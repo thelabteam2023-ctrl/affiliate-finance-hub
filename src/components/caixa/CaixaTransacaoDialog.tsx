@@ -46,7 +46,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Switch } from "@/components/ui/switch";
 import ParceiroSelect, { ParceiroSelectRef } from "@/components/parceiros/ParceiroSelect";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerSelect, { BookmakerSelectRef } from "@/components/bookmakers/BookmakerSelect";
