@@ -5700,7 +5700,9 @@ export function CaixaTransacaoDialog({
                           </span>
                           <div className="text-[10px] text-muted-foreground">
                             Cotação: {(cryptoPrices[coin] || 1).toFixed(4)} USD/{coin}
-                            <span className="ml-1 opacity-60">({isUsingFallback ? "fallback" : "oficial"})</span>
+                            <span className="ml-1 opacity-60">
+                              ({pricesStale ? "última válida" : isUsingFallback ? "fallback" : "oficial"})
+                            </span>
                           </div>
                         </div>
                       </div>
