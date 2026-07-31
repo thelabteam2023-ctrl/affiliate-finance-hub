@@ -13,6 +13,15 @@ export default {
       },
     },
     extend: {
+      zIndex: {
+        base: "0",
+        sticky: "20",
+        floating: "30",
+        header: "40",
+        overlay: "50",
+        popper: "60",
+        toast: "70",
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
