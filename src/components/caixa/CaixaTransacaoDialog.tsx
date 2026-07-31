@@ -5786,9 +5786,6 @@ export function CaixaTransacaoDialog({
                 <span className="text-[10px] font-semibold uppercase tracking-wider">{statusLabel}</span>
               </div>
               <div className="flex items-center gap-3">
-                <Button variant="outline" onClick={onClose}>
-                  Fechar
-                </Button>
                 <Button onClick={handleSubmit} disabled={isDisabled}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Registrar Transação
