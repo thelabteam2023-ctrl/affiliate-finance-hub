@@ -20,6 +20,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useEdgeSwipeToOpenSidebar } from "@/hooks/useEdgeSwipeToOpenSidebar";
+import { useOverlayPresence } from "@/hooks/useOverlayPresence";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { PresenceProvider } from "@/contexts/PresenceContext";
@@ -297,14 +298,17 @@ function SidebarAutoCollapse({ mainRef }: { mainRef: React.RefObject<HTMLElement
 /** Global floating button for Notes */
 function FloatingNotesButton({ onClick, isOpen }: { onClick: () => void, isOpen: boolean }) {
   const { user } = useAuth();
-  if (!user || isOpen) return null;
+  const hasOpenOverlay = useOverlayPresence();
+  // Nunca sobrepor overlays (Dialog/Sheet/Drawer): ações críticas ficam no
+  // canto inferior direito e não podem ser bloqueadas. Ver docs/UI_LAYERS.md.
+  if (!user || isOpen || hasOpenOverlay) return null;
 
   return (
     <button
       onClick={onClick}
       title="Anotações"
       className={cn(
-        "fixed bottom-6 right-6 z-[9999] flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-150 shadow-[0_4px_20px_rgba(0,200,83,0.4)] active:scale-95 bg-[#00c853] text-black hover:brightness-110 hover:scale-[1.08]"
+        "fixed bottom-6 right-6 z-floating flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-150 shadow-[0_4px_20px_rgba(0,200,83,0.4)] active:scale-95 bg-[#00c853] text-black hover:brightness-110 hover:scale-[1.08]"
       )}
     >
       <NotebookPen className="w-[22px] h-[22px]" />
@@ -317,18 +321,20 @@ function FloatingChatButton({ onClick, isOpen }: { onClick: () => void, isOpen: 
   const { user, workspace, loading, initialized } = useAuth();
   const [hasMention, setHasMention] = useState(false);
   const { unreadCount, incrementUnread, playNotificationSound } = useChatNotifications();
+  const hasOpenOverlay = useOverlayPresence();
   
   // Notification logic moved to ChatNotificationManager for robustness
   
   // Don't show while loading, if chat is already open, or if no workspace is resolved yet
-  if (loading || !initialized || !user || isOpen || !workspace?.id) return null;
+  // Também some enquanto houver overlay modal aberto (ver docs/UI_LAYERS.md).
+  if (loading || !initialized || !user || isOpen || !workspace?.id || hasOpenOverlay) return null;
 
   return (
     <button
       onClick={onClick}
       title="Chat"
       className={cn(
-        "fixed bottom-[88px] right-6 z-[9999] flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-150 shadow-[0_4px_20px_rgba(0,0,0,0.4)] active:scale-95 bg-[#1e2128] border border-[#2a2d35] text-white hover:border-[#00c853] hover:text-[#00c853] hover:scale-[1.08]",
+        "fixed bottom-[88px] right-6 z-floating flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-150 shadow-[0_4px_20px_rgba(0,0,0,0.4)] active:scale-95 bg-[#1e2128] border border-[#2a2d35] text-white hover:border-[#00c853] hover:text-[#00c853] hover:scale-[1.08]",
         hasMention && "animate-[mention-pulse_1.2s_ease-out_infinite] border-[#00c853] text-[#00c853]"
       )}
     >
