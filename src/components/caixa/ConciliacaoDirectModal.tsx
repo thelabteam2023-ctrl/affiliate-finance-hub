@@ -130,6 +130,9 @@ export function ConciliacaoDirectModal({
     }
   }, [open, fetchPending]);
 
+  // Mantém a lista de pendências sincronizada com mutações do Caixa
+  useCaixaFormSync({ open, refresh: fetchPending });
+
   const openConfirmStep = (tx: any) => {
     setSelectedTx(tx);
     const valorInicial = tx.valor_destino ?? tx.valor_usd ?? tx.valor ?? 0;
