@@ -1949,6 +1949,30 @@ export function CaixaTransacaoDialog({
     }
   };
 
+  /**
+   * Recarrega TODAS as fontes de dados locais do formulário em um único ciclo.
+   *
+   * Fonte única usada em três momentos:
+   *  1. abertura do dialog;
+   *  2. após registrar uma transação (formulário permanece aberto);
+   *  3. quando outro fluxo do Caixa dispara `dispatchCaixaDataChanged()`.
+   *
+   * Não toca em NENHUM campo do formulário — apenas nas listas/saldos.
+   */
+  const refreshDataSources = async () => {
+    await Promise.all([
+      fetchAccountsAndWallets(),
+      fetchBookmakers(),
+      fetchSaldosCaixa(),
+      fetchSaldosParceiros(),
+      fetchInvestidores(),
+      fetchSaquesPendentes(),
+    ]);
+  };
+
+  // Sincronização + feedback visual inline (padrão compartilhado do Caixa)
+  const formSync = useCaixaFormSync({ open, refresh: refreshDataSources });
+
   // Funções auxiliares para filtrar parceiros e contas/wallets disponíveis no destino
   // IMPORTANTE: Filtrar contas por moeda compatível (1 conta = 1 moeda)
   const getContasDisponiveisDestino = (parceiroId: string, moedaFiltro?: string) => {
