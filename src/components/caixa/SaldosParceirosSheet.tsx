@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchCryptoPricesResilient } from "@/lib/cryptoPricesClient";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
