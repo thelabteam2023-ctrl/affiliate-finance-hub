@@ -142,6 +142,9 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
     }
   }, [open, fetchWalletsAndBalances]);
 
+  // Mantém wallets/saldos sincronizados com qualquer mutação do Caixa enquanto aberto
+  useCaixaFormSync({ open, refresh: fetchWalletsAndBalances });
+
   const resetForm = () => {
     setWalletOrigemId("");
     setCoinOrigem("");
