@@ -3188,6 +3188,13 @@ export function CaixaTransacaoDialog({
       // Invalidação ampla do Caixa Operacional (saldos fiat/crypto/bookmakers/parceiros)
       await invalidateCaixa();
 
+      // Recarrega as fontes de dados DO PRÓPRIO formulário (saldos, contas,
+      // wallets, bookmakers) e exibe a confirmação inline. Sem isso o dialog
+      // continuaria exibindo o estado anterior à transação.
+      if (stayOpenAfterSuccess) {
+        await formSync.notifySuccess(mensagemSucesso);
+      }
+
       onSuccess();
 
     } catch (error: any) {
