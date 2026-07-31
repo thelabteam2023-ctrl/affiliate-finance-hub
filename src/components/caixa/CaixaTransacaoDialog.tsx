@@ -119,7 +119,13 @@ interface CaixaTransacaoDialogProps {
    * NOT close the dialog — the user does that via onClose (X, outside click, Esc).
    */
   stayOpenAfterSuccess?: boolean;
+  /**
+   * Filter destination partners by supplier ID.
+   * Used in the "Alocar Capital" flow from Supplier Admin Panel.
+   */
+  limitDestinoToSupplierId?: string;
 }
+
 
 
 interface BancoTaxa {
