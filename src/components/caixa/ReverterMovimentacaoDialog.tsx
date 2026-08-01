@@ -255,6 +255,7 @@ export function ReverterMovimentacaoDialog({ open, onOpenChange, transacao, resu
               </div>
             </ScrollArea>
           </div>
+          )}
           </>
         )}
 
