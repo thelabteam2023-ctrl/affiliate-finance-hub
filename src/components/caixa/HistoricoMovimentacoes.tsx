@@ -550,10 +550,18 @@ export function HistoricoMovimentacoes({
     };
     const cryptoAgg: Record<string, CryptoAgg> = {};
     let count = 0;
+    // Operações anuladas: original revertido (`reversed_at`) e o espelho de
+    // estorno (AJUSTE_RECONCILIACAO "ESTORNO: ...") NÃO compõem indicadores.
+    // Elas continuam listadas no histórico para trilha de auditoria.
+    let excluidasPorReversao = 0;
 
     transacoesComBusca.forEach((t: any) => {
       const status = (t.status || "").toUpperCase();
       if (status === "RECUSADO" || status === "CANCELADO" || status === "ESTORNADO") return;
+      if (classifyLedgerRow(t) !== "ORIGINAL_EFETIVO") {
+        excluidasPorReversao++;
+        return;
+      }
       count++;
 
       const isCrypto = t.tipo_moeda === "CRYPTO";
@@ -647,6 +655,7 @@ export function HistoricoMovimentacoes({
     return {
       count,
       hasPendente,
+      excluidasPorReversao,
       fiat: {
         moedas: fiatMoedas,
         displayMoeda: fiatDisplayMoeda,
