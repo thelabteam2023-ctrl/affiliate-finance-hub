@@ -18747,6 +18747,10 @@ export type Database = {
         Args: { p_motivo: string; p_transacao_id: string }
         Returns: Json
       }
+      reverter_movimentacao_caixa_inner: {
+        Args: { p_motivo: string; p_transacao_id: string }
+        Returns: Json
+      }
       rpc_override_surebet_v1: {
         Args: {
           p_aposta_id: string
