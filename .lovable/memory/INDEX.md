@@ -1,1 +1,0 @@
-- [Crypto Ledger Fiat Leg Display](mem://finance/crypto-ledger-fiat-leg-display-standard) — Histórico do Caixa exibe valor na moeda operacional (perna FIAT) + quantidade da coin
