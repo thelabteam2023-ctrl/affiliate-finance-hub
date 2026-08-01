@@ -17888,6 +17888,7 @@ export type Database = {
           saldo_materializado: number
         }[]
       }
+      fn_bookmaker_parity_sum: { Args: { p_ids: string[] }; Returns: number }
       fn_get_market_group: { Args: { p_market: string }; Returns: string }
       fn_ledger_profundo_bookmaker: {
         Args: { p_bookmaker_id: string }
