@@ -38,6 +38,7 @@ import { ExcluirMovimentacaoDialog } from "./ExcluirMovimentacaoDialog";
 import { EditarTagsDialog } from "./EditarTagsDialog";
 import { canRevert, canDelete } from "@/lib/movimentacaoEligibility";
 import { classifyLedgerRow } from "@/lib/ledger/effective";
+import { classifyMovementNature, MOVEMENT_GROUP_META, type MovementGroup, type MovementDirection } from "@/lib/caixa/ledgerNature";
 import { useRole } from "@/hooks/useRole";
 import { BookmakerFilterCombobox, type BookmakerFilterOption } from "@/components/ui/bookmaker-filter-combobox";
 const PAGE_SIZE = 20;
@@ -550,6 +551,35 @@ export function HistoricoMovimentacoes({
     };
     const cryptoAgg: Record<string, CryptoAgg> = {};
     let count = 0;
+
+    // Segregação por NATUREZA (Aporte × Quitação × Depósito × Saque × …)
+    type GrupoAgg = {
+      grupo: MovementGroup;
+      direcao: MovementDirection;
+      count: number;
+      fiatPorMoeda: Record<string, number>;
+      fiatConfirmadoPorMoeda: Record<string, number>;
+      cryptoPorCoin: Record<string, number>;   // qtd nativa
+      cryptoUsd: number;                        // snapshot USD
+      cryptoUsdConfirmado: number;
+    };
+    const grupoAgg: Record<string, GrupoAgg> = {};
+    const ensureGrupo = (grupo: MovementGroup, direcao: MovementDirection): GrupoAgg => {
+      const atual = grupoAgg[grupo];
+      if (atual) return atual;
+      const novo: GrupoAgg = {
+        grupo,
+        direcao,
+        count: 0,
+        fiatPorMoeda: {},
+        fiatConfirmadoPorMoeda: {},
+        cryptoPorCoin: {},
+        cryptoUsd: 0,
+        cryptoUsdConfirmado: 0,
+      };
+      grupoAgg[grupo] = novo;
+      return novo;
+    };
     // Operações anuladas: original revertido (`reversed_at`) e o espelho de
     // estorno (AJUSTE_RECONCILIACAO "ESTORNO: ...") NÃO compõem indicadores.
     // Elas continuam listadas no histórico para trilha de auditoria.
@@ -565,6 +595,9 @@ export function HistoricoMovimentacoes({
       count++;
 
       const isCrypto = t.tipo_moeda === "CRYPTO";
+      const natureza = classifyMovementNature(t);
+      const agrupado = ensureGrupo(natureza.grupo, natureza.direcao);
+      agrupado.count++;
 
       if (isCrypto) {
         const coin = (t.coin || t.moeda || "?").toUpperCase();
@@ -595,6 +628,9 @@ export function HistoricoMovimentacoes({
           agg.ultimoSnapshotAt = snapAt;
         }
         cryptoAgg[coin] = agg;
+        agrupado.cryptoPorCoin[coin] = (agrupado.cryptoPorCoin[coin] || 0) + qtd;
+        agrupado.cryptoUsd += usd;
+        if (status === "CONFIRMADO") agrupado.cryptoUsdConfirmado += usd;
       } else {
         const moeda = (t.moeda || "BRL").toUpperCase();
         const valor = Math.abs(Number(t.valor ?? 0));
@@ -603,6 +639,11 @@ export function HistoricoMovimentacoes({
           fiatConfirmado[moeda] = (fiatConfirmado[moeda] || 0) + valor;
         } else {
           fiatPendente[moeda] = (fiatPendente[moeda] || 0) + valor;
+        }
+        agrupado.fiatPorMoeda[moeda] = (agrupado.fiatPorMoeda[moeda] || 0) + valor;
+        if (status === "CONFIRMADO") {
+          agrupado.fiatConfirmadoPorMoeda[moeda] =
+            (agrupado.fiatConfirmadoPorMoeda[moeda] || 0) + valor;
         }
       }
     });
@@ -652,10 +693,57 @@ export function HistoricoMovimentacoes({
       fiatMoedas.some(m => m.pendente > 0) ||
       Object.values(cryptoAgg).some(c => c.qtdTotal > c.qtdConfirmada + 0.00000001);
 
+    // Consolida os grupos (fiat em BRL para exibição, cripto pelo snapshot USD)
+    const grupos = Object.values(grupoAgg)
+      .map((g) => {
+        const moedasFiat = Object.keys(g.fiatPorMoeda).sort(
+          (a, b) => g.fiatPorMoeda[b] - g.fiatPorMoeda[a]
+        );
+        let fiatBRL = 0;
+        let fiatConfirmadoBRL = 0;
+        for (const m of moedasFiat) {
+          fiatBRL += convertToBRL(g.fiatPorMoeda[m], m);
+          fiatConfirmadoBRL += convertToBRL(g.fiatConfirmadoPorMoeda[m] || 0, m);
+        }
+        const isMixed = moedasFiat.length > 1;
+        return {
+          ...g,
+          meta: MOVEMENT_GROUP_META[g.grupo],
+          moedasFiat: moedasFiat.map((m) => ({
+            moeda: m,
+            total: g.fiatPorMoeda[m],
+            confirmado: g.fiatConfirmadoPorMoeda[m] || 0,
+          })),
+          coins: Object.keys(g.cryptoPorCoin).map((c) => ({ coin: c, qtd: g.cryptoPorCoin[c] })),
+          fiatDisplayMoeda: isMixed ? "BRL" : (moedasFiat[0] || "BRL"),
+          fiatDisplayTotal: isMixed ? fiatBRL : (g.fiatPorMoeda[moedasFiat[0]] || 0),
+          fiatDisplayConfirmado: isMixed
+            ? fiatConfirmadoBRL
+            : (g.fiatConfirmadoPorMoeda[moedasFiat[0]] || 0),
+          fiatIsMixed: isMixed,
+          fiatBRL,
+        };
+      })
+      .filter((g) => g.count > 0)
+      .sort((a, b) => a.meta.order - b.meta.order);
+
+    // Fluxo líquido: entradas − saídas (neutros ficam de fora por definição)
+    let liquidoFiatBRL = 0;
+    let liquidoCryptoUSD = 0;
+    for (const g of grupos) {
+      if (g.direcao === "NEUTRO") continue;
+      const sinal = g.direcao === "ENTRADA" ? 1 : -1;
+      liquidoFiatBRL += sinal * g.fiatBRL;
+      liquidoCryptoUSD += sinal * g.cryptoUsd;
+    }
+    const temLiquido = grupos.some((g) => g.direcao !== "NEUTRO");
+
     return {
       count,
       hasPendente,
       excluidasPorReversao,
+      grupos,
+      liquido: { fiatBRL: liquidoFiatBRL, cryptoUSD: liquidoCryptoUSD, aplicavel: temLiquido },
       fiat: {
         moedas: fiatMoedas,
         displayMoeda: fiatDisplayMoeda,
