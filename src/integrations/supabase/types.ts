@@ -17905,6 +17905,10 @@ export type Database = {
           tipo_transacao: string
         }[]
       }
+      fn_ledger_reversal_impact: {
+        Args: { p_transacao_id: string }
+        Returns: Json
+      }
       fn_recalc_pai_surebet: {
         Args: { p_surebet_id: string }
         Returns: {
@@ -18740,6 +18744,10 @@ export type Database = {
         }[]
       }
       reverter_movimentacao_caixa: {
+        Args: { p_motivo: string; p_transacao_id: string }
+        Returns: Json
+      }
+      reverter_movimentacao_caixa_inner: {
         Args: { p_motivo: string; p_transacao_id: string }
         Returns: Json
       }
