@@ -154,6 +154,7 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationFn?:
       .in("origem_bookmaker_id", bookmakerIds)
       .eq("tipo_transacao", "SAQUE")
       .eq("status", "CONFIRMADO"),
+      
   ]);
 
   if (betsRes.error) throw betsRes.error;
