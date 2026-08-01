@@ -877,6 +877,25 @@ export function HistoricoMovimentacoes({
                 )}
               </div>
             )}
+            {metricas.excluidasPorReversao > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="mt-1 text-[10px] text-muted-foreground cursor-help flex items-center justify-end gap-1">
+                      <Undo2 className="h-3 w-3" />
+                      {metricas.excluidasPorReversao} lançamento(s) de reversão fora dos totais
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="end" className="max-w-xs">
+                    <p className="text-xs">
+                      Operações revertidas e seus estornos permanecem no histórico para
+                      auditoria, mas não compõem as somatórias — os totais refletem o
+                      valor líquido efetivamente movimentado.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
         </div>
 
