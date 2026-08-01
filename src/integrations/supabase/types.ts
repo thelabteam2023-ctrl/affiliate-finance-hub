@@ -17905,6 +17905,10 @@ export type Database = {
           tipo_transacao: string
         }[]
       }
+      fn_ledger_reversal_impact: {
+        Args: { p_transacao_id: string }
+        Returns: Json
+      }
       fn_recalc_pai_surebet: {
         Args: { p_surebet_id: string }
         Returns: {
