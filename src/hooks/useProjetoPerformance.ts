@@ -77,6 +77,7 @@ export function useProjetoPerformance({
       .select('valor, destino_bookmaker_id')
       .in('tipo_transacao', ['DEPOSITO', 'DEPOSITO_VIRTUAL'])
       .eq('status', 'CONFIRMADO')
+      .is('reversed_at', null)
       .not('destino_bookmaker_id', 'is', null);
     if (civilStart) queryDepositos = queryDepositos.gte('data_transacao', civilStart);
     if (civilEnd) queryDepositos = queryDepositos.lte('data_transacao', civilEnd);
@@ -87,6 +88,7 @@ export function useProjetoPerformance({
       .select('valor, origem_bookmaker_id')
       .in('tipo_transacao', ['SAQUE', 'SAQUE_VIRTUAL'])
       .eq('status', 'CONFIRMADO')
+      .is('reversed_at', null)
       .not('origem_bookmaker_id', 'is', null);
     if (civilStart) querySaques = querySaques.gte('data_transacao', civilStart);
     if (civilEnd) querySaques = querySaques.lte('data_transacao', civilEnd);
