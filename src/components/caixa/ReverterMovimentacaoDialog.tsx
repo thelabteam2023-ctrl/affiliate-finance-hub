@@ -29,6 +29,18 @@ interface Dependencias {
   total_dependencias: number;
   apostas_count: number;
   movimentacoes_count: number;
+  impacto?: {
+    ativos_negativos?: number;
+    descendentes_count?: number;
+    ativos_afetados?: Array<{
+      tipo: string;
+      nome: string | null;
+      moeda: string | null;
+      saldo_atual: number;
+      saldo_pos_reversao: number;
+      negativo: boolean;
+    }>;
+  };
   apostas: Array<{
     id: string;
     data: string;
