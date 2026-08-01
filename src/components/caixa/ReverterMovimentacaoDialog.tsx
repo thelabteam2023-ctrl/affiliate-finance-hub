@@ -176,6 +176,7 @@ export function ReverterMovimentacaoDialog({ open, onOpenChange, transacao, resu
               </div>
             </div>
           )}
+          {temDependencias && (
           <div
             className={`rounded-md border p-3 text-sm ${
               bloqueado
