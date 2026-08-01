@@ -47,7 +47,8 @@ export function HistoricoInvestidor() {
         .select("nome_investidor")
         .eq("tipo_transacao", "APORTE_FINANCEIRO")
         .not("nome_investidor", "is", null)
-        .eq("status", "CONFIRMADO");
+        .eq("status", "CONFIRMADO")
+        .is("reversed_at", null);
 
       if (error) throw error;
 
@@ -78,6 +79,7 @@ export function HistoricoInvestidor() {
         .eq("nome_investidor", investidorSelecionado)
         .eq("tipo_transacao", "APORTE_FINANCEIRO")
         .eq("status", "CONFIRMADO")
+        .is("reversed_at", null)
         .order("data_transacao", { ascending: false });
 
       if (error) throw error;

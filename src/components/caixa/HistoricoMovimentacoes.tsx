@@ -37,6 +37,7 @@ import { ReverterMovimentacaoDialog } from "./ReverterMovimentacaoDialog";
 import { ExcluirMovimentacaoDialog } from "./ExcluirMovimentacaoDialog";
 import { EditarTagsDialog } from "./EditarTagsDialog";
 import { canRevert, canDelete } from "@/lib/movimentacaoEligibility";
+import { classifyLedgerRow } from "@/lib/ledger/effective";
 import { useRole } from "@/hooks/useRole";
 import { BookmakerFilterCombobox, type BookmakerFilterOption } from "@/components/ui/bookmaker-filter-combobox";
 const PAGE_SIZE = 20;
@@ -549,10 +550,18 @@ export function HistoricoMovimentacoes({
     };
     const cryptoAgg: Record<string, CryptoAgg> = {};
     let count = 0;
+    // Operações anuladas: original revertido (`reversed_at`) e o espelho de
+    // estorno (AJUSTE_RECONCILIACAO "ESTORNO: ...") NÃO compõem indicadores.
+    // Elas continuam listadas no histórico para trilha de auditoria.
+    let excluidasPorReversao = 0;
 
     transacoesComBusca.forEach((t: any) => {
       const status = (t.status || "").toUpperCase();
       if (status === "RECUSADO" || status === "CANCELADO" || status === "ESTORNADO") return;
+      if (classifyLedgerRow(t) !== "ORIGINAL_EFETIVO") {
+        excluidasPorReversao++;
+        return;
+      }
       count++;
 
       const isCrypto = t.tipo_moeda === "CRYPTO";
@@ -646,6 +655,7 @@ export function HistoricoMovimentacoes({
     return {
       count,
       hasPendente,
+      excluidasPorReversao,
       fiat: {
         moedas: fiatMoedas,
         displayMoeda: fiatDisplayMoeda,
@@ -866,6 +876,25 @@ export function HistoricoMovimentacoes({
                   </TooltipProvider>
                 )}
               </div>
+            )}
+            {metricas.excluidasPorReversao > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="mt-1 text-[10px] text-muted-foreground cursor-help flex items-center justify-end gap-1">
+                      <Undo2 className="h-3 w-3" />
+                      {metricas.excluidasPorReversao} lançamento(s) de reversão fora dos totais
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="end" className="max-w-xs">
+                    <p className="text-xs">
+                      Operações revertidas e seus estornos permanecem no histórico para
+                      auditoria, mas não compõem as somatórias — os totais refletem o
+                      valor líquido efetivamente movimentado.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </div>
