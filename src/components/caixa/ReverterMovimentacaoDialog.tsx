@@ -95,7 +95,9 @@ export function ReverterMovimentacaoDialog({ open, onOpenChange, transacao, resu
   const tipoSensivel = ["DEPOSITO", "SAQUE", "TRANSFERENCIA", "BONUS_CREDITADO"].includes(
     transacao?.tipo_transacao
   );
-  const bloqueado = tipoSensivel && temDependencias;
+  const ativosNegativos = (deps?.impacto?.ativos_afetados ?? []).filter((a) => a.negativo);
+  const quebraCadeia = ativosNegativos.length > 0;
+  const bloqueado = quebraCadeia || (tipoSensivel && temDependencias);
 
   const handleConfirm = async () => {
     if (!transacao || motivo.trim().length < 5 || bloqueado) return;
@@ -153,6 +155,27 @@ export function ReverterMovimentacaoDialog({ open, onOpenChange, transacao, resu
         )}
 
         {!loadingDeps && deps && temDependencias && (
+          <>
+          {quebraCadeia && (
+            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-destructive" />
+                <div className="space-y-1">
+                  <p className="font-semibold">Reversão quebraria a cadeia financeira</p>
+                  {ativosNegativos.map((a) => (
+                    <p key={`${a.tipo}-${a.nome}`} className="text-xs text-muted-foreground">
+                      <strong>{a.nome || a.tipo}</strong> ficaria com{" "}
+                      <span className="font-mono text-destructive">
+                        {Number(a.saldo_pos_reversao).toFixed(2)} {a.moeda}
+                      </span>{" "}
+                      (saldo atual {Number(a.saldo_atual).toFixed(2)}). O recurso já foi consumido
+                      por operações posteriores — reverta-as primeiro.
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           <div
             className={`rounded-md border p-3 text-sm ${
               bloqueado
