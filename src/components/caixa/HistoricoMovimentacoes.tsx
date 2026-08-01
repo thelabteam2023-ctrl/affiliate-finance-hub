@@ -37,6 +37,7 @@ import { ReverterMovimentacaoDialog } from "./ReverterMovimentacaoDialog";
 import { ExcluirMovimentacaoDialog } from "./ExcluirMovimentacaoDialog";
 import { EditarTagsDialog } from "./EditarTagsDialog";
 import { canRevert, canDelete } from "@/lib/movimentacaoEligibility";
+import { classifyLedgerRow } from "@/lib/ledger/effective";
 import { useRole } from "@/hooks/useRole";
 import { BookmakerFilterCombobox, type BookmakerFilterOption } from "@/components/ui/bookmaker-filter-combobox";
 const PAGE_SIZE = 20;
