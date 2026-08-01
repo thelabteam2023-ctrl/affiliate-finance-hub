@@ -1,125 +1,47 @@
+## Diagnóstico (confirmado)
 
-# Saldo Tri-Fásico: correção do "Disponível" e unificação entre módulos
+- O histórico do Caixa (`src/pages/Caixa.tsx`) busca `cash_ledger` com `select("*")` e **sem** filtro de reversão — `reversed_at` chega ao componente.
+- Em `src/components/caixa/HistoricoMovimentacoes.tsx` (bloco `metricas`, linhas ~533-640) a soma ignora apenas `status` em `RECUSADO / CANCELADO / ESTORNADO`. **Não** há teste de `reversed_at`.
+- Consulta ao banco: existem **19 linhas revertidas** (`reversed_at IS NOT NULL`), das quais **18 ainda estão com status `CONFIRMADO`** — ou seja, entram integralmente nos totais fiat/cripto.
+- Existem também **19 linhas-espelho** de estorno (`AJUSTE_RECONCILIACAO` com descrição `ESTORNO:%`). `AJUSTE_RECONCILIACAO` está em `CASH_REAL_TYPES`, então o espelho também aparece e soma em módulo (`Math.abs`) — dobrando a distorção: a operação original conta uma vez e o estorno conta de novo.
+- Já existe helper canônico para isso: `src/lib/ledger/effective.ts` (`applyEffectiveFilter`, `classifyLedgerRow`), usado em vários hooks (`usePosicaoCapital`, `useFinanceiroData`, `useExposicaoFinanceira`, etc.), mas **não** no caminho do Caixa Operacional.
 
-## Diagnóstico
+## Correção proposta
 
-A view `v_saldo_parceiro_wallets` já expõe as 3 camadas corretas, **mas** o front consome de forma errada e desalinhada entre telas.
+### 1. Somatórias do Histórico (núcleo do problema)
+Em `HistoricoMovimentacoes.tsx`, no `useMemo` de `metricas`:
+- Pular a linha quando `t.reversed_at` estiver preenchido (original anulado).
+- Pular também a linha-espelho de estorno, usando `classifyLedgerRow` de `@/lib/ledger/effective` — só agrega quando o resultado for `ORIGINAL_EFETIVO`.
+- Isso vale para fiat (`fiatTotal/Confirmado/Pendente`), cripto (`qtdTotal/usdTotal/...`) e para o contador `count`.
 
-**O que a view devolve hoje (por wallet+coin):**
+A **lista** do histórico continua inalterada: a linha revertida segue visível com o badge "Revertida em …" (linhas ~1096 e ~1277) e o espelho de estorno também continua listado. Só a agregação muda.
 
-| Campo                       | Fórmula                                                                  |
-|-----------------------------|--------------------------------------------------------------------------|
-| `saldo_coin`                | Soma de tx **CONFIRMED** (entradas − saídas). = "on-chain confirmado".   |
-| `saldo_em_transito_coin`    | Soma **líquida** de tx `PENDING/STUCK/WRONG_ADDRESS/MANUAL_REVIEW` (entradas − saídas). |
-| `saldo_disponivel` (USD)    | `max(0, saldo_usd − balance_locked)` — depende do `lock_wallet_balance` ter sido chamado. |
-| `saldo_total` (USD)         | `saldo_usd + transit_usd`.                                               |
+### 2. Transparência no cabeçalho
+No bloco de resumo, exibir uma nota discreta quando houver linhas excluídas do cálculo no recorte atual: `"N operação(ões) revertida(s) não incluída(s) nos totais"`, com tooltip explicando que os valores refletem o líquido efetivo. Sem novos controles nem toggles.
 
-**O bug prático (cenário do usuário):**
-Wallet tem 121 USDT confirmados. Existe uma saída pendente de 45 USDT.
-- `saldo_coin` = 121, `transit_coin` = **−45** (saída), `balance_locked` pode ou não estar setado.
-- `CryptoWalletCard` mostra `saldo_coin` (121) como **Disponível** — errado.
-- Chip "Em Trânsito" só renderiza se `emTransitoUsd > 0`, então o **−45 fica invisível**.
-- Resultado: 121 exibido como disponível quando o real é 76.
+### 3. Auditoria dos demais consumidores
+Varrer os pontos que agregam `cash_ledger` **sem** filtro de reversão e aplicar `applyEffectiveFilter` (ou o teste equivalente em memória) apenas onde o consumo é **agregação/indicador**, nunca em telas de auditoria/edição:
 
-Além disso a semântica "trânsito" mistura entradas (chegando, não usáveis) e saídas (saindo, também não usáveis) em um único número líquido, o que impede exibir corretamente cada caso.
+Alvos de agregação a corrigir:
+- `src/components/caixa/RelatorioROI.tsx`
+- `src/hooks/useFinanceiroMensal.ts`
+- `src/hooks/useResumoOperacional.ts`
+- `src/hooks/useWorkspaceLucroRealizado.ts`
+- `src/hooks/useProjetoPerformance.ts`
+- `src/hooks/useProjectBonusAnalytics.ts`
+- `src/hooks/useParceiroFinanceiroCache.ts` / `useParceiroTabsCache.ts`
+- `src/components/caixa/HistoricoInvestidor.tsx` (totais; lista permanece)
+- `src/components/caixa/ConciliacaoSaldos.tsx` (validar caso a caso — saldo de conciliação pode já derivar de trigger)
 
-**Divergência entre telas (mesma wallet, valores diferentes):**
-- `ParceiroDialog / CryptoWalletCard` → `saldo_coin` como Disponível.
-- `SaldosParceirosSheet`, `ExposicaoCryptoCard`, `Caixa.tsx` → usam revaluation live via `getCryptoUSDValue(saldo_coin)`, ignoram trânsito.
-- `useSaldoOperavel`, `useValidacaoFinanceira`, `OrigemPagamentoSelect` (validação pré-envio) → usam `balance_available` do RPC `get_wallet_balances` (baseado em `balance_locked`), que só bate se o `lock_wallet_balance` foi chamado.
-- `ConciliacaoSaldos` → mostra chip de status por transação, mas não reconcilia com o "Disponível" exibido nos cards.
+Explicitamente **não** alterar: `useReverterMovimentacao`, diálogos de edição/confirmação (`ConfirmarSaqueDialog`, `EditarTagsDialog`, `EditarDataTransacaoDialog`, `EditarSaqueConfirmadoDialog`), `useInvalidateCaixaData`, `usePreCommitValidation` — esses precisam enxergar a linha original.
 
-## Modelo alvo (definição canônica)
+Cada arquivo será verificado antes da edição; se a leitura mostrar que já é filtrado indiretamente (via RPC canônica), fica registrado e não é tocado.
 
-Para toda wallet crypto, em toda tela, exibir/consumir estes 3 valores derivados **exclusivamente do `cash_ledger`** (sem depender de `balance_locked`):
+### 4. Regra de memória
+Registrar em memória de projeto a regra: *"Toda agregação sobre `cash_ledger` desconsidera `reversed_at IS NOT NULL` e espelhos `ESTORNO:`; listas de auditoria continuam exibindo ambos."*
 
-```text
-Saldo Total       = confirmados + entradas pendentes − saídas pendentes
-                  = saldo_coin + transit_in_coin − transit_out_coin
+## Observações técnicas
 
-Saldo Disponível  = confirmados − saídas pendentes
-                  = saldo_coin − transit_out_coin
-                    (nunca menor que 0)
-
-Em Trânsito (⬆ saindo) = transit_out_coin   [reduz o disponível]
-Em Trânsito (⬇ chegando) = transit_in_coin  [não aumenta o disponível; informativo]
-```
-
-Regras invioláveis (memory):
-- Nunca tratar entrada pendente como disponível.
-- Sempre respeitar `Floor(0)` no disponível.
-- Sempre filtrar por `workspace_id`.
-- Sem UPDATE direto em campos de saldo materializado — a verdade vem do ledger.
-
-## Mudanças planejadas
-
-### 1) Banco — recriar `v_saldo_parceiro_wallets` (schema)
-
-Adicionar colunas explícitas para entradas e saídas pendentes, e recalcular `saldo_disponivel` a partir do ledger (não mais de `balance_locked`):
-
-- `transit_in_coin`, `transit_in_usd` → soma de destino=wallet em `PENDING/STUCK/WRONG_ADDRESS/MANUAL_REVIEW`.
-- `transit_out_coin`, `transit_out_usd` → soma de origem=wallet nos mesmos status.
-- `saldo_em_transito_coin`/`saldo_em_transito` → mantidos, mas passam a valer `transit_in − transit_out` explicitamente (para retrocompatibilidade).
-- `saldo_disponivel_coin` (novo) = `GREATEST(0, saldo_coin − transit_out_coin)`.
-- `saldo_disponivel` (USD, redefinido) = `GREATEST(0, saldo_usd − transit_out_usd)`.
-- `saldo_total_coin` (novo) e `saldo_total` (USD, redefinido) = `saldo_coin + transit_in − transit_out`.
-
-Assinatura antiga preservada para não quebrar consumidores existentes.
-
-### 2) Componente unificado `SaldoTrifasico` — expansão
-
-Estender props para receber `transitInUsd` e `transitOutUsd` (em vez de um único `emTransitoUsd` líquido):
-
-```text
-Disponível (verde)     — sempre visível
-⬆ Saindo   (âmbar)     — só quando > 0
-⬇ Chegando (azul)      — só quando > 0
-Total consolidado      — opcional, variante detailed
-```
-
-Tooltip explicativo: "Valores em envio ficam bloqueados até conciliação. Valores chegando não estão disponíveis para operar até serem confirmados."
-
-Variantes existentes (`compact | stacked | detailed`) preservadas; sem breaking change para quem já usa `emTransitoUsd`.
-
-### 3) Front — consumidores da view
-
-Ajustar para hidratar `transit_in` e `transit_out` separadamente e passar para `SaldoTrifasico`:
-
-- `src/components/parceiros/ParceiroDialog.tsx` — carregar as 4 novas colunas.
-- `src/components/parceiros/CryptoWalletCard.tsx` — usar `saldo_disponivel_coin` para "Disponível" (não `saldo_coin`).
-- `src/components/parceiros/tabs/CryptoWalletsTab.tsx` — propagar `transitIn/transitOut` no lugar do `walletTransito` único.
-- `src/components/caixa/SaldosParceirosSheet.tsx` — trocar cálculo live por `saldo_disponivel` da view; expor colunas Total / Em Trânsito / Disponível.
-- `src/components/caixa/ExposicaoCryptoCard.tsx` — idem.
-- `src/pages/Caixa.tsx` — o card "Saldos por Parceiro" (Posição de Capital vs Saldos) passa a somar `saldo_disponivel` da view, garantindo paridade.
-
-### 4) Validação de saldo pré-operação
-
-Fonte única de verdade passa a ser `saldo_disponivel` da view (derivado do ledger), eliminando dependência de `balance_locked` materializado:
-
-- `src/hooks/useWalletTransitBalance.ts` (`canSendAmount`, `getWalletBalances`) — ler `saldo_disponivel_coin` da view.
-- `src/hooks/useSaldoOperavel.ts` — idem.
-- `src/hooks/useValidacaoFinanceira.ts` — idem.
-- `src/components/programa-indicacao/OrigemPagamentoSelect.tsx` — bloquear seleção quando `saldo_disponivel < valor`.
-
-O `lock_wallet_balance` continua sendo chamado como reserva otimista de curto prazo (TTL), mas deixa de ser condição necessária para o "Em Trânsito" aparecer — a view sempre reflete o ledger.
-
-### 5) Conciliação — alinhar UI
-
-`ConciliacaoSaldos.tsx`: no cabeçalho de cada wallet mostrar a mesma linha tri-fásica (`SaldoTrifasico` variante compact), para que o total dos chips PENDING/STUCK/... bata visualmente com "⬆ Saindo" e "⬇ Chegando".
-
-## Testes de aceitação
-
-1. Wallet com 121 USDT confirmados + saída pendente 45 USDT:
-   - Card mostra **Disponível 76,00 USDT**, chip **⬆ Saindo ≈ $45,00**, Total 121,00.
-   - `OrigemPagamentoSelect` só permite enviar até 76.
-2. Wallet com 100 USDC + entrada pendente 30 USDC:
-   - Disponível **100,00 USDC**, chip **⬇ Chegando ≈ $30,00**, Total 130,00.
-3. Wallet zerada com saída pendente 10 (cenário inconsistente):
-   - Disponível **0,00** (Floor), chip **⬆ Saindo ≈ $10,00** em vermelho de alerta.
-4. Paridade cross-módulo: mesma wallet exibe o mesmo Disponível em `ParceiroDialog`, `SaldosParceirosSheet`, `ExposicaoCryptoCard`, `Caixa`.
-
-## Fora de escopo
-
-- Correção retroativa de ledgers legados com `transit_status` incorreto (política anti-retrofix).
-- Mudança do modelo de reserva TTL (`bookmaker_stake_reservations`) — permanece igual.
-- Contas bancárias fiat (o modelo tri-fásico se aplica apenas a wallets crypto neste ciclo).
+- Nenhuma migração de banco é necessária — os dados já estão corretos (`reversed_at` preenchido pela RPC `reverter_movimentacao_caixa`); o defeito é puramente de leitura/agregação.
+- Nenhuma alteração em saldos: saldos continuam vindo de triggers/eventos, não da soma do histórico.
+- Validação: comparar, num recorte com reversão conhecida, o total antes/depois — a diferença deve ser exatamente (valor original + valor do espelho).
