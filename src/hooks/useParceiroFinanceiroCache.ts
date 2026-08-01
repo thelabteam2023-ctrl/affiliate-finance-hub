@@ -169,7 +169,8 @@ export function useParceiroFinanceiroCache() {
         .select("destino_bookmaker_id, valor, valor_destino, valor_usd, tipo_moeda, moeda, moeda_destino")
         .in("destino_bookmaker_id", bookmakerIds)
         .eq("tipo_transacao", "DEPOSITO")
-        .eq("status", "CONFIRMADO");
+        .eq("status", "CONFIRMADO")
+        .is("reversed_at", null);
 
       depositos?.forEach((d) => {
         if (d.destino_bookmaker_id) {
@@ -193,7 +194,8 @@ export function useParceiroFinanceiroCache() {
         .select("origem_bookmaker_id, valor, valor_origem, valor_usd, tipo_moeda, moeda, moeda_origem")
         .in("origem_bookmaker_id", bookmakerIds)
         .eq("tipo_transacao", "SAQUE")
-        .eq("status", "CONFIRMADO");
+        .eq("status", "CONFIRMADO")
+        .is("reversed_at", null);
 
       saques?.forEach((s) => {
         if (s.origem_bookmaker_id) {
