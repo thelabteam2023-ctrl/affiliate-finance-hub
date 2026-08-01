@@ -153,8 +153,8 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationFn?:
       .select("id, valor, origem_bookmaker_id, tipo_transacao, status")
       .in("origem_bookmaker_id", bookmakerIds)
       .eq("tipo_transacao", "SAQUE")
-      .eq("status", "CONFIRMADO"),
-      
+      .eq("status", "CONFIRMADO")
+      .is("reversed_at", null),
   ]);
 
   if (betsRes.error) throw betsRes.error;
