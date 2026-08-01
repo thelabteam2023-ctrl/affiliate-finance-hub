@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { SupportedCurrency, CURRENCY_SYMBOLS } from "@/types/currency";
+import { SupportedCurrency, CURRENCY_SYMBOLS, isCryptoCurrency } from "@/types/currency";
 
 /**
  * Hook utilitário para formatação de valores multi-moeda
@@ -20,16 +20,99 @@ export interface TransacaoMoeda {
 }
 
 /**
+ * Pernas de uma movimentação CRYPTO.
+ *
+ * REGRA: a cripto é apenas o MEIO de transferência. O impacto financeiro real
+ * é sempre o valor na moeda operacional (moeda da casa / conta fiat envolvida).
+ * Por isso o valor "efetivo" prioriza SEMPRE a perna FIAT (moeda_origem ou
+ * moeda_destino ou `moeda`), caindo para USD (snapshot `valor_usd`) apenas
+ * quando as duas pontas são cripto.
+ */
+export interface CryptoLegs {
+  /** Moeda operacional (fiat) da operação */
+  moedaFiat: string;
+  /** Valor na moeda operacional */
+  valorFiat: number;
+  /** true quando o valor fiat veio do snapshot USD (sem perna fiat explícita) */
+  fiatFromUsdSnapshot: boolean;
+  /** Quantidade da cripto movimentada */
+  qtdCoin: number | null;
+  coin: string | null;
+  /** Cotação aplicada no momento da operação (fiat por unidade de coin) */
+  cotacao: number | null;
+}
+
+type LedgerLike = TransacaoMoeda & {
+  coin?: string | null;
+  qtd_coin?: number | null;
+  cotacao?: number | null;
+  valor_usd_referencia?: number | null;
+  moeda_origem?: string | null;
+  valor_origem?: number | null;
+  moeda_destino?: string | null;
+  valor_destino?: number | null;
+};
+
+function isFiat(m?: string | null): boolean {
+  return !!m && !isCryptoCurrency(m);
+}
+
+export function getCryptoLegs(tx: LedgerLike): CryptoLegs {
+  const coin = (tx.coin || null) as string | null;
+
+  // 1) Perna FIAT — prioridade origem > destino > moeda base
+  let moedaFiat: string | null = null;
+  let valorFiat: number | null = null;
+  if (isFiat(tx.moeda_origem) && tx.valor_origem != null) {
+    moedaFiat = tx.moeda_origem!;
+    valorFiat = Number(tx.valor_origem);
+  } else if (isFiat(tx.moeda_destino) && tx.valor_destino != null) {
+    moedaFiat = tx.moeda_destino!;
+    valorFiat = Number(tx.valor_destino);
+  } else if (isFiat(tx.moeda)) {
+    moedaFiat = tx.moeda!;
+    valorFiat = Number(tx.valor ?? 0);
+  }
+
+  let fiatFromUsdSnapshot = false;
+  if (moedaFiat == null || valorFiat == null || !Number.isFinite(valorFiat)) {
+    // 2) Fallback: snapshot em USD (cripto → cripto)
+    moedaFiat = "USD";
+    valorFiat = Number(tx.valor_usd ?? tx.valor_usd_referencia ?? tx.valor ?? 0);
+    fiatFromUsdSnapshot = true;
+  }
+
+  // 3) Quantidade da cripto
+  let qtdCoin: number | null = tx.qtd_coin != null ? Number(tx.qtd_coin) : null;
+  if (qtdCoin == null) {
+    if (coin && tx.moeda_destino === coin && tx.valor_destino != null) qtdCoin = Number(tx.valor_destino);
+    else if (coin && tx.moeda_origem === coin && tx.valor_origem != null) qtdCoin = Number(tx.valor_origem);
+    else if (coin && tx.moeda === coin) qtdCoin = Number(tx.valor ?? 0);
+  }
+
+  // 4) Cotação aplicada (fiat por unidade de coin)
+  let cotacao: number | null = tx.cotacao != null ? Number(tx.cotacao) : null;
+  if ((cotacao == null || !Number.isFinite(cotacao) || cotacao <= 0) && qtdCoin && valorFiat) {
+    cotacao = Math.abs(valorFiat) / Math.abs(qtdCoin);
+  }
+
+  return {
+    moedaFiat,
+    valorFiat: Number(valorFiat) || 0,
+    fiatFromUsdSnapshot,
+    qtdCoin: qtdCoin != null && Number.isFinite(qtdCoin) ? qtdCoin : null,
+    coin,
+    cotacao: cotacao != null && Number.isFinite(cotacao) && cotacao > 0 ? cotacao : null,
+  };
+}
+
+/**
  * Retorna o valor correto baseado no tipo de moeda
  * CRYPTO usa valor_usd (dolarizado), FIAT usa valor direto
  */
-export function getValorEfetivo(transacao: TransacaoMoeda & { moeda_destino?: string; valor_destino?: number }): number {
+export function getValorEfetivo(transacao: LedgerLike): number {
   if (transacao.tipo_moeda === "CRYPTO") {
-    // Cross-currency crypto (e.g. USDT → MXN): use the converted destination value
-    if (transacao.moeda_destino && !["USD","USDT","USDC"].includes(transacao.moeda_destino)) {
-      return transacao.valor_destino ?? transacao.valor;
-    }
-    return transacao.valor_usd ?? transacao.valor;
+    return getCryptoLegs(transacao).valorFiat;
   }
   return transacao.valor;
 }
@@ -39,13 +122,9 @@ export function getValorEfetivo(transacao: TransacaoMoeda & { moeda_destino?: st
  * CRYPTO com conversão cross-currency = moeda destino, senão USD
  * FIAT = moeda original (geralmente BRL)
  */
-export function getMoedaEfetiva(transacao: TransacaoMoeda & { moeda_destino?: string }): string {
+export function getMoedaEfetiva(transacao: LedgerLike): string {
   if (transacao.tipo_moeda === "CRYPTO") {
-    // Cross-currency crypto: use destination currency
-    if (transacao.moeda_destino && !["USD","USDT","USDC"].includes(transacao.moeda_destino)) {
-      return transacao.moeda_destino;
-    }
-    return "USD";
+    return getCryptoLegs(transacao).moedaFiat;
   }
   return transacao.moeda || "BRL";
 }
