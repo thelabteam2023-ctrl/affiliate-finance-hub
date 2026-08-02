@@ -3009,11 +3009,11 @@ export function CaixaTransacaoDialog({
             transactionData.destino_bookmaker_id = destinoBookmakerId;
           } else if (destinoTipo === "CAIXA_OPERACIONAL") {
             // Wire optional company account for CAIXA destination
-            if (caixaContaId && caixaContaId !== "none") {
+            if (caixaContaId && caixaContaId !== "none" && tipoMoeda !== "CRYPTO") {
               transactionData.destino_conta_bancaria_id = caixaContaId;
               transactionData.destino_parceiro_id = caixaParceiroId;
             }
-            if (caixaWalletId && caixaWalletId !== "none") {
+            if (caixaWalletId && caixaWalletId !== "none" && tipoMoeda === "CRYPTO") {
               transactionData.destino_wallet_id = caixaWalletId;
               transactionData.destino_parceiro_id = caixaParceiroId;
             }
