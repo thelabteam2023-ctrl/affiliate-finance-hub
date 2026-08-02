@@ -7297,18 +7297,24 @@ export type Database = {
           aposta_id: string | null
           bookmaker_id: string | null
           cancelled_at: string | null
+          coin: string | null
           conta_bancaria_id: string | null
           contexto_metadata: Json | null
           created_at: string
           data_ocorrencia: string
           descricao: string
+          desfecho: string | null
+          endereco_destino_externo: string | null
           executor_id: string
           id: string
           moeda: string | null
+          network: string | null
           parceiro_id: string | null
+          perda_ledger_id: string | null
           perda_registrada_ledger: boolean | null
           prioridade: Database["public"]["Enums"]["ocorrencia_prioridade"]
           projeto_id: string | null
+          quantidade_cripto: number | null
           requerente_id: string
           resolucao_via_ajuste: boolean
           resolved_at: string | null
@@ -7322,10 +7328,14 @@ export type Database = {
           sub_motivo: string | null
           tipo: Database["public"]["Enums"]["ocorrencia_tipo"]
           titulo: string
+          tx_hash: string | null
           updated_at: string
           valor_perda: number | null
+          valor_recuperado: number | null
           valor_risco: number | null
+          wallet_destino_id: string | null
           wallet_id: string | null
+          wallet_origem_id: string | null
           workspace_id: string
         }
         Insert: {
@@ -7334,18 +7344,24 @@ export type Database = {
           aposta_id?: string | null
           bookmaker_id?: string | null
           cancelled_at?: string | null
+          coin?: string | null
           conta_bancaria_id?: string | null
           contexto_metadata?: Json | null
           created_at?: string
           data_ocorrencia?: string
           descricao: string
+          desfecho?: string | null
+          endereco_destino_externo?: string | null
           executor_id: string
           id?: string
           moeda?: string | null
+          network?: string | null
           parceiro_id?: string | null
+          perda_ledger_id?: string | null
           perda_registrada_ledger?: boolean | null
           prioridade?: Database["public"]["Enums"]["ocorrencia_prioridade"]
           projeto_id?: string | null
+          quantidade_cripto?: number | null
           requerente_id: string
           resolucao_via_ajuste?: boolean
           resolved_at?: string | null
@@ -7359,10 +7375,14 @@ export type Database = {
           sub_motivo?: string | null
           tipo?: Database["public"]["Enums"]["ocorrencia_tipo"]
           titulo: string
+          tx_hash?: string | null
           updated_at?: string
           valor_perda?: number | null
+          valor_recuperado?: number | null
           valor_risco?: number | null
+          wallet_destino_id?: string | null
           wallet_id?: string | null
+          wallet_origem_id?: string | null
           workspace_id: string
         }
         Update: {
@@ -7371,18 +7391,24 @@ export type Database = {
           aposta_id?: string | null
           bookmaker_id?: string | null
           cancelled_at?: string | null
+          coin?: string | null
           conta_bancaria_id?: string | null
           contexto_metadata?: Json | null
           created_at?: string
           data_ocorrencia?: string
           descricao?: string
+          desfecho?: string | null
+          endereco_destino_externo?: string | null
           executor_id?: string
           id?: string
           moeda?: string | null
+          network?: string | null
           parceiro_id?: string | null
+          perda_ledger_id?: string | null
           perda_registrada_ledger?: boolean | null
           prioridade?: Database["public"]["Enums"]["ocorrencia_prioridade"]
           projeto_id?: string | null
+          quantidade_cripto?: number | null
           requerente_id?: string
           resolucao_via_ajuste?: boolean
           resolved_at?: string | null
@@ -7396,10 +7422,14 @@ export type Database = {
           sub_motivo?: string | null
           tipo?: Database["public"]["Enums"]["ocorrencia_tipo"]
           titulo?: string
+          tx_hash?: string | null
           updated_at?: string
           valor_perda?: number | null
+          valor_recuperado?: number | null
           valor_risco?: number | null
+          wallet_destino_id?: string | null
           wallet_id?: string | null
+          wallet_origem_id?: string | null
           workspace_id?: string
         }
         Relationships: [
@@ -7607,10 +7637,108 @@ export type Database = {
             referencedColumns: ["parceiro_id"]
           },
           {
+            foreignKeyName: "ocorrencias_perda_ledger_id_fkey"
+            columns: ["perda_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_perda_ledger_id_fkey"
+            columns: ["perda_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ajustes_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_perda_ledger_id_fkey"
+            columns: ["perda_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_eventos_promocionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_perda_ledger_id_fkey"
+            columns: ["perda_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ajuste_ledger_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_perda_ledger_id_fkey"
+            columns: ["perda_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_saques_duplicidade_audit"
+            referencedColumns: ["saque_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_perda_ledger_id_fkey"
+            columns: ["perda_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_snapshot_anomalias"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ocorrencias_projeto_id_fkey"
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_wallet_destino_id_fkey"
+            columns: ["wallet_destino_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_wallet_destino_id_fkey"
+            columns: ["wallet_destino_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_wallet_destino_id_fkey"
+            columns: ["wallet_destino_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_wallet_destino_id_fkey"
+            columns: ["wallet_destino_id"]
+            isOneToOne: false
+            referencedRelation: "wallets_crypto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_wallet_origem_id_fkey"
+            columns: ["wallet_origem_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_wallet_origem_id_fkey"
+            columns: ["wallet_origem_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_wallet_origem_id_fkey"
+            columns: ["wallet_origem_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_wallet_origem_id_fkey"
+            columns: ["wallet_origem_id"]
+            isOneToOne: false
+            referencedRelation: "wallets_crypto"
             referencedColumns: ["id"]
           },
         ]
