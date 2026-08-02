@@ -583,6 +583,20 @@ export function useResolverOcorrenciaComFinanceiro() {
       valorPerda: number;
       resolvedAt?: string;
     }) => {
+      // 0. Valor em disputa original (para derivar o valor recuperado)
+      const { data: base } = await ocorrenciasTable()
+        .select('valor_risco')
+        .eq('id', id)
+        .maybeSingle();
+      const valorRisco = Number((base as any)?.valor_risco || 0);
+      const valorRecuperado = Math.max(0, valorRisco - (valorPerda || 0));
+      const desfecho =
+        resultadoFinanceiro === 'sem_impacto'
+          ? 'recuperado_total'
+          : resultadoFinanceiro === 'perda_parcial'
+          ? 'recuperado_parcial'
+          : 'perda_definitiva';
+
       // 1. Atualizar ocorrência com status + resultado financeiro
       const { error } = await ocorrenciasTable()
         .update({
@@ -591,6 +605,8 @@ export function useResolverOcorrenciaComFinanceiro() {
           resultado_financeiro: resultadoFinanceiro,
           valor_perda: valorPerda,
           perda_registrada_ledger: valorPerda > 0,
+          valor_recuperado: valorRecuperado,
+          desfecho,
         })
         .eq('id', id)
         .eq('workspace_id', workspaceId!);
