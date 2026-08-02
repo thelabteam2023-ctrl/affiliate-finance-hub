@@ -1,47 +1,48 @@
-## Diagnóstico (confirmado)
+## Diagnóstico (verificado no código)
 
-- O histórico do Caixa (`src/pages/Caixa.tsx`) busca `cash_ledger` com `select("*")` e **sem** filtro de reversão — `reversed_at` chega ao componente.
-- Em `src/components/caixa/HistoricoMovimentacoes.tsx` (bloco `metricas`, linhas ~533-640) a soma ignora apenas `status` em `RECUSADO / CANCELADO / ESTORNADO`. **Não** há teste de `reversed_at`.
-- Consulta ao banco: existem **19 linhas revertidas** (`reversed_at IS NOT NULL`), das quais **18 ainda estão com status `CONFIRMADO`** — ou seja, entram integralmente nos totais fiat/cripto.
-- Existem também **19 linhas-espelho** de estorno (`AJUSTE_RECONCILIACAO` com descrição `ESTORNO:%`). `AJUSTE_RECONCILIACAO` está em `CASH_REAL_TYPES`, então o espelho também aparece e soma em módulo (`Math.abs`) — dobrando a distorção: a operação original conta uma vez e o estorno conta de novo.
-- Já existe helper canônico para isso: `src/lib/ledger/effective.ts` (`applyEffectiveFilter`, `classifyLedgerRow`), usado em vários hooks (`usePosicaoCapital`, `useFinanceiroData`, `useExposicaoFinanceira`, etc.), mas **não** no caminho do Caixa Operacional.
+O `CalendarioLucros` recebe uma prop `initialMonth` e a usa como estado inicial (`useState(initialMonth ?? new Date())`), além de um `useEffect` que ressincroniza sempre que `initialMonth` muda.
 
-## Correção proposta
+Quem define esse valor:
 
-### 1. Somatórias do Histórico (núcleo do problema)
-Em `HistoricoMovimentacoes.tsx`, no `useMemo` de `metricas`:
-- Pular a linha quando `t.reversed_at` estiver preenchido (original anulado).
-- Pular também a linha-espelho de estorno, usando `classifyLedgerRow` de `@/lib/ledger/effective` — só agrega quando o resultado for `ORIGINAL_EFETIVO`.
-- Isso vale para fiat (`fiatTotal/Confirmado/Pendente`), cripto (`qtdTotal/usdTotal/...`) e para o contador `count`.
+- `src/components/projeto-detalhe/bonus/BonusResultadoLiquidoChart.tsx` (linhas 405-409): `calendarInitialMonth = dateRange?.start ?? new Date()`
+- `src/components/projeto-detalhe/VisaoGeralCharts.tsx` (linha 542): `calendarInitialMonth = periodStart ?? new Date()`
 
-A **lista** do histórico continua inalterada: a linha revertida segue visível com o badge "Revertida em …" (linhas ~1096 e ~1277) e o espelho de estorno também continua listado. Só a agregação muda.
+**Causa raiz:** o mês inicial é sempre o **início do período filtrado**. Com o filtro "Ano", `dateRange.start` = 01/01 do ano corrente, então o calendário abre em janeiro. Não é limitação de biblioteca — o calendário é implementado à mão com `date-fns` (`addMonths`/`subMonths`), e a navegação é livre.
 
-### 2. Transparência no cabeçalho
-No bloco de resumo, exibir uma nota discreta quando houver linhas excluídas do cálculo no recorte atual: `"N operação(ões) revertida(s) não incluída(s) nos totais"`, com tooltip explicando que os valores refletem o líquido efetivo. Sem novos controles nem toggles.
+## Melhoria proposta
 
-### 3. Auditoria dos demais consumidores
-Varrer os pontos que agregam `cash_ledger` **sem** filtro de reversão e aplicar `applyEffectiveFilter` (ou o teste equivalente em memória) apenas onde o consumo é **agregação/indicador**, nunca em telas de auditoria/edição:
+Criar um helper compartilhado `resolveCalendarInitialMonth(start, end)` que aplica a regra:
 
-Alvos de agregação a corrigir:
-- `src/components/caixa/RelatorioROI.tsx`
-- `src/hooks/useFinanceiroMensal.ts`
-- `src/hooks/useResumoOperacional.ts`
-- `src/hooks/useWorkspaceLucroRealizado.ts`
-- `src/hooks/useProjetoPerformance.ts`
-- `src/hooks/useProjectBonusAnalytics.ts`
-- `src/hooks/useParceiroFinanceiroCache.ts` / `useParceiroTabsCache.ts`
-- `src/components/caixa/HistoricoInvestidor.tsx` (totais; lista permanece)
-- `src/components/caixa/ConciliacaoSaldos.tsx` (validar caso a caso — saldo de conciliação pode já derivar de trigger)
+1. Se **hoje** está dentro do intervalo `[start, end]` → abrir no **mês de hoje**.
+2. Senão, se hoje é posterior ao intervalo → abrir no mês de `end` (mês mais recente com dados no filtro; ex.: "Mês anterior" continua abrindo no mês anterior).
+3. Senão (período totalmente futuro) → abrir no mês de `start`.
+4. Sem intervalo definido → `new Date()`.
 
-Explicitamente **não** alterar: `useReverterMovimentacao`, diálogos de edição/confirmação (`ConfirmarSaqueDialog`, `EditarTagsDialog`, `EditarDataTransacaoDialog`, `EditarSaqueConfirmadoDialog`), `useInvalidateCaixaData`, `usePreCommitValidation` — esses precisam enxergar a linha original.
+Toda a comparação usa o timezone operacional `America/Sao_Paulo`, coerente com `extractLocalDateKey`, para que a virada de dia/ano (31/12 → 01/01) seja correta independentemente do fuso do navegador.
 
-Cada arquivo será verificado antes da edição; se a leitura mostrar que já é filtrado indiretamente (via RPC canônica), fica registrado e não é tocado.
+Efeito por filtro:
+- 1 dia / 7 dias / Mês atual → mês corrente (inalterado na prática)
+- Mês anterior → mês anterior (regra 2, inalterado)
+- **Ano → mês corrente** (correção pedida)
+- Período custom → mês corrente se contiver hoje, senão o mês final do intervalo
 
-### 4. Regra de memória
-Registrar em memória de projeto a regra: *"Toda agregação sobre `cash_ledger` desconsidera `reversed_at IS NOT NULL` e espelhos `ESTORNO:`; listas de auditoria continuam exibindo ambos."*
+## Detalhes técnicos
 
-## Observações técnicas
+- Novo arquivo: `src/utils/calendarInitialMonth.ts` com a função pura + timezone São Paulo (`date-fns-tz`, já usado no projeto).
+- `BonusResultadoLiquidoChart.tsx`: substituir o `useMemo` das linhas 405-409 por `resolveCalendarInitialMonth(dateRange?.start, dateRange?.end)`.
+- `VisaoGeralCharts.tsx`: substituir a linha 542 por chamada equivalente com `periodStart`/`periodEnd`, sem alterar `calendarPeriodRange` (as estatísticas do período inteiro continuam funcionando como hoje).
+- `CalendarioLucros.tsx` **não muda**: continua respeitando `initialMonth` e mantendo a navegação manual (o `useEffect` só reage a mudanças reais da prop, então navegar mês a mês não é revertido).
 
-- Nenhuma migração de banco é necessária — os dados já estão corretos (`reversed_at` preenchido pela RPC `reverter_movimentacao_caixa`); o defeito é puramente de leitura/agregação.
-- Nenhuma alteração em saldos: saldos continuam vindo de triggers/eventos, não da soma do histórico.
-- Validação: comparar, num recorte com reversão conhecida, o total antes/depois — a diferença deve ser exatamente (valor original + valor do espelho).
+## Testes
+
+Suíte unitária nova `src/utils/__tests__/calendarInitialMonth.test.ts` com data "hoje" fixada (fake timers), cobrindo:
+
+- Ano com hoje em Janeiro, Junho, Julho, Novembro e Dezembro → abre no mês corrente
+- Virada de ano: 31/12 23:30 BRT e 01/01 00:30 BRT → mês correto em ambos
+- Filtro "Mês anterior" → continua abrindo no mês anterior
+- Filtro "1 dia" e "7 dias" → mês corrente
+- Período custom passado (ex.: mar-abr) → abre em abril
+- Período futuro → abre no mês de início
+- Sem range → mês corrente
+
+Depois: rodar a suíte completa de testes para confirmar ausência de regressão, e validar visualmente na aba Bônus → Visão Geral que o gráfico permanece idêntico com o filtro Ano e o calendário abre no mês corrente.
