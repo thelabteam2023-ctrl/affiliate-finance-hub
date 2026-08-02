@@ -25,6 +25,7 @@ import { CalendarioLucros } from "./CalendarioLucros";
 import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
 import { getConsolidatedLucro, getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
 import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
+import { resolveCalendarInitialMonth } from "@/utils/calendarInitialMonth";
 
 // =====================================================
 // TIPOS
@@ -539,7 +540,10 @@ export function VisaoGeralCharts({
     setCalendarOpen(open);
   };
 
-  const calendarInitialMonth = periodStart ?? new Date();
+  const calendarInitialMonth = useMemo(
+    () => resolveCalendarInitialMonth(periodStart, periodEnd),
+    [periodStart, periodEnd],
+  );
 
   // Detectar período multi-mês (ciclo) para que o calendário agregue totais do período inteiro
   const calendarPeriodRange = useMemo(() => {

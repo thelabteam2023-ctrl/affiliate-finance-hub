@@ -36,6 +36,7 @@ import { extractLocalDateKey, extractCivilDateKey, parseLocalDateTime } from "@/
 import { ptBR } from "date-fns/locale";
 import { ProjectBonus } from "@/hooks/useProjectBonuses";
 import { CalendarioLucros } from "../CalendarioLucros";
+import { resolveCalendarInitialMonth } from "@/utils/calendarInitialMonth";
 
 interface BonusBetData {
   id: string;
@@ -402,11 +403,11 @@ export function BonusResultadoLiquidoChart({
       }));
   }, [bonuses, bonusBets, ajustesPostLimitacao, perdasCancelamento, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
 
-  // Mês inicial do calendário: abre no mês do filtro ativo
-  const calendarInitialMonth = useMemo(() => {
-    if (dateRange?.start) return dateRange.start;
-    return new Date();
-  }, [dateRange]);
+  // Mês inicial do calendário: mês corrente quando o período o contém
+  const calendarInitialMonth = useMemo(
+    () => resolveCalendarInitialMonth(dateRange?.start, dateRange?.end),
+    [dateRange?.start, dateRange?.end],
+  );
 
   // MOVIDO para nível do componente (evitar violação de hooks dentro de renderChart)
   const useMonthlyTicks = !isSingleDayPeriod && chartData.length > 20;
