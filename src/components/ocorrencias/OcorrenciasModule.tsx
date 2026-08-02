@@ -208,8 +208,11 @@ export function OcorrenciasModule() {
               { key: 'todas', label: 'Todas', icon: <Inbox className="h-4 w-4" /> },
               { key: 'minhas', label: 'Minhas', icon: <Users className="h-4 w-4" /> },
               { key: 'historico', label: 'Histórico', icon: <CheckCircle2 className="h-4 w-4" /> },
+              ...(podeVerArquivadas
+                ? ([{ key: 'arquivadas', label: 'Arquivadas', icon: <Archive className="h-4 w-4" /> }] as const)
+                : ([] as const)),
               { key: 'estatisticas', label: 'Estatísticas', icon: <BarChart3 className="h-4 w-4" /> },
-            ] as const).map((tab) => (
+            ] as any[]).map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setFilterTab(tab.key)}
@@ -265,8 +268,11 @@ export function OcorrenciasModule() {
               statusFilter={statusFilter}
               modoMinhas={filterTab === 'minhas'}
               tipoFilter={tipoFilter}
+              apenasArquivadas={filterTab === 'arquivadas'}
               emptyMessage={
-                filterTab === 'historico'
+                filterTab === 'arquivadas'
+                  ? 'Nenhuma ocorrência arquivada.'
+                  : filterTab === 'historico'
                   ? 'Nenhuma ocorrência finalizada encontrada.'
                   : filterTab === 'minhas'
                   ? 'Nenhuma ocorrência atribuída a você.'
