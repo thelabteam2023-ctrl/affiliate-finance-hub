@@ -360,10 +360,12 @@ export function useAtualizarStatusOcorrencia() {
       id,
       novoStatus,
       statusAnterior,
+      aguardandoDe,
     }: {
       id: string;
       novoStatus: OcorrenciaStatus;
       statusAnterior: OcorrenciaStatus;
+      aguardandoDe?: string | null;
     }) => {
       // CENÁRIO: Cancelar ocorrência que já teve perda registrada
       // Precisamos estornar a perda antes de cancelar
