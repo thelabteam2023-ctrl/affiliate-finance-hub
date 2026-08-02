@@ -24,8 +24,8 @@ import { ResolucaoFinanceiraDialog } from './ResolucaoFinanceiraDialog';
 import { EditarOcorrenciaDialog } from './EditarOcorrenciaDialog';
 import { TimelineEvento } from './TimelineEvento';
 import { AguardandoDeDialog } from './AguardandoDeDialog';
-import type { OcorrenciaStatus, OcorrenciaEvento } from '@/types/ocorrencias';
-import { STATUS_LABELS, EVENTO_TIPO_LABELS, SUB_MOTIVO_LABELS } from '@/types/ocorrencias';
+import type { OcorrenciaStatus, OcorrenciaEvento, OcorrenciaDesfecho } from '@/types/ocorrencias';
+import { STATUS_LABELS, EVENTO_TIPO_LABELS, SUB_MOTIVO_LABELS, DESFECHO_LABELS } from '@/types/ocorrencias';
 import {
   Clock,
   User,
