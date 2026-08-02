@@ -19070,6 +19070,7 @@ export type Database = {
         | "bloqueio_bancario"
         | "bloqueio_contas"
         | "movimentacao_financeira"
+        | "movimentacao_cripto"
       parceria_status: "ATIVA" | "EM_ENCERRAMENTO" | "ENCERRADA" | "RENOVADA"
       solicitacao_prioridade: "baixa" | "media" | "alta" | "urgente"
       solicitacao_status: "pendente" | "em_execucao" | "concluida" | "recusada"
@@ -19329,6 +19330,7 @@ export const Constants = {
         "bloqueio_bancario",
         "bloqueio_contas",
         "movimentacao_financeira",
+        "movimentacao_cripto",
       ],
       parceria_status: ["ATIVA", "EM_ENCERRAMENTO", "ENCERRADA", "RENOVADA"],
       solicitacao_prioridade: ["baixa", "media", "alta", "urgente"],
