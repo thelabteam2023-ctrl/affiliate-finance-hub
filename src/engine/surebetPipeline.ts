@@ -4,7 +4,8 @@ import {
   type SurebetEngineConfig, 
   type SurebetEngineAnalysis,
   analisarArbitragem,
-  calcularStakesEqualizadasMultiCurrency
+  calcularStakesEqualizadasMultiCurrency,
+  calcularStakesDirecionadas
 } from "@/utils/surebetCurrencyEngine";
 
 export interface SurebetPipelineInput {
@@ -36,10 +37,29 @@ export function runSurebetPipeline(
     pipelineTrace // Pass trace into engine
   );
 
+  // 1b. Direcionamento de lucro (coluna "D"): quando apenas parte das pernas
+  // está marcada, o excedente é concentrado nelas e as demais ficam em break-even.
+  let stakesEfetivas = equalizationResult.stakesLocal;
+  const directedLegs = input.directedProfitLegs ?? [];
+  const refIndex = input.refIndex ?? input.legs.findIndex(l => l.isReference);
+  if (directedLegs.length > 0 && directedLegs.length < input.legs.length) {
+    const directedResult = calcularStakesDirecionadas(
+      input.legs,
+      input.config,
+      directedLegs,
+      refIndex,
+      input.arredondarFn,
+      pipelineTrace
+    );
+    if (directedResult.isValid) {
+      stakesEfetivas = directedResult.stakesLocal;
+    }
+  }
+
   // 2. Analisar Arbitragem baseada nas stakes reais/equalizadas
   const analysis = analisarArbitragem(
     input.legs,
-    equalizationResult.stakesLocal,
+    stakesEfetivas,
     input.config,
     input.numPernasEsperado,
     pipelineTrace // Pass trace into engine
