@@ -126,6 +126,13 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
       entidade_id: '',
       prioridade: 'media',
       valor_risco: 0,
+      coin: '',
+      network: '',
+      quantidade_cripto: 0,
+      tx_hash: '',
+      destino_tipo: 'externo',
+      wallet_destino_id: '',
+      endereco_destino_externo: '',
     },
   });
 
@@ -148,6 +155,9 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const valorRisco = form.watch('valor_risco');
   const tipoSelecionado = form.watch('tipo');
   const contextoEntidade = form.watch('contexto_entidade');
+  const destinoTipo = form.watch('destino_tipo');
+  const isWalletCtx = contextoEntidade === 'wallet';
+  const isParceiroCtx = contextoEntidade === 'banco' || isWalletCtx;
 
   const selectedBookmaker = useMemo(() => {
     if (contextoEntidade !== 'bookmaker') return null;
