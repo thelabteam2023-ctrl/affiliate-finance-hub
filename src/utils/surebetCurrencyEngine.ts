@@ -568,3 +568,104 @@ export function analisarArbitragem(
     exposicaoTotal,
   };
 }
+
+/**
+ * ─── SOLVER DE LUCRO DIRECIONADO ─────────────────────────────
+ *
+ * Quando o usuário marca apenas ALGUMAS pernas na coluna "D", o lucro deve
+ * ser concentrado nessas pernas: as pernas NÃO direcionadas passam a operar
+ * em break-even (payout = investimento total) e todo o excedente é
+ * distribuído igualmente entre as pernas direcionadas.
+ *
+ * Modelo (tudo em moeda de consolidação):
+ *   T = investimento total = Σ s_i
+ *   payout_i = s_i × D_i
+ *   não direcionada:  payout_i = T          → s_i = T / D_i
+ *   direcionada:      payout_j = R (= T+P)  → s_j = R / D_j
+ *   Âncora: a perna de referência mantém a stake informada pelo usuário.
+ *
+ * D_i = odd (back real) | odd−1 (freebet puro) | odd efetiva (stake misto).
+ * Pernas LAY não são suportadas aqui — o caminho lay usa a equalização padrão.
+ */
+export function calcularStakesDirecionadas(
+  legs: EngineLeg[],
+  config: SurebetEngineConfig,
+  directedProfitLegs: number[],
+  refIndex: number,
+  roundFn: (v: number) => number,
+  trace?: CalculationTrace
+): { stakesLocal: number[]; isValid: boolean } {
+  const { brlRates, consolidationCurrency } = config;
+  const n = legs.length;
+  const invalid = { stakesLocal: legs.map(l => l.stakeLocal), isValid: false };
+
+  if (n < 2) return invalid;
+  if (refIndex < 0 || refIndex >= n) return invalid;
+  if (legs.some(l => l.tipo === 'lay')) return invalid;
+  if (!legs.every(l => l.odd > 1)) return invalid;
+
+  const directed = new Set(directedProfitLegs.filter(i => i >= 0 && i < n));
+  if (directed.size === 0 || directed.size === n) return invalid;
+
+  const ref = legs[refIndex];
+  if (ref.stakeLocal <= 0) return invalid;
+
+  // Coeficiente D (retorno por unidade de stake) de cada perna
+  const coef = (leg: EngineLeg): number => {
+    const real = leg.realStakeLocal ?? (leg.isFreebet ? 0 : 1);
+    const fb = leg.freebetStakeLocal ?? (leg.isFreebet ? 1 : 0);
+    const total = real + fb;
+    if (total <= 0) return leg.odd;
+    return ((real / total) * leg.odd) + ((fb / total) * (leg.odd - 1));
+  };
+
+  const D = legs.map(coef);
+  if (D.some(d => !Number.isFinite(d) || d <= 0)) return invalid;
+
+  const toCons = (v: number, i: number) =>
+    convertViaBRL(v, legs[i].moeda, consolidationCurrency, brlRates, trace);
+  const fromCons = (v: number, i: number) =>
+    convertViaBRL(v, consolidationCurrency, legs[i].moeda, brlRates, trace);
+
+  const refStakeCons = toCons(ref.stakeLocal, refIndex);
+  const refPayoutCons = refStakeCons * D[refIndex];
+
+  const freeIdx = legs.map((_, i) => i).filter(i => i !== refIndex);
+  const sumInvW = freeIdx.filter(i => !directed.has(i)).reduce((a, i) => a + 1 / D[i], 0);
+  const sumInvU = freeIdx.filter(i => directed.has(i)).reduce((a, i) => a + 1 / D[i], 0);
+
+  let T: number; // investimento total consolidado
+  let R: number; // payout-alvo das pernas direcionadas
+
+  if (directed.has(refIndex)) {
+    // A referência é direcionada → o payout dela define R
+    R = refPayoutCons;
+    const denom = 1 - sumInvW;
+    if (denom <= 1e-9) return invalid;
+    T = (refStakeCons + R * sumInvU) / denom;
+  } else {
+    // A referência é break-even → o payout dela define T
+    T = refPayoutCons;
+    if (sumInvU <= 1e-9) return invalid;
+    R = (T - refStakeCons - T * sumInvW) / sumInvU;
+  }
+
+  if (!Number.isFinite(T) || !Number.isFinite(R) || T <= 0 || R <= 0) return invalid;
+
+  const stakesLocal = legs.map((leg, i) => {
+    if (i === refIndex) return leg.stakeLocal;
+    const targetPayoutCons = directed.has(i) ? R : T;
+    const value = fromCons(targetPayoutCons, i) / D[i];
+    if (!Number.isFinite(value) || value <= 0) return leg.stakeLocal;
+    return roundFn(value);
+  });
+
+  trace?.step("directed_profit_solver", {
+    inputs: { refIndex, directed: [...directed], D, refStakeCons },
+    outputs: { T, R, lucroDirecionado: R - T, stakesLocal },
+    currencyOut: consolidationCurrency,
+    formula: "s_i = (direcionada ? R : T) / D_i, com T = Σ s_i"
+  });
+
+  return { stakesLocal, isValid: true };
+}
