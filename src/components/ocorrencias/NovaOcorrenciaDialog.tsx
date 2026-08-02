@@ -522,7 +522,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                               <Select onValueChange={field.onChange} value={field.value} disabled={!selectedParceiroId}>
                                 <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                  {contasEWallets.map(c => (
+                                  {opcoesEntidade.map((c: any) => (
                                     <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
                                   ))}
                                 </SelectContent>
