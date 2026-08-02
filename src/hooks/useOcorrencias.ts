@@ -55,12 +55,21 @@ async function fetchOcorrencias(
     executorId?: string;
     requerenteId?: string;
     projetoId?: string;
+    /** Quando true, retorna SOMENTE ocorrências arquivadas (soft delete). */
+    apenasArquivadas?: boolean;
   }
 ): Promise<Ocorrencia[]> {
   let query = ocorrenciasTable()
     .select('*')
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false });
+
+  // Soft delete: arquivadas ficam fora de toda visão operacional
+  if (filters?.apenasArquivadas) {
+    query = query.not('deleted_at', 'is', null);
+  } else {
+    query = query.is('deleted_at', null);
+  }
 
   if (filters?.status && filters.status.length > 0) {
     query = query.in('status', filters.status);
@@ -126,6 +135,7 @@ export function useOcorrenciasKpis() {
       const { data, error } = await ocorrenciasTable()
         .select('id, status, prioridade, sla_violado, created_at, valor_risco, moeda')
         .eq('workspace_id', workspaceId!)
+        .is('deleted_at', null)
         .not('status', 'in', '(resolvido,cancelado)');
 
       if (error) throw error;
