@@ -26,16 +26,19 @@ import type { OcorrenciaTipo, OcorrenciaStatus } from '@/types/ocorrencias';
 import { getCurrencySymbol } from '@/types/currency';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useRole } from '@/hooks/useRole';
 import { toast } from 'sonner';
 
 
-type FilterTab = 'todas' | 'minhas' | 'historico' | 'estatisticas';
+type FilterTab = 'todas' | 'minhas' | 'historico' | 'arquivadas' | 'estatisticas';
 
 export function OcorrenciasModule() {
   const [novaOpen, setNovaOpen] = useState(false);
   const [filterTab, setFilterTab] = useState<FilterTab>('todas');
   const [tipoFilter, setTipoFilter] = useState<OcorrenciaTipo | null>(null);
   const { user, workspaceId } = useAuth();
+  const { isOwnerOrAdmin, isSystemOwner } = useRole();
+  const podeVerArquivadas = isOwnerOrAdmin || isSystemOwner;
   const { data: kpis, isLoading: loadingKpis, isError: kpiError } = useOcorrenciasKpis();
 
   // Self-monitoring: toast if system state is invalid
@@ -58,8 +61,10 @@ export function OcorrenciasModule() {
 
 
   // Status filter for active vs historical
-  const statusFilter: OcorrenciaStatus[] | undefined = useMemo(() => 
-    filterTab === 'historico'
+  const statusFilter: OcorrenciaStatus[] | undefined = useMemo(() =>
+    filterTab === 'arquivadas'
+      ? undefined
+      : filterTab === 'historico'
       ? ['resolvido', 'cancelado']
       : ['aberto', 'em_andamento', 'aguardando_terceiro'],
     [filterTab]
