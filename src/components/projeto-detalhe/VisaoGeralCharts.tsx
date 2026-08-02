@@ -539,7 +539,10 @@ export function VisaoGeralCharts({
     setCalendarOpen(open);
   };
 
-  const calendarInitialMonth = periodStart ?? new Date();
+  const calendarInitialMonth = useMemo(
+    () => resolveCalendarInitialMonth(periodStart, periodEnd),
+    [periodStart, periodEnd],
+  );
 
   // Detectar período multi-mês (ciclo) para que o calendário agregue totais do período inteiro
   const calendarPeriodRange = useMemo(() => {
