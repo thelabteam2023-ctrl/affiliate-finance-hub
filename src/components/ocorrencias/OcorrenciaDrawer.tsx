@@ -22,6 +22,8 @@ import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { StatusBadge, TipoBadge } from './OcorrenciaBadges';
 import { ResolucaoFinanceiraDialog } from './ResolucaoFinanceiraDialog';
 import { EditarOcorrenciaDialog } from './EditarOcorrenciaDialog';
+import { TimelineEvento } from './TimelineEvento';
+import { AguardandoDeDialog } from './AguardandoDeDialog';
 import type { OcorrenciaStatus, OcorrenciaEvento } from '@/types/ocorrencias';
 import { STATUS_LABELS, EVENTO_TIPO_LABELS, SUB_MOTIVO_LABELS } from '@/types/ocorrencias';
 import {
