@@ -577,6 +577,122 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                     <DollarSign className="h-4 w-4 text-primary" />
                     Financeiro e Urgência
                   </h4>
+                </div>
+
+                {isWalletCtx && (
+                <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
+                    <Hash className="h-4 w-4 text-primary" />
+                    Dados da Transação Cripto
+                  </h4>
+                  {walletOrigem && (
+                    <p className="text-[11px] text-muted-foreground -mt-2">
+                      Origem: <span className="font-medium text-foreground">{walletOrigem.label}</span> · rede {walletOrigem.network}
+                    </p>
+                  )}
+                  <div className="grid grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="coin"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Ativo</FormLabel>
+                          <FormControl><Input placeholder="USDT" className="h-10 bg-background uppercase" {...field} /></FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="network"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Rede usada</FormLabel>
+                          <FormControl>
+                            <Input placeholder={walletOrigem?.network || 'TRC20'} className="h-10 bg-background" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="quantidade_cripto"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Quantidade</FormLabel>
+                          <FormControl><Input type="number" step="0.00000001" className="h-10 bg-background font-mono" {...field} /></FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="destino_tipo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Destino</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'externo'}>
+                          <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="wallet_interna">Carteira cadastrada no sistema</SelectItem>
+                            <SelectItem value="externo">Endereço externo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+
+                  {destinoTipo === 'wallet_interna' ? (
+                    <FormField
+                      control={form.control}
+                      name="wallet_destino_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Carteira de destino</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione a carteira..." /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              {walletsDoParceiro
+                                .filter((w: any) => w.id !== selectedEntidadeId)
+                                .map((w: any) => (
+                                  <SelectItem key={w.id} value={w.id}>{w.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name="endereco_destino_externo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Endereço de destino</FormLabel>
+                          <FormControl><Input placeholder="0x... / T..." className="h-10 bg-background font-mono text-xs" {...field} /></FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  <FormField
+                    control={form.control}
+                    name="tx_hash"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Hash da transação</FormLabel>
+                        <FormControl><Input placeholder="Opcional — facilita o rastreio na rede" className="h-10 bg-background font-mono text-xs" {...field} /></FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                )}
+
+                <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    {isWalletCtx ? 'Valor em disputa (USD) e Urgência' : 'Financeiro e Urgência'}
+                  </h4>
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
