@@ -164,6 +164,15 @@ export const STATUS_LABELS: Record<OcorrenciaStatus, string> = {
   cancelado: 'Cancelado',
 };
 
+// Rótulos curtos de status (botões/filtros)
+export const STATUS_LABELS_LEGACY: Record<OcorrenciaStatus, string> = {
+  aberto: 'Aberto',
+  em_andamento: 'Em Andamento',
+  aguardando_terceiro: 'Aguardando Terceiro',
+  resolvido: 'Resolvido',
+  cancelado: 'Cancelado',
+};
+
 export const PRIORIDADE_COLORS: Record<OcorrenciaPrioridade, string> = {
   baixa: 'text-muted-foreground border-muted-foreground/50',
   media: 'text-blue-400 border-blue-400/50',
@@ -196,6 +205,19 @@ export const EVENTO_TIPO_LABELS: Record<OcorrenciaEventoTipo, string> = {
   observador_removido: 'removeu um observador',
   prioridade_alterada: 'alterou a prioridade',
   vinculo_adicionado: 'adicionou um vínculo',
+  campo_alterado: 'alterou um campo',
+};
+
+// Nomes amigáveis dos campos editáveis (usados na timeline)
+export const CAMPO_LABELS: Record<string, string> = {
+  titulo: 'Título',
+  descricao: 'Descrição',
+  tipo: 'Tipo',
+  sub_motivo: 'Sub-motivo',
+  prioridade: 'Prioridade',
+  valor_risco: 'Valor em risco',
+  data_ocorrencia: 'Data da ocorrência',
+  aguardando_de: 'Dependência externa',
 };
 
 // ============================================================
