@@ -224,6 +224,40 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     [walletOrigem]
   );
 
+  // Saldos reais por ativo da carteira de origem
+  const { data: saldosAtivos = [], isLoading: loadingSaldos } = useWalletSaldosAtivos(
+    isWalletCtx ? walletOrigem?.id : null
+  );
+  const coinSelecionada = form.watch('coin');
+  const quantidadeCripto = Number(form.watch('quantidade_cripto')) || 0;
+  const ativosDisponiveis = useMemo(() => {
+    if (saldosAtivos.length > 0) return saldosAtivos.map((s) => s.coin);
+    return moedasDaWallet.map((m) => String(m).toUpperCase());
+  }, [saldosAtivos, moedasDaWallet]);
+  const saldoAtivoSelecionado = useMemo(
+    () => saldosAtivos.find((s) => s.coin === (coinSelecionada || '').toUpperCase()) || null,
+    [saldosAtivos, coinSelecionada]
+  );
+  const saldoDisponivelCoin = saldoAtivoSelecionado?.saldo_disponivel_coin ?? null;
+  const valorDisputaUsd = useMemo(() => {
+    if (!saldoAtivoSelecionado) return 0;
+    return quantidadeCripto * (saldoAtivoSelecionado.cotacao_usd || 0);
+  }, [quantidadeCripto, saldoAtivoSelecionado]);
+  const isQuantidadeExcedente =
+    isWalletCtx && saldoDisponivelCoin !== null && quantidadeCripto > saldoDisponivelCoin + 1e-8;
+  const exposicaoWallet = useMemo(() => {
+    if (!saldoDisponivelCoin || saldoDisponivelCoin <= 0) return 0;
+    return (quantidadeCripto / saldoDisponivelCoin) * 100;
+  }, [quantidadeCripto, saldoDisponivelCoin]);
+
+  // Valor em disputa (USD) derivado da quantidade — evita duplicidade de entrada
+  useEffect(() => {
+    if (!isWalletCtx) return;
+    const atual = Number(form.getValues('valor_risco')) || 0;
+    const novo = Number(valorDisputaUsd.toFixed(2));
+    if (Math.abs(atual - novo) > 0.001) form.setValue('valor_risco', novo);
+  }, [isWalletCtx, valorDisputaUsd, form]);
+
   // Preenchimento automático a partir do cadastro da carteira de origem
   useEffect(() => {
     if (!isWalletCtx || !walletOrigem) return;
