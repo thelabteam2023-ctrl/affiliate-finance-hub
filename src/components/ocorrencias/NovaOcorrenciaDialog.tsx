@@ -518,7 +518,9 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                           name="entidade_id"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Conta ou Wallet</FormLabel>
+                           <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">
+                             {isWalletCtx ? 'Carteira de origem' : 'Conta ou Wallet'}
+                           </FormLabel>
                               <Select onValueChange={field.onChange} value={field.value} disabled={!selectedParceiroId}>
                                 <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
                                 <SelectContent>
