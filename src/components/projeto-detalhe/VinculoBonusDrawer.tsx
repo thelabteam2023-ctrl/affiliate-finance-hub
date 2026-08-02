@@ -193,7 +193,7 @@ export function VinculoBonusDrawer({
         bookmakerLogo={bookmakerLogo}
         bonuses={bookmakerBonuses}
         totalCredited={summary.total_credited}
-        currency={currency}
+        currency={effectiveCurrency}
         onAddBonus={handleAddBonus}
         onEditBonus={handleEditBonus}
         onDeleteBonus={handleDeleteBonus}
@@ -204,7 +204,7 @@ export function VinculoBonusDrawer({
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         projectId={projectId}
-        bookmakers={[{ id: bookmakerId, nome: bookmakerName, login_username: bookmakerLogin, login_password_encrypted: bookmakerPassword, bookmaker_catalogo_id: bookmakerCatalogoId, logo_url: bookmakerLogo, moeda: currency, saldo_atual: saldoCanonico }]}
+        bookmakers={[{ id: bookmakerId, nome: bookmakerName, login_username: bookmakerLogin, login_password_encrypted: bookmakerPassword, bookmaker_catalogo_id: bookmakerCatalogoId, logo_url: bookmakerLogo, moeda: effectiveCurrency, saldo_atual: saldoCanonico }]}
         bonus={editingBonus}
         preselectedBookmakerId={bookmakerId}
         saving={saving}
