@@ -16,6 +16,8 @@ interface Props {
   modoMinhas?: boolean;
   tipoFilter?: OcorrenciaTipo | null;
   emptyMessage?: string;
+  /** Exibe somente ocorrências arquivadas (soft delete) — owner/admin */
+  apenasArquivadas?: boolean;
 }
 
 function useBookmakerInfo(ids: string[]) {
@@ -70,7 +72,7 @@ function useProjetoNames(ids: string[]) {
   });
 }
 
-export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMessage }: Props) {
+export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMessage, apenasArquivadas }: Props) {
   const { user, workspaceId } = useAuth();
   const [detalheId, setDetalheId] = useState<string | null>(null);
 
@@ -86,7 +88,13 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
     error, 
     refetch,
     isRefetching
-  } = useOcorrencias(statusFilter ? { status: statusFilter } : undefined);
+  } = useOcorrencias(
+    apenasArquivadas
+      ? { apenasArquivadas: true }
+      : statusFilter
+      ? { status: statusFilter }
+      : undefined
+  );
 
   // Filter by user and type
   const lista = useMemo(() => {
