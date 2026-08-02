@@ -4,6 +4,7 @@
 
 export type OcorrenciaTipo =
   | 'movimentacao_financeira'
+  | 'movimentacao_cripto'
   | 'kyc'
   | 'bloqueio_bancario'
   | 'bloqueio_contas';
@@ -66,6 +67,21 @@ export const AGUARDANDO_DE_DESCRICOES: Record<OcorrenciaAguardandoDe, string> = 
   outro: 'Outra dependência externa',
 };
 
+/**
+ * Desfecho da tentativa de recuperação de ativos (usado principalmente em
+ * ocorrências de movimentação cripto, mas válido para qualquer perda).
+ */
+export type OcorrenciaDesfecho =
+  | 'recuperado_total'
+  | 'recuperado_parcial'
+  | 'perda_definitiva';
+
+export const DESFECHO_LABELS: Record<OcorrenciaDesfecho, string> = {
+  recuperado_total: 'Recuperado integralmente',
+  recuperado_parcial: 'Recuperado parcialmente',
+  perda_definitiva: 'Perda definitiva',
+};
+
 export interface OcorrenciaAnexo {
   nome: string;
   url: string;
@@ -91,6 +107,18 @@ export interface Ocorrencia {
   parceiro_id?: string | null;
   aposta_id?: string | null;
   wallet_id?: string | null;
+  // Contexto cripto
+  wallet_origem_id?: string | null;
+  wallet_destino_id?: string | null;
+  endereco_destino_externo?: string | null;
+  network?: string | null;
+  coin?: string | null;
+  quantidade_cripto?: number | null;
+  tx_hash?: string | null;
+  // Ciclo de recuperação
+  valor_recuperado?: number | null;
+  desfecho?: OcorrenciaDesfecho | null;
+  perda_ledger_id?: string | null;
   sla_horas?: number | null;
   sla_alerta_em?: string | null;
   sla_violado: boolean;
@@ -143,6 +171,7 @@ export interface OcorrenciaObservador {
 
 export const TIPO_LABELS: Record<OcorrenciaTipo, string> = {
   movimentacao_financeira: 'MOVIMENTAÇÃO FINANCEIRA',
+  movimentacao_cripto: 'MOVIMENTAÇÃO CRIPTO',
   kyc: 'KYC',
   bloqueio_bancario: 'BLOQUEIO BANCÁRIO',
   bloqueio_contas: 'BLOQUEIO CONTAS',
@@ -224,6 +253,15 @@ export const CAMPO_LABELS: Record<string, string> = {
   valor_risco: 'Valor em risco',
   data_ocorrencia: 'Data da ocorrência',
   aguardando_de: 'Dependência externa',
+  coin: 'Ativo',
+  network: 'Rede',
+  quantidade_cripto: 'Quantidade',
+  tx_hash: 'Hash da transação',
+  endereco_destino_externo: 'Endereço de destino',
+  wallet_origem_id: 'Carteira de origem',
+  wallet_destino_id: 'Carteira de destino',
+  valor_recuperado: 'Valor recuperado',
+  desfecho: 'Desfecho',
 };
 
 // ============================================================
@@ -232,6 +270,15 @@ export const CAMPO_LABELS: Record<string, string> = {
 
 export const SUB_MOTIVOS: Record<OcorrenciaTipo, { value: string; label: string }[]> = {
   movimentacao_financeira: [], // handled by SUB_MOTIVOS_MOVIMENTACAO per context
+  movimentacao_cripto: [
+    { value: 'rede_incorreta', label: 'Envio em rede incorreta' },
+    { value: 'endereco_incorreto', label: 'Endereço de destino incorreto' },
+    { value: 'transacao_nao_creditada', label: 'Transação não creditada no destino' },
+    { value: 'transacao_travada', label: 'Transação travada / pendente na rede' },
+    { value: 'valor_divergente', label: 'Valor recebido divergente' },
+    { value: 'fraude', label: 'Fraude / interceptação' },
+    { value: 'outro', label: 'Outro motivo' },
+  ],
   kyc: [
     { value: 'documento_pendente', label: 'Documento pendente de envio' },
     { value: 'documento_rejeitado', label: 'Documento rejeitado' },
