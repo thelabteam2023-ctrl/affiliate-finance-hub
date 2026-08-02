@@ -834,6 +834,8 @@ export function useReabrirOcorrencia() {
           resultado_financeiro: null,
           valor_perda: null,
           perda_registrada_ledger: false,
+          valor_recuperado: null,
+          desfecho: null,
         })
         .eq('id', id)
         .eq('workspace_id', workspaceId!);
