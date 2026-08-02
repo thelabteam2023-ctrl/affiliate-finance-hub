@@ -20,22 +20,26 @@ import {
   ArrowRight,
   Timer,
   AlertCircle,
+  Archive,
 } from 'lucide-react';
 import { TIPO_LABELS } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaStatus } from '@/types/ocorrencias';
 import { getCurrencySymbol } from '@/types/currency';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useRole } from '@/hooks/useRole';
 import { toast } from 'sonner';
 
 
-type FilterTab = 'todas' | 'minhas' | 'historico' | 'estatisticas';
+type FilterTab = 'todas' | 'minhas' | 'historico' | 'arquivadas' | 'estatisticas';
 
 export function OcorrenciasModule() {
   const [novaOpen, setNovaOpen] = useState(false);
   const [filterTab, setFilterTab] = useState<FilterTab>('todas');
   const [tipoFilter, setTipoFilter] = useState<OcorrenciaTipo | null>(null);
   const { user, workspaceId } = useAuth();
+  const { isOwnerOrAdmin, isSystemOwner } = useRole();
+  const podeVerArquivadas = isOwnerOrAdmin || isSystemOwner;
   const { data: kpis, isLoading: loadingKpis, isError: kpiError } = useOcorrenciasKpis();
 
   // Self-monitoring: toast if system state is invalid
@@ -58,8 +62,10 @@ export function OcorrenciasModule() {
 
 
   // Status filter for active vs historical
-  const statusFilter: OcorrenciaStatus[] | undefined = useMemo(() => 
-    filterTab === 'historico'
+  const statusFilter: OcorrenciaStatus[] | undefined = useMemo(() =>
+    filterTab === 'arquivadas'
+      ? undefined
+      : filterTab === 'historico'
       ? ['resolvido', 'cancelado']
       : ['aberto', 'em_andamento', 'aguardando_terceiro'],
     [filterTab]
@@ -203,8 +209,11 @@ export function OcorrenciasModule() {
               { key: 'todas', label: 'Todas', icon: <Inbox className="h-4 w-4" /> },
               { key: 'minhas', label: 'Minhas', icon: <Users className="h-4 w-4" /> },
               { key: 'historico', label: 'Histórico', icon: <CheckCircle2 className="h-4 w-4" /> },
+              ...(podeVerArquivadas
+                ? ([{ key: 'arquivadas', label: 'Arquivadas', icon: <Archive className="h-4 w-4" /> }] as const)
+                : ([] as const)),
               { key: 'estatisticas', label: 'Estatísticas', icon: <BarChart3 className="h-4 w-4" /> },
-            ] as const).map((tab) => (
+            ] as any[]).map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setFilterTab(tab.key)}
@@ -260,8 +269,11 @@ export function OcorrenciasModule() {
               statusFilter={statusFilter}
               modoMinhas={filterTab === 'minhas'}
               tipoFilter={tipoFilter}
+              apenasArquivadas={filterTab === 'arquivadas'}
               emptyMessage={
-                filterTab === 'historico'
+                filterTab === 'arquivadas'
+                  ? 'Nenhuma ocorrência arquivada.'
+                  : filterTab === 'historico'
                   ? 'Nenhuma ocorrência finalizada encontrada.'
                   : filterTab === 'minhas'
                   ? 'Nenhuma ocorrência atribuída a você.'

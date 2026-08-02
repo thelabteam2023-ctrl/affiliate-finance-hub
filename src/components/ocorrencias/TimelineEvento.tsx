@@ -110,6 +110,19 @@ export function TimelineEvento({ evento, autorNome, resolveNome }: Props) {
     const anterior = evento.valor_anterior;
     const novo = evento.valor_novo;
 
+    // Exclusão lógica / restauração (auditoria)
+    if (evento.tipo === 'campo_alterado' && novo === 'ARQUIVADA') {
+      return (
+        <span className="inline-flex flex-wrap items-center gap-1.5">
+          arquivou esta ocorrência (exclusão lógica)
+          {evento.conteudo ? <Chip tone="from">{evento.conteudo}</Chip> : null}
+        </span>
+      );
+    }
+    if (evento.tipo === 'campo_alterado' && anterior === 'ARQUIVADA' && novo === 'ATIVA') {
+      return <span>restaurou esta ocorrência do arquivo</span>;
+    }
+
     if (evento.tipo === 'status_alterado' && (anterior || novo)) {
       const de = anterior ? STATUS_LABELS[anterior as OcorrenciaStatus] || anterior : '—';
       const para = novo

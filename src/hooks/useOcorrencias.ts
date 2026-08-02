@@ -55,12 +55,21 @@ async function fetchOcorrencias(
     executorId?: string;
     requerenteId?: string;
     projetoId?: string;
+    /** Quando true, retorna SOMENTE ocorrências arquivadas (soft delete). */
+    apenasArquivadas?: boolean;
   }
 ): Promise<Ocorrencia[]> {
   let query = ocorrenciasTable()
     .select('*')
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false });
+
+  // Soft delete: arquivadas ficam fora de toda visão operacional
+  if (filters?.apenasArquivadas) {
+    query = query.not('deleted_at', 'is', null);
+  } else {
+    query = query.is('deleted_at', null);
+  }
 
   if (filters?.status && filters.status.length > 0) {
     query = query.in('status', filters.status);
@@ -126,6 +135,7 @@ export function useOcorrenciasKpis() {
       const { data, error } = await ocorrenciasTable()
         .select('id, status, prioridade, sla_violado, created_at, valor_risco, moeda')
         .eq('workspace_id', workspaceId!)
+        .is('deleted_at', null)
         .not('status', 'in', '(resolvido,cancelado)');
 
       if (error) throw error;
@@ -375,11 +385,14 @@ export function useAtualizarStatusOcorrencia() {
       novoStatus,
       statusAnterior,
       aguardandoDe,
+      motivo,
     }: {
       id: string;
       novoStatus: OcorrenciaStatus;
       statusAnterior: OcorrenciaStatus;
       aguardandoDe?: string | null;
+      /** Motivo do cancelamento (ex.: "Aberta por engano") */
+      motivo?: string | null;
     }) => {
       // CENÁRIO: Cancelar ocorrência que já teve perda registrada
       // Precisamos estornar a perda antes de cancelar
@@ -449,6 +462,7 @@ export function useAtualizarStatusOcorrencia() {
       if (novoStatus === 'cancelado') {
         extra.cancelled_at = new Date().toISOString();
         extra.perda_registrada_ledger = false; // Marcar que a perda foi estornada
+        extra.cancel_reason = motivo?.trim() || null;
       }
       // Dependência externa só faz sentido no estado de espera
       extra.aguardando_de = novoStatus === 'aguardando_terceiro' ? (aguardandoDe || null) : null;
@@ -466,7 +480,12 @@ export function useAtualizarStatusOcorrencia() {
         autor_id: user!.id,
         valor_anterior: statusAnterior,
         valor_novo: novoStatus,
-        conteudo: novoStatus === 'aguardando_terceiro' ? (aguardandoDe || null) : null,
+        conteudo:
+          novoStatus === 'aguardando_terceiro'
+            ? aguardandoDe || null
+            : novoStatus === 'cancelado'
+            ? motivo?.trim() || null
+            : null,
       });
     },
     onSuccess: (_, vars) => {
@@ -943,24 +962,69 @@ export function useAtualizarExecutorOcorrencia() {
 }
 
 // ============================================================
-// MUTATION: excluir ocorrência (apenas owner/admin)
+// MUTATION: arquivar ocorrência (soft delete — apenas owner/admin)
 // ============================================================
 export function useExcluirOcorrencia() {
   const { workspaceId } = useAuth();
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await ocorrenciasTable()
-        .delete()
-        .eq('id', id)
-        .eq('workspace_id', workspaceId!);
+    mutationFn: async ({ id, motivo }: { id: string; motivo: string }) => {
+      const { data, error } = await (supabase as any).rpc('soft_delete_ocorrencia', {
+        p_id: id,
+        p_motivo: motivo,
+      });
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.all(workspaceId!) });
-      toast.success('Ocorrência excluída');
+      qc.invalidateQueries({ queryKey: ['ocorrencias'] });
+      toast.success('Ocorrência arquivada', {
+        description: 'O registro foi preservado para auditoria e pode ser restaurado por um administrador.',
+      });
     },
-    onError: () => toast.error('Erro ao excluir ocorrência'),
+    onError: (err: any) => {
+      const msg = String(err?.message || '');
+      if (msg.includes('VINCULO_FINANCEIRO')) {
+        toast.error('Exclusão bloqueada', {
+          description: 'Esta ocorrência possui perda registrada no ledger. Estorne a perda (ou cancele a ocorrência) antes de arquivar.',
+        });
+      } else if (msg.includes('PERMISSAO_NEGADA')) {
+        toast.error('Apenas proprietários e administradores podem arquivar ocorrências');
+      } else if (msg.includes('MOTIVO_OBRIGATORIO')) {
+        toast.error('Informe um motivo com pelo menos 10 caracteres');
+      } else {
+        toast.error('Erro ao arquivar ocorrência');
+      }
+    },
+  });
+}
+
+// ============================================================
+// MUTATION: restaurar ocorrência arquivada (owner/admin)
+// ============================================================
+export function useRestaurarOcorrencia() {
+  const { workspaceId } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await (supabase as any).rpc('restore_ocorrencia', { p_id: id });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ocorrencias'] });
+      toast.success('Ocorrência restaurada');
+    },
+    onError: (err: any) => {
+      const msg = String(err?.message || '');
+      toast.error(
+        msg.includes('PERMISSAO_NEGADA')
+          ? 'Apenas proprietários e administradores podem restaurar ocorrências'
+          : 'Erro ao restaurar ocorrência'
+      );
+    },
   });
 }

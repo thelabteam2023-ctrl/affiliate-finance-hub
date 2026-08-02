@@ -7296,12 +7296,16 @@ export type Database = {
           ajuste_ledger_id: string | null
           aposta_id: string | null
           bookmaker_id: string | null
+          cancel_reason: string | null
           cancelled_at: string | null
           coin: string | null
           conta_bancaria_id: string | null
           contexto_metadata: Json | null
           created_at: string
           data_ocorrencia: string
+          delete_reason: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           descricao: string
           desfecho: string | null
           endereco_destino_externo: string | null
@@ -7343,12 +7347,16 @@ export type Database = {
           ajuste_ledger_id?: string | null
           aposta_id?: string | null
           bookmaker_id?: string | null
+          cancel_reason?: string | null
           cancelled_at?: string | null
           coin?: string | null
           conta_bancaria_id?: string | null
           contexto_metadata?: Json | null
           created_at?: string
           data_ocorrencia?: string
+          delete_reason?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           descricao: string
           desfecho?: string | null
           endereco_destino_externo?: string | null
@@ -7390,12 +7398,16 @@ export type Database = {
           ajuste_ledger_id?: string | null
           aposta_id?: string | null
           bookmaker_id?: string | null
+          cancel_reason?: string | null
           cancelled_at?: string | null
           coin?: string | null
           conta_bancaria_id?: string | null
           contexto_metadata?: Json | null
           created_at?: string
           data_ocorrencia?: string
+          delete_reason?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           descricao?: string
           desfecho?: string | null
           endereco_destino_externo?: string | null
@@ -18863,6 +18875,7 @@ export type Database = {
         Args: { p_estrategia: string; p_resultado: string }
         Returns: string
       }
+      restore_ocorrencia: { Args: { p_id: string }; Returns: Json }
       revert_wallet_transit: {
         Args: { p_ledger_id: string; p_motivo?: string; p_status?: string }
         Returns: Json
@@ -18933,6 +18946,10 @@ export type Database = {
           p_motivo: string
           p_transacao_id: string
         }
+        Returns: Json
+      }
+      soft_delete_ocorrencia: {
+        Args: { p_id: string; p_motivo: string }
         Returns: Json
       }
       supplier_ledger_insert: {

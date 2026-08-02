@@ -132,6 +132,11 @@ export interface Ocorrencia {
   updated_at: string;
   resolved_at?: string | null;
   cancelled_at?: string | null;
+  // Auditoria de exclusão lógica / cancelamento
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+  delete_reason?: string | null;
+  cancel_reason?: string | null;
   // Joins
   requerente?: { id: string; full_name: string; avatar_url?: string };
   executor?: { id: string; full_name: string; avatar_url?: string };
