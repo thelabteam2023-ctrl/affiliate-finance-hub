@@ -80,17 +80,17 @@ function getIntensityLevel(value: number, maxAbsValue: number): number {
 function getHeatmapTone(lucro: number, temDados: boolean, maxAbsLucro: number) {
   if (!temDados) {
     return {
-      cell: "bg-muted/15 dark:bg-muted/15 border border-border/20",
-      day: "text-muted-foreground/55",
-      value: "text-muted-foreground/55",
+      cell: "bg-muted/10 dark:bg-muted/5 border border-border/10",
+      day: "text-muted-foreground/40",
+      value: "text-muted-foreground/30",
     };
   }
 
   if (lucro === 0) {
     return {
-      cell: "bg-secondary/70 dark:bg-secondary/70 border border-border/35",
-      day: "text-foreground/80",
-      value: "text-muted-foreground",
+      cell: "bg-secondary/40 dark:bg-secondary/20 border border-border/20",
+      day: "text-foreground/70",
+      value: "text-muted-foreground/60",
     };
   }
 
@@ -100,27 +100,27 @@ function getHeatmapTone(lucro: number, temDados: boolean, maxAbsLucro: number) {
     switch (level) {
       case 1:
         return {
-          cell: "bg-emerald-100 dark:bg-success/14 border border-emerald-200 dark:border-success/20",
-          day: "text-emerald-700 dark:text-success",
-          value: "text-emerald-700 dark:text-success",
+          cell: "bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20",
+          day: "text-emerald-700 dark:text-emerald-400",
+          value: "text-emerald-600 dark:text-emerald-400/80",
         };
       case 2:
         return {
-          cell: "bg-emerald-200 dark:bg-success/24 border border-emerald-300 dark:border-success/25",
-          day: "text-emerald-800 dark:text-success",
-          value: "text-emerald-800 dark:text-success",
+          cell: "bg-emerald-100 dark:bg-emerald-500/25 border border-emerald-200 dark:border-emerald-500/30",
+          day: "text-emerald-800 dark:text-emerald-300",
+          value: "text-emerald-700 dark:text-emerald-300/80",
         };
       case 3:
         return {
-          cell: "bg-emerald-300 dark:bg-success/38 border border-emerald-400 dark:border-success/30",
-          day: "text-emerald-900 dark:text-emerald-200",
-          value: "text-emerald-900 dark:text-emerald-200/90",
+          cell: "bg-emerald-500 dark:bg-emerald-500/60 border border-emerald-600 dark:border-emerald-500/40",
+          day: "text-white dark:text-white",
+          value: "text-white/90 dark:text-white/90",
         };
       default:
         return {
-          cell: "bg-emerald-500 dark:bg-success/58 border border-emerald-600 dark:border-success/35 shadow-soft",
-          day: "text-emerald-950 dark:text-emerald-100",
-          value: "text-emerald-950 dark:text-emerald-100/90",
+          cell: "bg-emerald-600 dark:bg-emerald-500 border border-emerald-700 dark:border-emerald-400 shadow-soft",
+          day: "text-white dark:text-white",
+          value: "text-white dark:text-white",
         };
     }
   }
@@ -128,27 +128,27 @@ function getHeatmapTone(lucro: number, temDados: boolean, maxAbsLucro: number) {
   switch (level) {
     case 1:
       return {
-        cell: "bg-red-100 dark:bg-destructive/12 border border-red-200 dark:border-destructive/18",
-        day: "text-red-700 dark:text-destructive",
-        value: "text-red-700 dark:text-destructive",
+        cell: "bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20",
+        day: "text-rose-700 dark:text-rose-400",
+        value: "text-rose-600 dark:text-rose-400/80",
       };
     case 2:
       return {
-        cell: "bg-red-200 dark:bg-destructive/22 border border-red-300 dark:border-destructive/22",
-        day: "text-red-800 dark:text-destructive",
-        value: "text-red-800 dark:text-destructive",
+        cell: "bg-rose-100 dark:bg-rose-500/25 border border-rose-200 dark:border-rose-500/30",
+        day: "text-rose-800 dark:text-rose-300",
+        value: "text-rose-700 dark:text-rose-300/80",
       };
     case 3:
       return {
-        cell: "bg-red-300 dark:bg-destructive/34 border border-red-400 dark:border-destructive/28",
-        day: "text-red-900 dark:text-red-200",
-        value: "text-red-900 dark:text-red-200/90",
+        cell: "bg-rose-500 dark:bg-rose-500/60 border border-rose-600 dark:border-rose-500/40",
+        day: "text-white dark:text-white",
+        value: "text-white/90 dark:text-white/90",
       };
     default:
       return {
-        cell: "bg-red-500 dark:bg-destructive/48 border border-red-600 dark:border-destructive/32 shadow-soft",
-        day: "text-red-950 dark:text-red-100",
-        value: "text-red-950 dark:text-red-100/90",
+        cell: "bg-rose-600 dark:bg-rose-500 border border-rose-700 dark:border-rose-400 shadow-soft",
+        day: "text-white dark:text-white",
+        value: "text-white dark:text-white",
       };
   }
 }
@@ -398,11 +398,11 @@ export function CalendarioLucros({
   const renderLegend = () => (
     <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/75">
       <span>Menos</span>
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-border/20 bg-muted/15" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-200 dark:border-success/20 bg-emerald-100 dark:bg-success/14" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-300 dark:border-success/25 bg-emerald-200 dark:bg-success/24" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-400 dark:border-success/30 bg-emerald-300 dark:bg-success/38" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-600 dark:border-success/35 bg-emerald-500 dark:bg-success/58" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-border/10 bg-muted/10 dark:bg-muted/5" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-100 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-200 dark:border-emerald-500/30 bg-emerald-100 dark:bg-emerald-500/25" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-600 dark:border-emerald-500/40 bg-emerald-500 dark:bg-emerald-500/60" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-700 dark:border-emerald-400 bg-emerald-600 dark:bg-emerald-500" />
       <span>Mais</span>
     </div>
   );
