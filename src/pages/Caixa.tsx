@@ -912,7 +912,7 @@ export default function Caixa() {
       }
       // Se origem é CAIXA_OPERACIONAL, é uma liquidação (Caixa → Investidor)
       if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
-        return getCaixaInfo(transacao.origem_conta_bancaria_id, transacao.origem_wallet_id);
+        return getCaixaInfo(transacao.origem_conta_bancaria_id, transacao.origem_wallet_id, isCryptoTx(transacao));
       }
     }
     
@@ -921,7 +921,7 @@ export default function Caixa() {
     }
     
     if (transacao.tipo_transacao === "LIQUIDACAO") {
-      return getCaixaInfo(transacao.origem_conta_bancaria_id, transacao.origem_wallet_id);
+      return getCaixaInfo(transacao.origem_conta_bancaria_id, transacao.origem_wallet_id, isCryptoTx(transacao));
     }
     
     // AJUSTE_SALDO: origem é a bookmaker ajustada
@@ -935,7 +935,7 @@ export default function Caixa() {
     }
     
     if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
-      return getCaixaInfo(transacao.origem_conta_bancaria_id, transacao.origem_wallet_id);
+      return getCaixaInfo(transacao.origem_conta_bancaria_id, transacao.origem_wallet_id, isCryptoTx(transacao));
     }
     
     if (transacao.origem_tipo === "PARCEIRO_CONTA" && transacao.origem_conta_bancaria_id) {
@@ -1021,7 +1021,7 @@ export default function Caixa() {
     if (transacao.tipo_transacao === "APORTE_FINANCEIRO") {
       // Se destino é CAIXA_OPERACIONAL, é um aporte (Investidor → Caixa)
       if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
-        return getCaixaInfo(transacao.destino_conta_bancaria_id, transacao.destino_wallet_id);
+        return getCaixaInfo(transacao.destino_conta_bancaria_id, transacao.destino_wallet_id, isCryptoTx(transacao));
       }
       // Se origem é CAIXA_OPERACIONAL, é uma liquidação (Caixa → Investidor)
       if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
@@ -1030,7 +1030,7 @@ export default function Caixa() {
     }
     
     if (transacao.tipo_transacao === "APORTE") {
-      return getCaixaInfo(transacao.destino_conta_bancaria_id, transacao.destino_wallet_id);
+      return getCaixaInfo(transacao.destino_conta_bancaria_id, transacao.destino_wallet_id, isCryptoTx(transacao));
     }
     
     if (transacao.tipo_transacao === "LIQUIDACAO") {
@@ -1038,7 +1038,7 @@ export default function Caixa() {
     }
     
     if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
-      return getCaixaInfo(transacao.destino_conta_bancaria_id, transacao.destino_wallet_id);
+      return getCaixaInfo(transacao.destino_conta_bancaria_id, transacao.destino_wallet_id, isCryptoTx(transacao));
     }
     
     if (transacao.destino_tipo === "PARCEIRO_CONTA" && transacao.destino_conta_bancaria_id) {
