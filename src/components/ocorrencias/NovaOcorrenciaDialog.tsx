@@ -336,14 +336,22 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
         toast.error('O valor em disputa não pode exceder o saldo disponível na casa.');
         return;
       }
+      if (step === 2 && isQuantidadeExcedente) {
+        toast.error('A quantidade em disputa não pode exceder o saldo disponível da carteira.');
+        return;
+      }
+      if (step === 2 && isWalletCtx && (!form.getValues('coin') || Number(form.getValues('quantidade_cripto')) <= 0)) {
+        toast.error('Informe o ativo e a quantidade em disputa da carteira.');
+        return;
+      }
       setStep(prev => prev + 1);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl p-0 overflow-hidden border-border/40 shadow-2xl">
-        <DialogHeader className="p-6 pb-2">
+      <DialogContent className="max-w-xl p-0 overflow-hidden border-border/40 shadow-2xl max-h-[92dvh] flex flex-col gap-0">
+        <DialogHeader className="p-6 pb-2 shrink-0">
           <div className="flex items-center gap-2 mb-2">
             <Badge variant="outline" className="text-[10px] font-bold tracking-widest uppercase py-0.5 px-2 bg-muted/50">Passo {step} de 3</Badge>
           </div>
@@ -351,7 +359,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-6 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-6 py-4 flex-1 overflow-y-auto custom-scrollbar">
             {step === 1 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
                 <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
@@ -647,7 +655,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       Selecione a carteira de origem no passo anterior para preenchimento automático.
                     </p>
                   )}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="coin"
@@ -765,7 +773,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                     <DollarSign className="h-4 w-4 text-primary" />
                     {isWalletCtx ? 'Valor em disputa (USD) e Urgência' : 'Financeiro e Urgência'}
                   </h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="prioridade"
@@ -900,7 +908,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
           </form>
         </Form>
 
-        <DialogFooter className="p-6 border-t border-border/40 bg-muted/5">
+        <DialogFooter className="p-6 border-t border-border/40 bg-muted/5 shrink-0">
            <div className="flex w-full items-center justify-between">
              {step > 1 ? (
                <Button type="button" variant="outline" onClick={() => setStep(prev => prev - 1)} className="gap-2 px-5 font-bold text-xs uppercase tracking-wider">
@@ -916,7 +924,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                     type="button" 
                     onClick={nextStep} 
                     className="gap-2 px-8 font-bold text-xs uppercase tracking-wider shadow-lg shadow-primary/20"
-                    disabled={step === 2 && isValueExceedingBalance}
+                    disabled={step === 2 && (isValueExceedingBalance || isQuantidadeExcedente)}
                   >
                     Próximo <ChevronRight className="h-4 w-4" />
                   </Button>
