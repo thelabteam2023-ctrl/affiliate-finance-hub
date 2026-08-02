@@ -45,7 +45,13 @@ export function PrioridadeBadge({ prioridade }: { prioridade: OcorrenciaPriorida
   );
 }
 
-export function StatusBadge({ status }: { status: OcorrenciaStatus }) {
+export function StatusBadge({
+  status,
+  aguardandoDe,
+}: {
+  status: OcorrenciaStatus;
+  aguardandoDe?: string | null;
+}) {
   const icons: Record<OcorrenciaStatus, React.ReactNode> = {
     aberto: <Circle className="h-3 w-3" />,
     em_andamento: <Clock className="h-3 w-3" />,
@@ -71,7 +77,7 @@ export function StatusBadge({ status }: { status: OcorrenciaStatus }) {
       )}
     >
       {icons[status]}
-      {STATUS_LABELS[status]}
+      {getStatusLabel(status, aguardandoDe)}
     </Badge>
   );
 }
