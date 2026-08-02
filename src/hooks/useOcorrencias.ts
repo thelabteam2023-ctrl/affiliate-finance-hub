@@ -502,20 +502,38 @@ export function useEditarOcorrencia() {
       if (fields.valor_risco !== undefined) updateData.valor_risco = fields.valor_risco;
       if (fields.data_ocorrencia !== undefined) updateData.data_ocorrencia = fields.data_ocorrencia;
 
+      // Snapshot ANTES da alteração — base para o diff auditável da timeline
+      const { data: anterior } = await ocorrenciasTable()
+        .select('titulo, descricao, tipo, sub_motivo, prioridade, valor_risco, data_ocorrencia')
+        .eq('id', id)
+        .eq('workspace_id', workspaceId!)
+        .single();
+
       const { error } = await ocorrenciasTable()
         .update(updateData)
         .eq('id', id)
         .eq('workspace_id', workspaceId!);
       if (error) throw error;
 
-      // Registrar evento de edição
-      await eventosTable().insert({
-        ocorrencia_id: id,
-        workspace_id: workspaceId!,
-        tipo: 'comentario',
-        conteudo: 'Ocorrência editada',
-        autor_id: user!.id,
-      });
+      // Um evento por campo efetivamente alterado (trilha de auditoria)
+      const norm = (v: unknown) =>
+        v === null || v === undefined || v === '' ? '' : String(v);
+
+      const eventos = Object.entries(updateData)
+        .filter(([campo, novo]) => norm(anterior?.[campo]) !== norm(novo))
+        .map(([campo, novo]) => ({
+          ocorrencia_id: id,
+          workspace_id: workspaceId!,
+          tipo: campo === 'prioridade' ? 'prioridade_alterada' : 'campo_alterado',
+          conteudo: campo,
+          valor_anterior: norm(anterior?.[campo]) || null,
+          valor_novo: norm(novo) || null,
+          autor_id: user!.id,
+        }));
+
+      if (eventos.length > 0) {
+        await eventosTable().insert(eventos);
+      }
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.all(workspaceId!) });
