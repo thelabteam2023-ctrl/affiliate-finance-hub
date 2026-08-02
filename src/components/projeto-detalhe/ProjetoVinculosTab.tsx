@@ -196,7 +196,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
-  const [selectedBookmakerForBonus, setSelectedBookmakerForBonus] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmakerCatalogoId?: string | null } | null>(null);
+  const [selectedBookmakerForBonus, setSelectedBookmakerForBonus] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmakerCatalogoId?: string | null; moeda?: string | null } | null>(null);
   const [filterBonusOnly, setFilterBonusOnly] = useState(false);
   const [cotacaoTrabalho, setCotacaoTrabalho] = useState<number | null>(null);
   const [cotacaoTrabalhoEur, setCotacaoTrabalhoEur] = useState<number | null>(null);
@@ -335,7 +335,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
     return acc;
   }, {} as Record<string, number>);
 
-  const handleOpenBonusDrawer = (bookmaker: { id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmakerCatalogoId?: string | null }) => {
+  const handleOpenBonusDrawer = (bookmaker: { id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmakerCatalogoId?: string | null; moeda?: string | null }) => {
     setSelectedBookmakerForBonus(bookmaker);
     setBonusDrawerOpen(true);
   };
@@ -686,7 +686,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
 
   const openBonusDrawer = (vinculo: Vinculo) => {
     setVinculoDetalhesMobile(null);
-    handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome, login: vinculo.login_username, password: vinculo.login_password_encrypted, logo: vinculo.logo_url, bookmakerCatalogoId: vinculo.bookmaker_catalogo_id });
+    handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome, login: vinculo.login_username, password: vinculo.login_password_encrypted, logo: vinculo.logo_url, bookmakerCatalogoId: vinculo.bookmaker_catalogo_id, moeda: vinculo.moeda });
   };
 
   if (loading) {
@@ -1089,7 +1089,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                         variant="outline"
                         size="sm"
                         className="flex-1"
-                        onClick={() => handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome, login: vinculo.login_username, password: vinculo.login_password_encrypted, logo: vinculo.logo_url, bookmakerCatalogoId: vinculo.bookmaker_catalogo_id })}
+                        onClick={() => handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome, login: vinculo.login_username, password: vinculo.login_password_encrypted, logo: vinculo.logo_url, bookmakerCatalogoId: vinculo.bookmaker_catalogo_id, moeda: vinculo.moeda })}
                         title="Ver Bônus"
                       >
                         <Coins className="mr-2 h-4 w-4" />
@@ -1812,6 +1812,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
           bookmakerPassword={selectedBookmakerForBonus.password}
           bookmakerLogo={selectedBookmakerForBonus.logo}
           bookmakerCatalogoId={selectedBookmakerForBonus.bookmakerCatalogoId}
+          currency={selectedBookmakerForBonus.moeda || "BRL"}
           onBonusChange={() => {
             refetchBonuses();
             invalidateVinculos();
