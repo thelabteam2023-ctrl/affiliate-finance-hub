@@ -2984,11 +2984,12 @@ export function CaixaTransacaoDialog({
             transactionData.origem_bookmaker_id = origemBookmakerId;
           } else if (origemTipo === "CAIXA_OPERACIONAL") {
             // Wire optional company account for CAIXA origin
-            if (caixaContaId && caixaContaId !== "none") {
+            // Meio ÚNICO: CRYPTO usa wallet, FIAT usa conta bancária.
+            if (caixaContaId && caixaContaId !== "none" && tipoMoeda !== "CRYPTO") {
               transactionData.origem_conta_bancaria_id = caixaContaId;
               transactionData.origem_parceiro_id = caixaParceiroId;
             }
-            if (caixaWalletId && caixaWalletId !== "none") {
+            if (caixaWalletId && caixaWalletId !== "none" && tipoMoeda === "CRYPTO") {
               transactionData.origem_wallet_id = caixaWalletId;
               transactionData.origem_parceiro_id = caixaParceiroId;
             }
