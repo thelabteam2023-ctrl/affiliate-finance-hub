@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus, BonusFormData, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { BonusHistoryDrawer } from "./BonusHistoryDrawer";
@@ -40,6 +41,27 @@ export function VinculoBonusDrawer({
   const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
   const [bonusToFinalize, setBonusToFinalize] = useState<ProjectBonus | null>(null);
+  // BLINDAGEM: a moeda do bônus DEVE ser a moeda real da casa. Se o caller não
+  // informar (ou informar o default BRL indevido), buscamos direto do banco.
+  const [moedaCasa, setMoedaCasa] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!bookmakerId || !(open || dialogOpen)) return;
+    supabase
+      .from("bookmakers")
+      .select("moeda")
+      .eq("id", bookmakerId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data?.moeda) setMoedaCasa(data.moeda);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookmakerId, open, dialogOpen]);
+
+  const effectiveCurrency = moedaCasa || currency;
 
   const {
     bonuses,
