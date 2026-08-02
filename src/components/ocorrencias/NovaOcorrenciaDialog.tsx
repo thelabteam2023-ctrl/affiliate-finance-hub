@@ -84,8 +84,6 @@ const schema = z.object({
   network: z.string().optional(),
   quantidade_cripto: z.coerce.number().min(0).optional(),
   tx_hash: z.string().optional(),
-  destino_tipo: z.enum(['wallet_interna', 'externo']).optional(),
-  wallet_destino_id: z.string().optional(),
   endereco_destino_externo: z.string().optional(),
 });
 
@@ -130,8 +128,6 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
       network: '',
       quantidade_cripto: 0,
       tx_hash: '',
-      destino_tipo: 'externo',
-      wallet_destino_id: '',
       endereco_destino_externo: '',
     },
   });
@@ -155,7 +151,6 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const valorRisco = form.watch('valor_risco');
   const tipoSelecionado = form.watch('tipo');
   const contextoEntidade = form.watch('contexto_entidade');
-  const destinoTipo = form.watch('destino_tipo');
   const isWalletCtx = contextoEntidade === 'wallet';
   const isParceiroCtx = contextoEntidade === 'banco' || isWalletCtx;
 
@@ -224,6 +219,22 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     () => walletsDoParceiro.find((w) => w.id === selectedEntidadeId) || null,
     [walletsDoParceiro, selectedEntidadeId]
   );
+  const moedasDaWallet: string[] = useMemo(
+    () => (Array.isArray(walletOrigem?.moedas) ? walletOrigem!.moedas.filter(Boolean) : []),
+    [walletOrigem]
+  );
+
+  // Preenchimento automático a partir do cadastro da carteira de origem
+  useEffect(() => {
+    if (!isWalletCtx || !walletOrigem) return;
+    form.setValue('network', walletOrigem.network || '');
+    const coinAtual = form.getValues('coin');
+    if (moedasDaWallet.length === 1) {
+      form.setValue('coin', moedasDaWallet[0]);
+    } else if (coinAtual && moedasDaWallet.length > 0 && !moedasDaWallet.includes(coinAtual)) {
+      form.setValue('coin', '');
+    }
+  }, [isWalletCtx, walletOrigem, moedasDaWallet, form]);
 
   const subMotivos = tipoSelecionado === 'movimentacao_financeira'
     ? (SUB_MOTIVOS_MOVIMENTACAO[contextoEntidade] || [])
@@ -258,8 +269,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
             ? data.entidade_id
             : undefined,
         wallet_origem_id: isWallet ? data.entidade_id : undefined,
-        wallet_destino_id: isWallet && data.destino_tipo === 'wallet_interna' ? data.wallet_destino_id || undefined : undefined,
-        endereco_destino_externo: isWallet && data.destino_tipo === 'externo' ? data.endereco_destino_externo?.trim() || undefined : undefined,
+        endereco_destino_externo: isWallet ? data.endereco_destino_externo?.trim() || undefined : undefined,
         network: isWallet ? (data.network?.trim() || walletOrigem?.network || undefined) : undefined,
         coin: isWallet ? data.coin?.trim().toUpperCase() || undefined : undefined,
         quantidade_cripto: isWallet ? Number(data.quantidade_cripto) || undefined : undefined,
@@ -572,44 +582,55 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                   />
                 </div>
 
-                <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
-                  <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
-                    <DollarSign className="h-4 w-4 text-primary" />
-                    Financeiro e Urgência
-                  </h4>
-                </div>
-
                 {isWalletCtx && (
                 <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
                   <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
                     <Hash className="h-4 w-4 text-primary" />
                     Dados da Transação Cripto
                   </h4>
-                  {walletOrigem && (
+                  {walletOrigem ? (
+                    <div className="-mt-2 rounded-lg border border-border/50 bg-background/60 p-3 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold uppercase text-muted-foreground">Carteira de origem</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/30 bg-primary/10 text-primary font-medium">
+                          {walletOrigem.network}
+                        </span>
+                      </div>
+                      <p className="text-sm font-semibold text-foreground">{walletOrigem.label}</p>
+                      {walletOrigem.exchange && (
+                        <p className="text-[11px] text-muted-foreground">Custódia: {walletOrigem.exchange}</p>
+                      )}
+                      {walletOrigem.endereco && (
+                        <p className="font-mono text-[11px] text-muted-foreground break-all">{walletOrigem.endereco}</p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground/80">
+                        Rede e endereço preenchidos automaticamente a partir do cadastro.
+                      </p>
+                    </div>
+                  ) : (
                     <p className="text-[11px] text-muted-foreground -mt-2">
-                      Origem: <span className="font-medium text-foreground">{walletOrigem.label}</span> · rede {walletOrigem.network}
+                      Selecione a carteira de origem no passo anterior para preenchimento automático.
                     </p>
                   )}
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="coin"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Ativo</FormLabel>
-                          <FormControl><Input placeholder="USDT" className="h-10 bg-background uppercase" {...field} /></FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="network"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Rede usada</FormLabel>
-                          <FormControl>
-                            <Input placeholder={walletOrigem?.network || 'TRC20'} className="h-10 bg-background" {...field} />
-                          </FormControl>
+                          {moedasDaWallet.length > 0 ? (
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                              <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione o ativo..." /></SelectTrigger></FormControl>
+                              <SelectContent>
+                                {moedasDaWallet.map((m: string) => (
+                                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <FormControl><Input placeholder="USDT" className="h-10 bg-background uppercase" {...field} /></FormControl>
+                          )}
                         </FormItem>
                       )}
                     />
@@ -627,53 +648,14 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
 
                   <FormField
                     control={form.control}
-                    name="destino_tipo"
+                    name="endereco_destino_externo"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Destino</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'externo'}>
-                          <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            <SelectItem value="wallet_interna">Carteira cadastrada no sistema</SelectItem>
-                            <SelectItem value="externo">Endereço externo</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Endereço de destino (opcional)</FormLabel>
+                        <FormControl><Input placeholder="0x... / T... — informe se relevante para auditoria" className="h-10 bg-background font-mono text-xs" {...field} /></FormControl>
                       </FormItem>
                     )}
                   />
-
-                  {destinoTipo === 'wallet_interna' ? (
-                    <FormField
-                      control={form.control}
-                      name="wallet_destino_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Carteira de destino</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione a carteira..." /></SelectTrigger></FormControl>
-                            <SelectContent>
-                              {walletsDoParceiro
-                                .filter((w: any) => w.id !== selectedEntidadeId)
-                                .map((w: any) => (
-                                  <SelectItem key={w.id} value={w.id}>{w.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                  ) : (
-                    <FormField
-                      control={form.control}
-                      name="endereco_destino_externo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Endereço de destino</FormLabel>
-                          <FormControl><Input placeholder="0x... / T..." className="h-10 bg-background font-mono text-xs" {...field} /></FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  )}
 
                   <FormField
                     control={form.control}
