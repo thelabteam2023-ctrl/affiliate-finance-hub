@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Plus, Check, Trash2 } from 'lucide-react';
 import { BookmakerSelectOption, BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
-import { BookmakerSearchableSelectContent } from '@/components/bookmakers/BookmakerSearchableSelectContent';
+import { BookmakerSearchableSelectContent, resolveBookmakerSelectValue } from '@/components/bookmakers/BookmakerSearchableSelectContent';
 import { BookmakerLogo } from '@/components/ui/bookmaker-logo';
 import { type OddEntry, type LegScenario } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
@@ -266,7 +266,7 @@ export function SurebetTableRow({
           <div className="flex flex-col">
             <Select 
               value={entry.bookmaker_id}
-              onValueChange={(v) => onUpdateOdd(pernaIndex, "bookmaker_id", v)}
+              onValueChange={(v) => onUpdateOdd(pernaIndex, "bookmaker_id", resolveBookmakerSelectValue(v))}
             >
               <SelectTrigger className="h-9 text-xs w-full">
                 <SelectValue placeholder="Selecione">
@@ -294,6 +294,7 @@ export function SurebetTableRow({
               <BookmakerSearchableSelectContent
                 bookmakers={bookmakers}
                 className="max-w-[300px]"
+                clearable
               />
             </Select>
             <BookmakerMetaRow 
@@ -617,7 +618,7 @@ export function SurebetTableRow({
               <div className="flex flex-col">
                 <Select 
                   value={addEntry.bookmaker_id}
-                  onValueChange={(v) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'bookmaker_id', v)}
+                  onValueChange={(v) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'bookmaker_id', resolveBookmakerSelectValue(v))}
                 >
                     <SelectTrigger className="h-9 text-xs w-full justify-center [&>span]:flex-1">
                     <SelectValue placeholder="Casa...">
@@ -635,7 +636,7 @@ export function SurebetTableRow({
                       )}
                     </SelectValue>
                   </SelectTrigger>
-                  <BookmakerSearchableSelectContent bookmakers={subBookmakers} className="max-w-[300px]" />
+                  <BookmakerSearchableSelectContent bookmakers={subBookmakers} className="max-w-[300px]" clearable />
                 </Select>
                 <BookmakerMetaRow 
                   bookmaker={addBookmaker ? {

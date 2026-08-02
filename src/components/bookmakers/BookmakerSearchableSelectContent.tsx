@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { SelectItem, SelectScrollUpButton, SelectScrollDownButton } from "@/components/ui/select";
 import { BookmakerSelectOption, type BookmakerOptionData } from "./BookmakerSelectOption";
-import { Search, ChevronUp, ChevronDown } from "lucide-react";
+import { Search, ChevronUp, ChevronDown, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExchangeRatesSafe } from "@/contexts/ExchangeRatesContext";
 
@@ -11,6 +11,18 @@ type BookmakerInput = Omit<BookmakerOptionData, 'parceiro_nome'> & { parceiro_no
 
 const SEARCH_THRESHOLD = 7;
 
+/**
+ * Valor sentinela usado pelo item "Nenhuma casa".
+ * O Radix Select não aceita SelectItem com value="", então usamos o sentinela
+ * e o convertemos de volta para "" via `resolveBookmakerSelectValue`.
+ */
+export const BOOKMAKER_CLEAR_VALUE = "__clear_bookmaker__";
+
+/** Converte o valor emitido pelo Select, mapeando o sentinela para string vazia. */
+export function resolveBookmakerSelectValue(value: string): string {
+  return value === BOOKMAKER_CLEAR_VALUE ? "" : value;
+}
+
 interface BookmakerSearchableSelectContentProps {
   bookmakers: BookmakerInput[];
   className?: string;
@@ -18,6 +30,10 @@ interface BookmakerSearchableSelectContentProps {
   emptyMessage?: string;
   /** Override de saldo_freebet por bookmaker_id (ex: descontar FB já usado em outras entradas) */
   freebetOverrides?: Map<string, number>;
+  /** Exibe a opção "Nenhuma casa" no topo, permitindo limpar a seleção */
+  clearable?: boolean;
+  /** Texto do item de limpeza */
+  clearLabel?: string;
 }
 
 /**
@@ -34,6 +50,8 @@ export function BookmakerSearchableSelectContent({
   itemClassName,
   emptyMessage = "Nenhuma bookmaker com saldo disponível",
   freebetOverrides,
+  clearable = false,
+  clearLabel = "Nenhuma casa",
 }: BookmakerSearchableSelectContentProps) {
   const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -116,6 +134,17 @@ export function BookmakerSearchableSelectContent({
         <SelectPrimitive.Viewport
           className="p-1 h-[var(--radix-select-trigger-height)] w-full overflow-hidden"
         >
+          {clearable && (
+            <SelectItem
+              value={BOOKMAKER_CLEAR_VALUE}
+              className={cn("py-2 pl-8 pr-2 text-muted-foreground", itemClassName)}
+            >
+              <span className="flex items-center gap-2 text-xs">
+                <XCircle className="h-3.5 w-3.5" />
+                {clearLabel}
+              </span>
+            </SelectItem>
+          )}
           {filtered.length === 0 ? (
             <div className="p-3 text-center text-sm text-muted-foreground">
               {search.trim() ? "Nenhuma casa encontrada" : emptyMessage}
