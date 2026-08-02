@@ -288,6 +288,8 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                         setResolucaoOpen(true);
                       } else if (ocorrencia.status === 'resolvido' && s === 'em_andamento') {
                         reabrirOcorrencia({ id: ocorrencia.id });
+                      } else if (s === 'aguardando_terceiro') {
+                        setAguardandoOpen(true);
                       } else {
                         atualizarStatus({
                           id: ocorrencia.id,
