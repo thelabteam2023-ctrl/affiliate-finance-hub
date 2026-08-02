@@ -592,6 +592,16 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                 }}
               />
             )}
+
+            {/* Exclusão lógica (soft delete) — owner/admin */}
+            {ocorrencia && podeExcluir && (
+              <ExcluirOcorrenciaDialog
+                open={excluirOpen}
+                onOpenChange={setExcluirOpen}
+                ocorrencia={ocorrencia}
+                onArquivada={() => onOpenChange(false)}
+              />
+            )}
           </>
         ) : null}
       </SheetContent>
