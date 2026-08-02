@@ -850,9 +850,19 @@ export default function Caixa() {
    */
   const getCaixaInfo = (
     contaBancariaId?: string | null,
-    walletId?: string | null
+    walletId?: string | null,
+    isCrypto?: boolean
   ): { primary: string; secondary?: string } => {
-    if (contaBancariaId) {
+    // FONTE ÚNICA DE VERDADE: em operações CRYPTO o meio real é SEMPRE a wallet.
+    // Lançamentos legados podem carregar também um conta_bancaria_id espúrio —
+    // exibi-lo faria a mesma transação aparecer como bancária no Histórico.
+    if (isCrypto && walletId) {
+      const wallet = walletsDetalhes.find(w => w.id === walletId);
+      if (wallet) {
+        return { primary: getWalletDisplayName(wallet), secondary: "Caixa Operacional" };
+      }
+    }
+    if (contaBancariaId && !isCrypto) {
       const conta = contasBancarias.find(c => c.id === contaBancariaId);
       if (conta) {
         return { primary: conta.banco, secondary: "Caixa Operacional" };
@@ -864,8 +874,16 @@ export default function Caixa() {
         return { primary: getWalletDisplayName(wallet), secondary: "Caixa Operacional" };
       }
     }
+    if (contaBancariaId) {
+      const conta = contasBancarias.find(c => c.id === contaBancariaId);
+      if (conta) {
+        return { primary: conta.banco, secondary: "Caixa Operacional" };
+      }
+    }
     return { primary: "Caixa Operacional" };
   };
+
+  const isCryptoTx = (t: Transacao) => t.tipo_moeda === "CRYPTO" || !!t.coin;
 
   const getOrigemInfo = (transacao: Transacao): { primary: string; secondary?: string } => {
     // SWAP: Mostrar wallet de origem com nome do parceiro
