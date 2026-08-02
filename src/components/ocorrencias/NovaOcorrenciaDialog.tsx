@@ -36,6 +36,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useParceiroContas } from '@/hooks/useParceiroContas';
+import { useWalletSaldosAtivos } from '@/hooks/useWalletSaldosAtivos';
 import { TIPO_LABELS, PRIORIDADE_LABELS, SUB_MOTIVOS, SUB_MOTIVOS_MOVIMENTACAO } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
 import { 
@@ -224,17 +225,52 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     [walletOrigem]
   );
 
+  // Saldos reais por ativo da carteira de origem
+  const { data: saldosAtivos = [], isLoading: loadingSaldos } = useWalletSaldosAtivos(
+    isWalletCtx ? walletOrigem?.id : null
+  );
+  const coinSelecionada = form.watch('coin');
+  const quantidadeCripto = Number(form.watch('quantidade_cripto')) || 0;
+  const ativosDisponiveis = useMemo(() => {
+    if (saldosAtivos.length > 0) return saldosAtivos.map((s) => s.coin);
+    return moedasDaWallet.map((m) => String(m).toUpperCase());
+  }, [saldosAtivos, moedasDaWallet]);
+  const saldoAtivoSelecionado = useMemo(
+    () => saldosAtivos.find((s) => s.coin === (coinSelecionada || '').toUpperCase()) || null,
+    [saldosAtivos, coinSelecionada]
+  );
+  const saldoDisponivelCoin = saldoAtivoSelecionado?.saldo_disponivel_coin ?? null;
+  const valorDisputaUsd = useMemo(() => {
+    if (!saldoAtivoSelecionado) return 0;
+    return quantidadeCripto * (saldoAtivoSelecionado.cotacao_usd || 0);
+  }, [quantidadeCripto, saldoAtivoSelecionado]);
+  const isQuantidadeExcedente =
+    isWalletCtx && saldoDisponivelCoin !== null && quantidadeCripto > saldoDisponivelCoin + 1e-8;
+  const exposicaoWallet = useMemo(() => {
+    if (!saldoDisponivelCoin || saldoDisponivelCoin <= 0) return 0;
+    return (quantidadeCripto / saldoDisponivelCoin) * 100;
+  }, [quantidadeCripto, saldoDisponivelCoin]);
+
+  // Valor em disputa (USD) derivado da quantidade — evita duplicidade de entrada
+  useEffect(() => {
+    if (!isWalletCtx) return;
+    const atual = Number(form.getValues('valor_risco')) || 0;
+    const novo = Number(valorDisputaUsd.toFixed(2));
+    if (Math.abs(atual - novo) > 0.001) form.setValue('valor_risco', novo);
+  }, [isWalletCtx, valorDisputaUsd, form]);
+
   // Preenchimento automático a partir do cadastro da carteira de origem
   useEffect(() => {
     if (!isWalletCtx || !walletOrigem) return;
     form.setValue('network', walletOrigem.network || '');
     const coinAtual = form.getValues('coin');
-    if (moedasDaWallet.length === 1) {
-      form.setValue('coin', moedasDaWallet[0]);
-    } else if (coinAtual && moedasDaWallet.length > 0 && !moedasDaWallet.includes(coinAtual)) {
+    const opcoes = ativosDisponiveis;
+    if (opcoes.length === 1) {
+      form.setValue('coin', opcoes[0]);
+    } else if (coinAtual && opcoes.length > 0 && !opcoes.includes(coinAtual.toUpperCase())) {
       form.setValue('coin', '');
     }
-  }, [isWalletCtx, walletOrigem, moedasDaWallet, form]);
+  }, [isWalletCtx, walletOrigem, ativosDisponiveis, form]);
 
   const subMotivos = tipoSelecionado === 'movimentacao_financeira'
     ? (SUB_MOTIVOS_MOVIMENTACAO[contextoEntidade] || [])
@@ -301,14 +337,22 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
         toast.error('O valor em disputa não pode exceder o saldo disponível na casa.');
         return;
       }
+      if (step === 2 && isQuantidadeExcedente) {
+        toast.error('A quantidade em disputa não pode exceder o saldo disponível da carteira.');
+        return;
+      }
+      if (step === 2 && isWalletCtx && (!form.getValues('coin') || Number(form.getValues('quantidade_cripto')) <= 0)) {
+        toast.error('Informe o ativo e a quantidade em disputa da carteira.');
+        return;
+      }
       setStep(prev => prev + 1);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl p-0 overflow-hidden border-border/40 shadow-2xl">
-        <DialogHeader className="p-6 pb-2">
+      <DialogContent className="max-w-xl p-0 overflow-hidden border-border/40 shadow-2xl max-h-[92dvh] flex flex-col gap-0">
+        <DialogHeader className="p-6 pb-2 shrink-0">
           <div className="flex items-center gap-2 mb-2">
             <Badge variant="outline" className="text-[10px] font-bold tracking-widest uppercase py-0.5 px-2 bg-muted/50">Passo {step} de 3</Badge>
           </div>
@@ -316,7 +360,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-6 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-6 py-4 flex-1 overflow-y-auto custom-scrollbar">
             {step === 1 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
                 <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
@@ -603,8 +647,20 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       {walletOrigem.endereco && (
                         <p className="font-mono text-[11px] text-muted-foreground break-all">{walletOrigem.endereco}</p>
                       )}
+                      {saldosAtivos.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {saldosAtivos.map((s) => (
+                            <span key={s.coin} className="text-[10px] px-2 py-0.5 rounded-md border border-border/50 bg-muted/40 font-mono">
+                              {s.coin}: {s.saldo_disponivel_coin.toLocaleString('pt-BR', { maximumFractionDigits: 8 })}
+                              {s.saldo_em_transito_coin > 0 && (
+                                <span className="text-amber-500"> · {s.saldo_em_transito_coin.toLocaleString('pt-BR', { maximumFractionDigits: 8 })} em trânsito</span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <p className="text-[10px] text-muted-foreground/80">
-                        Rede e endereço preenchidos automaticamente a partir do cadastro.
+                        Rede, endereço e saldos carregados automaticamente do cadastro.
                       </p>
                     </div>
                   ) : (
@@ -612,20 +668,26 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       Selecione a carteira de origem no passo anterior para preenchimento automático.
                     </p>
                   )}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="coin"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Ativo</FormLabel>
-                          {moedasDaWallet.length > 0 ? (
+                          {ativosDisponiveis.length > 0 ? (
                             <Select onValueChange={field.onChange} value={field.value || ''}>
                               <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione o ativo..." /></SelectTrigger></FormControl>
                               <SelectContent>
-                                {moedasDaWallet.map((m: string) => (
-                                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                                ))}
+                                {ativosDisponiveis.map((m: string) => {
+                                  const s = saldosAtivos.find((x) => x.coin === m);
+                                  return (
+                                    <SelectItem key={m} value={m}>
+                                      {m}
+                                      {s ? ` — ${s.saldo_disponivel_coin.toLocaleString('pt-BR', { maximumFractionDigits: 8 })} disp.` : ''}
+                                    </SelectItem>
+                                  );
+                                })}
                               </SelectContent>
                             </Select>
                           ) : (
@@ -639,13 +701,60 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       name="quantidade_cripto"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Quantidade</FormLabel>
-                          <FormControl><Input type="number" step="0.00000001" className="h-10 bg-background font-mono" {...field} /></FormControl>
+                          <div className="flex items-center justify-between mb-2 gap-2">
+                            <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground mb-0">Quantidade em disputa</FormLabel>
+                            {saldoDisponivelCoin !== null && (
+                              <button
+                                type="button"
+                                onClick={() => form.setValue('quantidade_cripto', saldoDisponivelCoin)}
+                                className="text-[10px] font-bold uppercase text-primary hover:underline"
+                              >
+                                Usar saldo total
+                              </button>
+                            )}
+                          </div>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.00000001"
+                              max={saldoDisponivelCoin ?? undefined}
+                              className={cn('h-10 bg-background font-mono', isQuantidadeExcedente && 'border-destructive text-destructive')}
+                              {...field}
+                            />
+                          </FormControl>
+                          <p className={cn('text-[10px] mt-1', isQuantidadeExcedente ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
+                            {loadingSaldos
+                              ? 'Carregando saldo da carteira...'
+                              : saldoDisponivelCoin !== null
+                                ? isQuantidadeExcedente
+                                  ? `Excede o saldo disponível (${saldoDisponivelCoin.toLocaleString('pt-BR', { maximumFractionDigits: 8 })} ${coinSelecionada}).`
+                                  : `Disponível: ${saldoDisponivelCoin.toLocaleString('pt-BR', { maximumFractionDigits: 8 })} ${coinSelecionada}${valorDisputaUsd > 0 ? ` · ≈ US$ ${valorDisputaUsd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} em disputa` : ''}`
+                                : 'Saldo indisponível — valor registrado sem validação automática.'}
+                          </p>
                         </FormItem>
                       )}
                     />
                   </div>
+                  {saldoDisponivelCoin !== null && quantidadeCripto > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                        <span className="text-muted-foreground">Exposição da carteira</span>
+                        <span className={cn(isQuantidadeExcedente ? 'text-destructive' : 'text-primary')}>{exposicaoWallet.toFixed(1)}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-background rounded-full overflow-hidden border border-border/20">
+                        <div
+                          className={cn('h-full transition-all duration-500', isQuantidadeExcedente ? 'bg-destructive' : 'bg-primary')}
+                          style={{ width: `${Math.min(exposicaoWallet, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
 
+                  <details className="group rounded-lg border border-border/50 bg-background/40 p-3">
+                    <summary className="cursor-pointer list-none text-[11px] font-bold uppercase text-muted-foreground select-none">
+                      Detalhes de rastreio (opcional)
+                    </summary>
+                    <div className="mt-3 space-y-4">
                   <FormField
                     control={form.control}
                     name="endereco_destino_externo"
@@ -667,6 +776,8 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       </FormItem>
                     )}
                   />
+                    </div>
+                  </details>
                 </div>
                 )}
 
@@ -675,7 +786,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                     <DollarSign className="h-4 w-4 text-primary" />
                     {isWalletCtx ? 'Valor em disputa (USD) e Urgência' : 'Financeiro e Urgência'}
                   </h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="prioridade"
@@ -708,6 +819,15 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                             )}
                           </div>
                           <FormControl>
+                            {isWalletCtx ? (
+                              <div className="h-10 flex items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3">
+                                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-mono text-sm font-semibold text-foreground">
+                                  {valorDisputaUsd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                                <span className="ml-auto text-[10px] uppercase text-muted-foreground">calculado</span>
+                              </div>
+                            ) : (
                             <div className="relative">
                               <DollarSign className={cn(
                                 "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4",
@@ -715,7 +835,13 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                               )} />
                               <Input type="number" step="0.01" className={cn("pl-9 h-10 bg-background", isValueExceedingBalance && "border-destructive text-destructive")} {...field} />
                             </div>
+                            )}
                           </FormControl>
+                          {isWalletCtx && (
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              Derivado da quantidade em disputa × cotação da carteira.
+                            </p>
+                          )}
                         </FormItem>
                       )}
                     />
@@ -795,7 +921,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
           </form>
         </Form>
 
-        <DialogFooter className="p-6 border-t border-border/40 bg-muted/5">
+        <DialogFooter className="p-6 border-t border-border/40 bg-muted/5 shrink-0">
            <div className="flex w-full items-center justify-between">
              {step > 1 ? (
                <Button type="button" variant="outline" onClick={() => setStep(prev => prev - 1)} className="gap-2 px-5 font-bold text-xs uppercase tracking-wider">
@@ -811,7 +937,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                     type="button" 
                     onClick={nextStep} 
                     className="gap-2 px-8 font-bold text-xs uppercase tracking-wider shadow-lg shadow-primary/20"
-                    disabled={step === 2 && isValueExceedingBalance}
+                    disabled={step === 2 && (isValueExceedingBalance || isQuantidadeExcedente)}
                   >
                     Próximo <ChevronRight className="h-4 w-4" />
                   </Button>
