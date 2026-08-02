@@ -219,6 +219,22 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     () => walletsDoParceiro.find((w) => w.id === selectedEntidadeId) || null,
     [walletsDoParceiro, selectedEntidadeId]
   );
+  const moedasDaWallet: string[] = useMemo(
+    () => (Array.isArray(walletOrigem?.moedas) ? walletOrigem!.moedas.filter(Boolean) : []),
+    [walletOrigem]
+  );
+
+  // Preenchimento automático a partir do cadastro da carteira de origem
+  useEffect(() => {
+    if (!isWalletCtx || !walletOrigem) return;
+    form.setValue('network', walletOrigem.network || '');
+    const coinAtual = form.getValues('coin');
+    if (moedasDaWallet.length === 1) {
+      form.setValue('coin', moedasDaWallet[0]);
+    } else if (coinAtual && moedasDaWallet.length > 0 && !moedasDaWallet.includes(coinAtual)) {
+      form.setValue('coin', '');
+    }
+  }, [isWalletCtx, walletOrigem, moedasDaWallet, form]);
 
   const subMotivos = tipoSelecionado === 'movimentacao_financeira'
     ? (SUB_MOTIVOS_MOVIMENTACAO[contextoEntidade] || [])
