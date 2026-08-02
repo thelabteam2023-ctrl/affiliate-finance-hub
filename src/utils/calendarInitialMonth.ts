@@ -29,8 +29,9 @@ export function resolveCalendarInitialMonth(
 
   if (!start && !end) return hoje;
 
-  const inicio = start ? startOfMonth(toZonedTime(start, OPERATIONAL_TIMEZONE)) : null;
-  const fim = end ? endOfMonth(toZonedTime(end, OPERATIONAL_TIMEZONE)) : null;
+  // start/end já são datas civis do filtro (calendário local) — não reconverter.
+  const inicio = start ? startOfMonth(start) : null;
+  const fim = end ? endOfMonth(end) : null;
 
   const depoisDoInicio = !inicio || hoje >= inicio;
   const antesDoFim = !fim || hoje <= fim;
