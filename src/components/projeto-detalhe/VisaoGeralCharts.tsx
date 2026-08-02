@@ -25,6 +25,7 @@ import { CalendarioLucros } from "./CalendarioLucros";
 import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
 import { getConsolidatedLucro, getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
 import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
+import { resolveCalendarInitialMonth } from "@/utils/calendarInitialMonth";
 
 // =====================================================
 // TIPOS
