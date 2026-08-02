@@ -798,6 +798,15 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                             )}
                           </div>
                           <FormControl>
+                            {isWalletCtx ? (
+                              <div className="h-10 flex items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3">
+                                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-mono text-sm font-semibold text-foreground">
+                                  {valorDisputaUsd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                                <span className="ml-auto text-[10px] uppercase text-muted-foreground">calculado</span>
+                              </div>
+                            ) : (
                             <div className="relative">
                               <DollarSign className={cn(
                                 "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4",
@@ -805,7 +814,13 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                               )} />
                               <Input type="number" step="0.01" className={cn("pl-9 h-10 bg-background", isValueExceedingBalance && "border-destructive text-destructive")} {...field} />
                             </div>
+                            )}
                           </FormControl>
+                          {isWalletCtx && (
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              Derivado da quantidade em disputa × cotação da carteira.
+                            </p>
+                          )}
                         </FormItem>
                       )}
                     />
