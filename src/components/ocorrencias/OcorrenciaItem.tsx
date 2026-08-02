@@ -61,7 +61,7 @@ export function OcorrenciaItem({
             </h4>
             <div className="flex items-center gap-2 shrink-0">
               <TipoBadge tipo={ocorrencia.tipo} />
-              <StatusBadge status={ocorrencia.status} />
+              <StatusBadge status={ocorrencia.status} aguardandoDe={(ocorrencia as any).aguardando_de} />
             </div>
           </div>
         </div>

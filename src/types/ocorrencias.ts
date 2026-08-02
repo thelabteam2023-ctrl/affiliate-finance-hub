@@ -26,7 +26,45 @@ export type OcorrenciaEventoTipo =
   | 'observador_adicionado'
   | 'observador_removido'
   | 'prioridade_alterada'
-  | 'vinculo_adicionado';
+  | 'vinculo_adicionado'
+  | 'campo_alterado';
+
+/**
+ * Dimensão de dependência externa usada quando a ocorrência entra em
+ * "Aguardando Retorno". Mantém o enum de status enxuto e ao mesmo tempo
+ * deixa explícito DE QUEM se aguarda (exibido no badge: "Aguardando Casa").
+ */
+export type OcorrenciaAguardandoDe =
+  | 'casa'
+  | 'banco'
+  | 'provedor'
+  | 'parceiro'
+  | 'suporte'
+  | 'titular'
+  | 'interno'
+  | 'outro';
+
+export const AGUARDANDO_DE_LABELS: Record<OcorrenciaAguardandoDe, string> = {
+  casa: 'Casa',
+  banco: 'Banco',
+  provedor: 'Provedor',
+  parceiro: 'Parceiro',
+  suporte: 'Suporte',
+  titular: 'Titular',
+  interno: 'Interno',
+  outro: 'Outro',
+};
+
+export const AGUARDANDO_DE_DESCRICOES: Record<OcorrenciaAguardandoDe, string> = {
+  casa: 'Retorno da casa de apostas / plataforma',
+  banco: 'Retorno do banco ou instituição financeira',
+  provedor: 'Retorno do provedor de pagamento / gateway',
+  parceiro: 'Retorno do parceiro responsável',
+  suporte: 'Retorno de suporte ou atendimento externo',
+  titular: 'Retorno do titular da conta',
+  interno: 'Retorno de outra área interna',
+  outro: 'Outra dependência externa',
+};
 
 export interface OcorrenciaAnexo {
   nome: string;
@@ -44,6 +82,7 @@ export interface Ocorrencia {
   sub_motivo?: string | null;
   prioridade: OcorrenciaPrioridade;
   status: OcorrenciaStatus;
+  aguardando_de?: OcorrenciaAguardandoDe | null;
   requerente_id: string;
   executor_id: string;
   bookmaker_id?: string | null;
@@ -120,10 +159,25 @@ export const PRIORIDADE_LABELS: Record<OcorrenciaPrioridade, string> = {
 export const STATUS_LABELS: Record<OcorrenciaStatus, string> = {
   aberto: 'Aberto',
   em_andamento: 'Em Andamento',
-  aguardando_terceiro: 'Aguardando Terceiro',
+  aguardando_terceiro: 'Aguardando Retorno',
   resolvido: 'Resolvido',
   cancelado: 'Cancelado',
 };
+
+/**
+ * Label contextual do status: em "Aguardando Retorno" mostra de quem
+ * se aguarda (ex.: "Aguardando Casa"), tornando o badge auto-explicativo.
+ */
+export function getStatusLabel(
+  status: OcorrenciaStatus,
+  aguardandoDe?: string | null
+): string {
+  if (status === 'aguardando_terceiro' && aguardandoDe) {
+    const label = AGUARDANDO_DE_LABELS[aguardandoDe as OcorrenciaAguardandoDe];
+    if (label) return `Aguardando ${label}`;
+  }
+  return STATUS_LABELS[status];
+}
 
 export const PRIORIDADE_COLORS: Record<OcorrenciaPrioridade, string> = {
   baixa: 'text-muted-foreground border-muted-foreground/50',
@@ -157,6 +211,19 @@ export const EVENTO_TIPO_LABELS: Record<OcorrenciaEventoTipo, string> = {
   observador_removido: 'removeu um observador',
   prioridade_alterada: 'alterou a prioridade',
   vinculo_adicionado: 'adicionou um vínculo',
+  campo_alterado: 'alterou um campo',
+};
+
+// Nomes amigáveis dos campos editáveis (usados na timeline)
+export const CAMPO_LABELS: Record<string, string> = {
+  titulo: 'Título',
+  descricao: 'Descrição',
+  tipo: 'Tipo',
+  sub_motivo: 'Sub-motivo',
+  prioridade: 'Prioridade',
+  valor_risco: 'Valor em risco',
+  data_ocorrencia: 'Data da ocorrência',
+  aguardando_de: 'Dependência externa',
 };
 
 // ============================================================

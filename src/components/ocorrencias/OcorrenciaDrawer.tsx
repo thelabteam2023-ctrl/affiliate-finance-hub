@@ -22,6 +22,8 @@ import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { StatusBadge, TipoBadge } from './OcorrenciaBadges';
 import { ResolucaoFinanceiraDialog } from './ResolucaoFinanceiraDialog';
 import { EditarOcorrenciaDialog } from './EditarOcorrenciaDialog';
+import { TimelineEvento } from './TimelineEvento';
+import { AguardandoDeDialog } from './AguardandoDeDialog';
 import type { OcorrenciaStatus, OcorrenciaEvento } from '@/types/ocorrencias';
 import { STATUS_LABELS, EVENTO_TIPO_LABELS, SUB_MOTIVO_LABELS } from '@/types/ocorrencias';
 import {
@@ -84,6 +86,7 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
   const [comentario, setComentario] = useState('');
   const [resolucaoOpen, setResolucaoOpen] = useState(false);
   const [editarOpen, setEditarOpen] = useState(false);
+  const [aguardandoOpen, setAguardandoOpen] = useState(false);
 
   const memberMap = new Map(members.map((m) => [m.user_id, m]));
 
@@ -204,7 +207,7 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                   </div>
                 </div>
                 <div className="h-4 w-px bg-border" />
-                <StatusBadge status={ocorrencia.status} />
+                <StatusBadge status={ocorrencia.status} aguardandoDe={(ocorrencia as any).aguardando_de} />
                 <TipoBadge tipo={ocorrencia.tipo} />
                 
                 <div className="flex-1" />
@@ -285,6 +288,8 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                         setResolucaoOpen(true);
                       } else if (ocorrencia.status === 'resolvido' && s === 'em_andamento') {
                         reabrirOcorrencia({ id: ocorrencia.id });
+                      } else if (s === 'aguardando_terceiro') {
+                        setAguardandoOpen(true);
                       } else {
                         atualizarStatus({
                           id: ocorrencia.id,
@@ -393,21 +398,12 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                 ) : (
                   <div className="space-y-6 relative before:absolute before:inset-y-0 before:left-3.5 before:w-px before:bg-border/60">
                     {eventos.map((evento) => (
-                      <div key={evento.id} className="relative pl-10">
-                        <div className="absolute left-0 top-1 h-7 w-7 rounded-full bg-background border border-border flex items-center justify-center z-10">
-                           <div className="h-2 w-2 rounded-full bg-muted-foreground/40" />
-                        </div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-semibold text-foreground">{getMemberName(evento.autor_id)}</span>
-                          <span className="text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(evento.created_at), { addSuffix: true, locale: ptBR })}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground leading-relaxed">
-                          {EVENTO_TIPO_LABELS[evento.tipo]}
-                          {evento.tipo === 'comentario' && (
-                            <p className="mt-1 text-foreground bg-muted/30 p-2 rounded-md border border-border/20">{evento.conteudo}</p>
-                          )}
-                        </div>
-                      </div>
+                      <TimelineEvento
+                        key={evento.id}
+                        evento={evento}
+                        autorNome={getMemberName(evento.autor_id)}
+                        resolveNome={getMemberName}
+                      />
                     ))}
                   </div>
                 )}
@@ -477,6 +473,25 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                 open={editarOpen}
                 onOpenChange={setEditarOpen}
                 ocorrencia={ocorrencia}
+              />
+            )}
+
+            {/* Dependência externa ao entrar em Aguardando Retorno */}
+            {ocorrencia && (
+              <AguardandoDeDialog
+                open={aguardandoOpen}
+                onOpenChange={setAguardandoOpen}
+                isPending={updatingStatus}
+                valorAtual={(ocorrencia as any).aguardando_de}
+                onConfirm={(aguardandoDe) => {
+                  atualizarStatus({
+                    id: ocorrencia.id,
+                    novoStatus: 'aguardando_terceiro',
+                    statusAnterior: ocorrencia.status,
+                    aguardandoDe,
+                  });
+                  setAguardandoOpen(false);
+                }}
               />
             )}
           </>
