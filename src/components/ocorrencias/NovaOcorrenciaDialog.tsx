@@ -84,8 +84,6 @@ const schema = z.object({
   network: z.string().optional(),
   quantidade_cripto: z.coerce.number().min(0).optional(),
   tx_hash: z.string().optional(),
-  destino_tipo: z.enum(['wallet_interna', 'externo']).optional(),
-  wallet_destino_id: z.string().optional(),
   endereco_destino_externo: z.string().optional(),
 });
 
@@ -130,8 +128,6 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
       network: '',
       quantidade_cripto: 0,
       tx_hash: '',
-      destino_tipo: 'externo',
-      wallet_destino_id: '',
       endereco_destino_externo: '',
     },
   });
@@ -155,7 +151,6 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const valorRisco = form.watch('valor_risco');
   const tipoSelecionado = form.watch('tipo');
   const contextoEntidade = form.watch('contexto_entidade');
-  const destinoTipo = form.watch('destino_tipo');
   const isWalletCtx = contextoEntidade === 'wallet';
   const isParceiroCtx = contextoEntidade === 'banco' || isWalletCtx;
 
@@ -258,8 +253,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
             ? data.entidade_id
             : undefined,
         wallet_origem_id: isWallet ? data.entidade_id : undefined,
-        wallet_destino_id: isWallet && data.destino_tipo === 'wallet_interna' ? data.wallet_destino_id || undefined : undefined,
-        endereco_destino_externo: isWallet && data.destino_tipo === 'externo' ? data.endereco_destino_externo?.trim() || undefined : undefined,
+        endereco_destino_externo: isWallet ? data.endereco_destino_externo?.trim() || undefined : undefined,
         network: isWallet ? (data.network?.trim() || walletOrigem?.network || undefined) : undefined,
         coin: isWallet ? data.coin?.trim().toUpperCase() || undefined : undefined,
         quantidade_cripto: isWallet ? Number(data.quantidade_cripto) || undefined : undefined,
