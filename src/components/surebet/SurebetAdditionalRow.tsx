@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Minus } from 'lucide-react';
 import { BookmakerSelectOption, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
-import { BookmakerSearchableSelectContent } from '@/components/bookmakers/BookmakerSearchableSelectContent';
+import { BookmakerSearchableSelectContent, resolveBookmakerSelectValue } from '@/components/bookmakers/BookmakerSearchableSelectContent';
 import { BookmakerLogo } from '@/components/ui/bookmaker-logo';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 
@@ -71,7 +71,7 @@ export function SurebetAdditionalRow({
         <div className="flex flex-col">
           <Select 
             value={entry.bookmaker_id}
-            onValueChange={(v) => onUpdate(pernaIndex, additionalIndex, "bookmaker_id", v)}
+            onValueChange={(v) => onUpdate(pernaIndex, additionalIndex, "bookmaker_id", resolveBookmakerSelectValue(v))}
           >
             <SelectTrigger className="h-7 text-[10px] w-full">
               <SelectValue placeholder="Selecione">
@@ -106,6 +106,7 @@ export function SurebetAdditionalRow({
             <BookmakerSearchableSelectContent
               bookmakers={bookmakers}
               className="max-w-[300px]"
+              clearable
             />
           </Select>
           {selectedBookmaker?.parceiro_nome && (
