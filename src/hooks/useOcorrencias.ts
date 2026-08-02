@@ -436,6 +436,8 @@ export function useAtualizarStatusOcorrencia() {
         extra.cancelled_at = new Date().toISOString();
         extra.perda_registrada_ledger = false; // Marcar que a perda foi estornada
       }
+      // Dependência externa só faz sentido no estado de espera
+      extra.aguardando_de = novoStatus === 'aguardando_terceiro' ? (aguardandoDe || null) : null;
 
       const { error } = await ocorrenciasTable()
         .update({ status: novoStatus, ...extra })
@@ -450,6 +452,7 @@ export function useAtualizarStatusOcorrencia() {
         autor_id: user!.id,
         valor_anterior: statusAnterior,
         valor_novo: novoStatus,
+        conteudo: novoStatus === 'aguardando_terceiro' ? (aguardandoDe || null) : null,
       });
     },
     onSuccess: (_, vars) => {
