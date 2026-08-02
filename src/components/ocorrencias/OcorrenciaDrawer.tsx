@@ -398,21 +398,12 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                 ) : (
                   <div className="space-y-6 relative before:absolute before:inset-y-0 before:left-3.5 before:w-px before:bg-border/60">
                     {eventos.map((evento) => (
-                      <div key={evento.id} className="relative pl-10">
-                        <div className="absolute left-0 top-1 h-7 w-7 rounded-full bg-background border border-border flex items-center justify-center z-10">
-                           <div className="h-2 w-2 rounded-full bg-muted-foreground/40" />
-                        </div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-semibold text-foreground">{getMemberName(evento.autor_id)}</span>
-                          <span className="text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(evento.created_at), { addSuffix: true, locale: ptBR })}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground leading-relaxed">
-                          {EVENTO_TIPO_LABELS[evento.tipo]}
-                          {evento.tipo === 'comentario' && (
-                            <p className="mt-1 text-foreground bg-muted/30 p-2 rounded-md border border-border/20">{evento.conteudo}</p>
-                          )}
-                        </div>
-                      </div>
+                      <TimelineEvento
+                        key={evento.id}
+                        evento={evento}
+                        autorNome={getMemberName(evento.autor_id)}
+                        resolveNome={getMemberName}
+                      />
                     ))}
                   </div>
                 )}
