@@ -7292,6 +7292,7 @@ export type Database = {
       }
       ocorrencias: {
         Row: {
+          aguardando_de: string | null
           ajuste_ledger_id: string | null
           aposta_id: string | null
           bookmaker_id: string | null
@@ -7328,6 +7329,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          aguardando_de?: string | null
           ajuste_ledger_id?: string | null
           aposta_id?: string | null
           bookmaker_id?: string | null
@@ -7364,6 +7366,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          aguardando_de?: string | null
           ajuste_ledger_id?: string | null
           aposta_id?: string | null
           bookmaker_id?: string | null
@@ -19047,6 +19050,7 @@ export type Database = {
         | "observador_removido"
         | "prioridade_alterada"
         | "vinculo_adicionado"
+        | "campo_alterado"
       ocorrencia_prioridade: "baixa" | "media" | "alta" | "urgente"
       ocorrencia_resultado_financeiro:
         | "sem_impacto"
@@ -19302,6 +19306,7 @@ export const Constants = {
         "observador_removido",
         "prioridade_alterada",
         "vinculo_adicionado",
+        "campo_alterado",
       ],
       ocorrencia_prioridade: ["baixa", "media", "alta", "urgente"],
       ocorrencia_resultado_financeiro: [
