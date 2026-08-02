@@ -20,6 +20,7 @@ import {
   ArrowRight,
   Timer,
   AlertCircle,
+  Archive,
 } from 'lucide-react';
 import { TIPO_LABELS } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaStatus } from '@/types/ocorrencias';
