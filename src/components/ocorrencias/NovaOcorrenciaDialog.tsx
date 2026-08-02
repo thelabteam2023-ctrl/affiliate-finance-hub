@@ -326,6 +326,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                             form.setValue('entidade_id', '');
                             if (v === 'bloqueio_bancario') form.setValue('contexto_entidade', 'banco');
                             else if (v === 'bloqueio_contas') form.setValue('contexto_entidade', 'bookmaker');
+                            else if (v === 'movimentacao_cripto') form.setValue('contexto_entidade', 'wallet');
                           }} value={field.value}>
                             <FormControl>
                               <SelectTrigger className="h-11 bg-background">
@@ -338,6 +339,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                                   <div className="flex flex-col gap-0.5 items-start">
                                     <span className="font-semibold text-sm leading-none">{l}</span>
                                     {v === 'movimentacao_financeira' && <span className="text-[10px] text-muted-foreground leading-tight">Saques, depósitos, estornos e atrasos</span>}
+                                    {v === 'movimentacao_cripto' && <span className="text-[10px] text-muted-foreground leading-tight">Envios em rede/endereço errado, valores não creditados</span>}
                                     {v === 'kyc' && <span className="text-[10px] text-muted-foreground leading-tight">Verificação de identidade e documentos</span>}
                                     {v === 'bloqueio_bancario' && <span className="text-[10px] text-muted-foreground leading-tight">Bloqueios em contas e PIX</span>}
                                     {v === 'bloqueio_contas' && <span className="text-[10px] text-muted-foreground leading-tight">Suspensão e encerramento de contas</span>}
@@ -355,11 +357,16 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Contexto</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={['bloqueio_bancario', 'bloqueio_contas'].includes(tipoSelecionado)}>
+                          <Select
+                            onValueChange={(v) => { field.onChange(v); form.setValue('entidade_id', ''); }}
+                            value={field.value}
+                            disabled={['bloqueio_bancario', 'bloqueio_contas', 'movimentacao_cripto'].includes(tipoSelecionado)}
+                          >
                             <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
                             <SelectContent>
                               <SelectItem value="bookmaker">Bookmaker</SelectItem>
                               <SelectItem value="banco">Banco</SelectItem>
+                              <SelectItem value="wallet">Carteira cripto</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormItem>
