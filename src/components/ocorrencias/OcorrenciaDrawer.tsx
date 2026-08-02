@@ -86,6 +86,7 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
   const [comentario, setComentario] = useState('');
   const [resolucaoOpen, setResolucaoOpen] = useState(false);
   const [editarOpen, setEditarOpen] = useState(false);
+  const [aguardandoOpen, setAguardandoOpen] = useState(false);
 
   const memberMap = new Map(members.map((m) => [m.user_id, m]));
 
