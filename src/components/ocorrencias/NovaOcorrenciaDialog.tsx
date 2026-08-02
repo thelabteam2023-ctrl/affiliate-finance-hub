@@ -69,15 +69,24 @@ const schema = z.object({
   descricao: z.string().min(10, 'Descreva o problema com pelo menos 10 caracteres'),
   tipo: z.enum([
     'movimentacao_financeira',
+    'movimentacao_cripto',
     'kyc',
     'bloqueio_bancario',
     'bloqueio_contas',
   ] as const),
   sub_motivo: z.string().optional(),
-  contexto_entidade: z.enum(['bookmaker', 'banco'], { required_error: 'Selecione onde ocorreu' }),
+  contexto_entidade: z.enum(['bookmaker', 'banco', 'wallet'], { required_error: 'Selecione onde ocorreu' }),
   entidade_id: z.string().min(1, 'Selecione a entidade'),
   prioridade: z.enum(['baixa', 'media', 'alta', 'urgente'] as const),
   valor_risco: z.coerce.number().min(0).optional(),
+  // Contexto cripto (opcionais — validados apenas quando contexto = wallet)
+  coin: z.string().optional(),
+  network: z.string().optional(),
+  quantidade_cripto: z.coerce.number().min(0).optional(),
+  tx_hash: z.string().optional(),
+  destino_tipo: z.enum(['wallet_interna', 'externo']).optional(),
+  wallet_destino_id: z.string().optional(),
+  endereco_destino_externo: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
