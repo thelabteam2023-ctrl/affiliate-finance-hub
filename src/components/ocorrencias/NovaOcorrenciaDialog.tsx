@@ -264,12 +264,13 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     if (!isWalletCtx || !walletOrigem) return;
     form.setValue('network', walletOrigem.network || '');
     const coinAtual = form.getValues('coin');
-    if (moedasDaWallet.length === 1) {
-      form.setValue('coin', moedasDaWallet[0]);
-    } else if (coinAtual && moedasDaWallet.length > 0 && !moedasDaWallet.includes(coinAtual)) {
+    const opcoes = ativosDisponiveis;
+    if (opcoes.length === 1) {
+      form.setValue('coin', opcoes[0]);
+    } else if (coinAtual && opcoes.length > 0 && !opcoes.includes(coinAtual.toUpperCase())) {
       form.setValue('coin', '');
     }
-  }, [isWalletCtx, walletOrigem, moedasDaWallet, form]);
+  }, [isWalletCtx, walletOrigem, ativosDisponiveis, form]);
 
   const subMotivos = tipoSelecionado === 'movimentacao_financeira'
     ? (SUB_MOTIVOS_MOVIMENTACAO[contextoEntidade] || [])
@@ -646,8 +647,20 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       {walletOrigem.endereco && (
                         <p className="font-mono text-[11px] text-muted-foreground break-all">{walletOrigem.endereco}</p>
                       )}
+                      {saldosAtivos.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {saldosAtivos.map((s) => (
+                            <span key={s.coin} className="text-[10px] px-2 py-0.5 rounded-md border border-border/50 bg-muted/40 font-mono">
+                              {s.coin}: {s.saldo_disponivel_coin.toLocaleString('pt-BR', { maximumFractionDigits: 8 })}
+                              {s.saldo_em_transito_coin > 0 && (
+                                <span className="text-amber-500"> · {s.saldo_em_transito_coin.toLocaleString('pt-BR', { maximumFractionDigits: 8 })} em trânsito</span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <p className="text-[10px] text-muted-foreground/80">
-                        Rede e endereço preenchidos automaticamente a partir do cadastro.
+                        Rede, endereço e saldos carregados automaticamente do cadastro.
                       </p>
                     </div>
                   ) : (
