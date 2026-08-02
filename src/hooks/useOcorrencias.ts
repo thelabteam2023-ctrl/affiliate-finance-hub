@@ -274,6 +274,13 @@ interface CriarOcorrenciaPayload {
   parceiro_id?: string;
   aposta_id?: string;
   wallet_id?: string;
+  wallet_origem_id?: string;
+  wallet_destino_id?: string;
+  endereco_destino_externo?: string;
+  network?: string;
+  coin?: string;
+  quantidade_cripto?: number;
+  tx_hash?: string;
   contexto_metadata?: Record<string, unknown>;
   valor_risco?: number;
   moeda?: string;
@@ -304,6 +311,13 @@ export function useCriarOcorrencia() {
           parceiro_id: payload.parceiro_id || null,
           aposta_id: payload.aposta_id || null,
           wallet_id: payload.wallet_id || null,
+          wallet_origem_id: payload.wallet_origem_id || null,
+          wallet_destino_id: payload.wallet_destino_id || null,
+          endereco_destino_externo: payload.endereco_destino_externo || null,
+          network: payload.network || null,
+          coin: payload.coin || null,
+          quantidade_cripto: payload.quantidade_cripto ?? null,
+          tx_hash: payload.tx_hash || null,
           contexto_metadata: payload.contexto_metadata || null,
           valor_risco: payload.valor_risco || 0,
           moeda: payload.moeda || 'BRL',
@@ -569,6 +583,20 @@ export function useResolverOcorrenciaComFinanceiro() {
       valorPerda: number;
       resolvedAt?: string;
     }) => {
+      // 0. Valor em disputa original (para derivar o valor recuperado)
+      const { data: base } = await ocorrenciasTable()
+        .select('valor_risco')
+        .eq('id', id)
+        .maybeSingle();
+      const valorRisco = Number((base as any)?.valor_risco || 0);
+      const valorRecuperado = Math.max(0, valorRisco - (valorPerda || 0));
+      const desfecho =
+        resultadoFinanceiro === 'sem_impacto'
+          ? 'recuperado_total'
+          : resultadoFinanceiro === 'perda_parcial'
+          ? 'recuperado_parcial'
+          : 'perda_definitiva';
+
       // 1. Atualizar ocorrência com status + resultado financeiro
       const { error } = await ocorrenciasTable()
         .update({
@@ -577,6 +605,8 @@ export function useResolverOcorrenciaComFinanceiro() {
           resultado_financeiro: resultadoFinanceiro,
           valor_perda: valorPerda,
           perda_registrada_ledger: valorPerda > 0,
+          valor_recuperado: valorRecuperado,
+          desfecho,
         })
         .eq('id', id)
         .eq('workspace_id', workspaceId!);
@@ -804,6 +834,8 @@ export function useReabrirOcorrencia() {
           resultado_financeiro: null,
           valor_perda: null,
           perda_registrada_ledger: false,
+          valor_recuperado: null,
+          desfecho: null,
         })
         .eq('id', id)
         .eq('workspace_id', workspaceId!);

@@ -7,6 +7,7 @@ export const PRIORIDADE_DOTS = {
 
 export const TIPO_COLORS = {
   movimentacao_financeira: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+  movimentacao_cripto: 'text-cyan-500 bg-cyan-500/10 border-cyan-500/20',
   kyc: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
   bloqueio_bancario: 'text-red-500 bg-red-500/10 border-red-500/20',
   bloqueio_contas: 'text-orange-500 bg-orange-500/10 border-orange-500/20',

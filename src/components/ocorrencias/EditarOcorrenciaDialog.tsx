@@ -44,6 +44,7 @@ const schema = z.object({
   descricao: z.string().min(10, 'Descreva o problema com pelo menos 10 caracteres'),
   tipo: z.enum([
     'movimentacao_financeira',
+   'movimentacao_cripto',
     'kyc',
     'bloqueio_bancario',
     'bloqueio_contas',

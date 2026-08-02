@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/select";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useCriarOcorrencia } from "@/hooks/useOcorrencias";
+import { useAuth } from "@/hooks/useAuth";
 
 type Motivo = "REDE_INCORRETA" | "ENDERECO_INVALIDO" | "FRAUDE" | "OUTRO";
 
@@ -62,6 +64,9 @@ export function ReportarPerdaTransitDialog({
   const [observacao, setObservacao] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [abrirOcorrencia, setAbrirOcorrencia] = useState(true);
+  const { user } = useAuth();
+  const { mutateAsync: criarOcorrencia } = useCriarOcorrencia();
 
   const reset = () => {
     setMotivo("REDE_INCORRETA");
@@ -69,6 +74,7 @@ export function ReportarPerdaTransitDialog({
     setHash("");
     setObservacao("");
     setConfirmed(false);
+    setAbrirOcorrencia(true);
   };
 
   const canSubmit =
@@ -97,6 +103,38 @@ export function ReportarPerdaTransitDialog({
       toast.success(
         `Perda registrada. $${Number(res.valor_perdido_usd || valorUsd).toFixed(2)} debitados da carteira de origem.`,
       );
+
+      if (abrirOcorrencia && user?.id) {
+        try {
+          await criarOcorrencia({
+            titulo: `Recuperação de ativos — ${coin || "cripto"} em trânsito`,
+            descricao: observacao.trim(),
+            tipo: "movimentacao_cripto",
+            sub_motivo:
+              motivo === "REDE_INCORRETA"
+                ? "rede_incorreta"
+                : motivo === "ENDERECO_INVALIDO"
+                ? "endereco_incorreto"
+                : motivo === "FRAUDE"
+                ? "fraude"
+                : "outro",
+            prioridade: "alta",
+            executor_id: user.id,
+            coin: coin || undefined,
+            network: rede.trim() || undefined,
+            quantidade_cripto: qtdCoin ?? undefined,
+            tx_hash: hash.trim() || undefined,
+            valor_risco: Number(res.valor_perdido_usd || valorUsd) || 0,
+            moeda: "USD",
+            contexto_metadata: { perda_ledger_id: ledgerId, origem: "reportar_perda_transit" },
+          });
+          toast.success("Ocorrência de acompanhamento criada.");
+        } catch (e) {
+          console.error("[ReportarPerdaTransitDialog] falha ao criar ocorrência:", e);
+          toast.warning("Perda registrada, mas não foi possível abrir a ocorrência.");
+        }
+      }
+
       reset();
       onOpenChange(false);
       onSuccess?.();
@@ -190,6 +228,18 @@ export function ReportarPerdaTransitDialog({
               {observacao.trim().length}/20
             </p>
           </div>
+
+          <label className="flex items-start gap-2 text-sm cursor-pointer">
+            <Checkbox
+              checked={abrirOcorrencia}
+              onCheckedChange={(v) => setAbrirOcorrencia(v === true)}
+              className="mt-0.5"
+            />
+            <span>
+              Abrir <strong>ocorrência de recuperação</strong> para acompanhar tentativas de resgate
+              dos ativos.
+            </span>
+          </label>
 
           <label className="flex items-start gap-2 text-sm cursor-pointer">
             <Checkbox

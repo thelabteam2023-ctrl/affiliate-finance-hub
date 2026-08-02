@@ -69,15 +69,24 @@ const schema = z.object({
   descricao: z.string().min(10, 'Descreva o problema com pelo menos 10 caracteres'),
   tipo: z.enum([
     'movimentacao_financeira',
+    'movimentacao_cripto',
     'kyc',
     'bloqueio_bancario',
     'bloqueio_contas',
   ] as const),
   sub_motivo: z.string().optional(),
-  contexto_entidade: z.enum(['bookmaker', 'banco'], { required_error: 'Selecione onde ocorreu' }),
+  contexto_entidade: z.enum(['bookmaker', 'banco', 'wallet'], { required_error: 'Selecione onde ocorreu' }),
   entidade_id: z.string().min(1, 'Selecione a entidade'),
   prioridade: z.enum(['baixa', 'media', 'alta', 'urgente'] as const),
   valor_risco: z.coerce.number().min(0).optional(),
+  // Contexto cripto (opcionais — validados apenas quando contexto = wallet)
+  coin: z.string().optional(),
+  network: z.string().optional(),
+  quantidade_cripto: z.coerce.number().min(0).optional(),
+  tx_hash: z.string().optional(),
+  destino_tipo: z.enum(['wallet_interna', 'externo']).optional(),
+  wallet_destino_id: z.string().optional(),
+  endereco_destino_externo: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -117,6 +126,13 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
       entidade_id: '',
       prioridade: 'media',
       valor_risco: 0,
+      coin: '',
+      network: '',
+      quantidade_cripto: 0,
+      tx_hash: '',
+      destino_tipo: 'externo',
+      wallet_destino_id: '',
+      endereco_destino_externo: '',
     },
   });
 
@@ -139,6 +155,9 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const valorRisco = form.watch('valor_risco');
   const tipoSelecionado = form.watch('tipo');
   const contextoEntidade = form.watch('contexto_entidade');
+  const destinoTipo = form.watch('destino_tipo');
+  const isWalletCtx = contextoEntidade === 'wallet';
+  const isParceiroCtx = contextoEntidade === 'banco' || isWalletCtx;
 
   const selectedBookmaker = useMemo(() => {
     if (contextoEntidade !== 'bookmaker') return null;
@@ -193,6 +212,18 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   });
 
   const { data: contasEWallets = [] } = useParceiroContas(selectedParceiroId);
+  const walletsDoParceiro = useMemo(
+    () => (contasEWallets as any[]).filter((c) => c.tipo === 'wallet'),
+    [contasEWallets]
+  );
+  const opcoesEntidade = useMemo(
+    () => (isWalletCtx ? walletsDoParceiro : (contasEWallets as any[])),
+    [isWalletCtx, walletsDoParceiro, contasEWallets]
+  );
+  const walletOrigem = useMemo(
+    () => walletsDoParceiro.find((w) => w.id === selectedEntidadeId) || null,
+    [walletsDoParceiro, selectedEntidadeId]
+  );
 
   const subMotivos = tipoSelecionado === 'movimentacao_financeira'
     ? (SUB_MOTIVOS_MOVIMENTACAO[contextoEntidade] || [])
@@ -210,6 +241,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     try {
       const isBookmaker = data.contexto_entidade === 'bookmaker';
       const isBanco = data.contexto_entidade === 'banco';
+      const isWallet = data.contexto_entidade === 'wallet';
       const bkSelecionado = isBookmaker ? bookmakers.find(bk => bk.id === data.entidade_id) : null;
 
       await criar({
@@ -221,11 +253,21 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
         executor_id: executorId,
         bookmaker_id: isBookmaker ? data.entidade_id : contextoInicial?.bookmaker_id,
         conta_bancaria_id: isBanco && (contasEWallets.find(c => c.id === data.entidade_id)?.tipo === 'banco') ? data.entidade_id : undefined,
-        wallet_id: isBanco && (contasEWallets.find(c => c.id === data.entidade_id)?.tipo === 'wallet') ? data.entidade_id : undefined,
+        wallet_id:
+          (isBanco || isWallet) && contasEWallets.find(c => c.id === data.entidade_id)?.tipo === 'wallet'
+            ? data.entidade_id
+            : undefined,
+        wallet_origem_id: isWallet ? data.entidade_id : undefined,
+        wallet_destino_id: isWallet && data.destino_tipo === 'wallet_interna' ? data.wallet_destino_id || undefined : undefined,
+        endereco_destino_externo: isWallet && data.destino_tipo === 'externo' ? data.endereco_destino_externo?.trim() || undefined : undefined,
+        network: isWallet ? (data.network?.trim() || walletOrigem?.network || undefined) : undefined,
+        coin: isWallet ? data.coin?.trim().toUpperCase() || undefined : undefined,
+        quantidade_cripto: isWallet ? Number(data.quantidade_cripto) || undefined : undefined,
+        tx_hash: isWallet ? data.tx_hash?.trim() || undefined : undefined,
         projeto_id: contextoInicial?.projeto_id,
-        parceiro_id: isBanco ? selectedParceiroId || undefined : contextoInicial?.parceiro_id,
+        parceiro_id: isBanco || isWallet ? selectedParceiroId || undefined : contextoInicial?.parceiro_id,
         valor_risco: data.valor_risco || 0,
-        moeda: bkSelecionado?.moeda || 'BRL',
+        moeda: isWallet ? 'USD' : bkSelecionado?.moeda || 'BRL',
         data_ocorrencia: format(new Date(), 'yyyy-MM-dd'),
       });
       onOpenChange(false);
@@ -241,6 +283,10 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     };
     const isValid = await form.trigger(fieldsByStep[step]);
     if (isValid) {
+      if (step === 1 && contextoEntidade === 'wallet' && !selectedParceiroId) {
+        toast.error('Selecione o parceiro dono da carteira de origem.');
+        return;
+      }
       if (step === 2 && isValueExceedingBalance) {
         toast.error('O valor em disputa não pode exceder o saldo disponível na casa.');
         return;
@@ -280,6 +326,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                             form.setValue('entidade_id', '');
                             if (v === 'bloqueio_bancario') form.setValue('contexto_entidade', 'banco');
                             else if (v === 'bloqueio_contas') form.setValue('contexto_entidade', 'bookmaker');
+                            else if (v === 'movimentacao_cripto') form.setValue('contexto_entidade', 'wallet');
                           }} value={field.value}>
                             <FormControl>
                               <SelectTrigger className="h-11 bg-background">
@@ -292,6 +339,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                                   <div className="flex flex-col gap-0.5 items-start">
                                     <span className="font-semibold text-sm leading-none">{l}</span>
                                     {v === 'movimentacao_financeira' && <span className="text-[10px] text-muted-foreground leading-tight">Saques, depósitos, estornos e atrasos</span>}
+                                    {v === 'movimentacao_cripto' && <span className="text-[10px] text-muted-foreground leading-tight">Envios em rede/endereço errado, valores não creditados</span>}
                                     {v === 'kyc' && <span className="text-[10px] text-muted-foreground leading-tight">Verificação de identidade e documentos</span>}
                                     {v === 'bloqueio_bancario' && <span className="text-[10px] text-muted-foreground leading-tight">Bloqueios em contas e PIX</span>}
                                     {v === 'bloqueio_contas' && <span className="text-[10px] text-muted-foreground leading-tight">Suspensão e encerramento de contas</span>}
@@ -309,11 +357,16 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Contexto</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={['bloqueio_bancario', 'bloqueio_contas'].includes(tipoSelecionado)}>
+                          <Select
+                            onValueChange={(v) => { field.onChange(v); form.setValue('entidade_id', ''); }}
+                            value={field.value}
+                            disabled={['bloqueio_bancario', 'bloqueio_contas', 'movimentacao_cripto'].includes(tipoSelecionado)}
+                          >
                             <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
                             <SelectContent>
                               <SelectItem value="bookmaker">Bookmaker</SelectItem>
                               <SelectItem value="banco">Banco</SelectItem>
+                              <SelectItem value="wallet">Carteira cripto</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormItem>
@@ -465,11 +518,13 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                           name="entidade_id"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Conta ou Wallet</FormLabel>
+                           <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">
+                             {isWalletCtx ? 'Carteira de origem' : 'Conta ou Wallet'}
+                           </FormLabel>
                               <Select onValueChange={field.onChange} value={field.value} disabled={!selectedParceiroId}>
                                 <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                  {contasEWallets.map(c => (
+                                  {opcoesEntidade.map((c: any) => (
                                     <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
                                   ))}
                                 </SelectContent>
@@ -521,6 +576,122 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                   <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
                     <DollarSign className="h-4 w-4 text-primary" />
                     Financeiro e Urgência
+                  </h4>
+                </div>
+
+                {isWalletCtx && (
+                <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
+                    <Hash className="h-4 w-4 text-primary" />
+                    Dados da Transação Cripto
+                  </h4>
+                  {walletOrigem && (
+                    <p className="text-[11px] text-muted-foreground -mt-2">
+                      Origem: <span className="font-medium text-foreground">{walletOrigem.label}</span> · rede {walletOrigem.network}
+                    </p>
+                  )}
+                  <div className="grid grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="coin"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Ativo</FormLabel>
+                          <FormControl><Input placeholder="USDT" className="h-10 bg-background uppercase" {...field} /></FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="network"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Rede usada</FormLabel>
+                          <FormControl>
+                            <Input placeholder={walletOrigem?.network || 'TRC20'} className="h-10 bg-background" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="quantidade_cripto"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Quantidade</FormLabel>
+                          <FormControl><Input type="number" step="0.00000001" className="h-10 bg-background font-mono" {...field} /></FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="destino_tipo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Destino</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'externo'}>
+                          <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="wallet_interna">Carteira cadastrada no sistema</SelectItem>
+                            <SelectItem value="externo">Endereço externo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+
+                  {destinoTipo === 'wallet_interna' ? (
+                    <FormField
+                      control={form.control}
+                      name="wallet_destino_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Carteira de destino</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione a carteira..." /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              {walletsDoParceiro
+                                .filter((w: any) => w.id !== selectedEntidadeId)
+                                .map((w: any) => (
+                                  <SelectItem key={w.id} value={w.id}>{w.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name="endereco_destino_externo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Endereço de destino</FormLabel>
+                          <FormControl><Input placeholder="0x... / T..." className="h-10 bg-background font-mono text-xs" {...field} /></FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  <FormField
+                    control={form.control}
+                    name="tx_hash"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Hash da transação</FormLabel>
+                        <FormControl><Input placeholder="Opcional — facilita o rastreio na rede" className="h-10 bg-background font-mono text-xs" {...field} /></FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                )}
+
+                <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    {isWalletCtx ? 'Valor em disputa (USD) e Urgência' : 'Financeiro e Urgência'}
                   </h4>
                   <div className="grid grid-cols-2 gap-4">
                     <FormField

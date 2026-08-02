@@ -1,0 +1,1 @@
+ALTER TYPE public.ocorrencia_tipo ADD VALUE IF NOT EXISTS 'movimentacao_cripto';

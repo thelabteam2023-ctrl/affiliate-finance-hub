@@ -24,8 +24,8 @@ import { ResolucaoFinanceiraDialog } from './ResolucaoFinanceiraDialog';
 import { EditarOcorrenciaDialog } from './EditarOcorrenciaDialog';
 import { TimelineEvento } from './TimelineEvento';
 import { AguardandoDeDialog } from './AguardandoDeDialog';
-import type { OcorrenciaStatus, OcorrenciaEvento } from '@/types/ocorrencias';
-import { STATUS_LABELS, EVENTO_TIPO_LABELS, SUB_MOTIVO_LABELS } from '@/types/ocorrencias';
+import type { OcorrenciaStatus, OcorrenciaEvento, OcorrenciaDesfecho } from '@/types/ocorrencias';
+import { STATUS_LABELS, EVENTO_TIPO_LABELS, SUB_MOTIVO_LABELS, DESFECHO_LABELS } from '@/types/ocorrencias';
 import {
   Clock,
   User,
@@ -384,6 +384,46 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                   </div>
                 )}
               </section>
+
+              {/* Contexto Cripto */}
+              {(() => {
+                const oc = ocorrencia as any;
+                const temCripto =
+                  oc.wallet_origem_id || oc.wallet_destino_id || oc.endereco_destino_externo ||
+                  oc.coin || oc.network || oc.quantidade_cripto || oc.tx_hash;
+                if (!temCripto) return null;
+                const linhas: { label: string; value: string }[] = [];
+                if (oc.coin) linhas.push({ label: 'Ativo', value: String(oc.coin).toUpperCase() });
+                if (oc.network) linhas.push({ label: 'Rede', value: oc.network });
+                if (oc.quantidade_cripto)
+                  linhas.push({ label: 'Quantidade', value: Number(oc.quantidade_cripto).toString() });
+                if (oc.endereco_destino_externo)
+                  linhas.push({ label: 'Destino externo', value: oc.endereco_destino_externo });
+                if (oc.tx_hash) linhas.push({ label: 'Hash', value: oc.tx_hash });
+                if (oc.desfecho)
+                  linhas.push({ label: 'Desfecho', value: DESFECHO_LABELS[oc.desfecho as OcorrenciaDesfecho] || oc.desfecho });
+                if (oc.valor_recuperado > 0)
+                  linhas.push({
+                    label: 'Valor recuperado',
+                    value: `${oc.moeda || 'USD'} ${Number(oc.valor_recuperado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                  });
+                return (
+                  <section className="space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                      <Tag className="h-3.5 w-3.5" />
+                      Transação Cripto
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 rounded-xl border border-border/40 bg-muted/20 p-3">
+                      {linhas.map((l) => (
+                        <div key={l.label} className="min-w-0">
+                          <p className="text-[9px] uppercase font-black tracking-widest text-primary/70 mb-0.5">{l.label}</p>
+                          <p className="text-xs font-medium text-foreground break-all">{l.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })()}
 
               {/* Timeline Events */}
               <section className="space-y-4">
