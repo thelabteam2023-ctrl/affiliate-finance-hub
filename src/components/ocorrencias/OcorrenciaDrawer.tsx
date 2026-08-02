@@ -475,6 +475,25 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                 ocorrencia={ocorrencia}
               />
             )}
+
+            {/* Dependência externa ao entrar em Aguardando Retorno */}
+            {ocorrencia && (
+              <AguardandoDeDialog
+                open={aguardandoOpen}
+                onOpenChange={setAguardandoOpen}
+                isPending={updatingStatus}
+                valorAtual={(ocorrencia as any).aguardando_de}
+                onConfirm={(aguardandoDe) => {
+                  atualizarStatus({
+                    id: ocorrencia.id,
+                    novoStatus: 'aguardando_terceiro',
+                    statusAnterior: ocorrencia.status,
+                    aguardandoDe,
+                  });
+                  setAguardandoOpen(false);
+                }}
+              />
+            )}
           </>
         ) : null}
       </SheetContent>
