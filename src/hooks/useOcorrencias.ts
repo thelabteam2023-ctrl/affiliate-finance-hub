@@ -385,11 +385,14 @@ export function useAtualizarStatusOcorrencia() {
       novoStatus,
       statusAnterior,
       aguardandoDe,
+      motivo,
     }: {
       id: string;
       novoStatus: OcorrenciaStatus;
       statusAnterior: OcorrenciaStatus;
       aguardandoDe?: string | null;
+      /** Motivo do cancelamento (ex.: "Aberta por engano") */
+      motivo?: string | null;
     }) => {
       // CENÁRIO: Cancelar ocorrência que já teve perda registrada
       // Precisamos estornar a perda antes de cancelar
@@ -459,6 +462,7 @@ export function useAtualizarStatusOcorrencia() {
       if (novoStatus === 'cancelado') {
         extra.cancelled_at = new Date().toISOString();
         extra.perda_registrada_ledger = false; // Marcar que a perda foi estornada
+        extra.cancel_reason = motivo?.trim() || null;
       }
       // Dependência externa só faz sentido no estado de espera
       extra.aguardando_de = novoStatus === 'aguardando_terceiro' ? (aguardandoDe || null) : null;
@@ -476,7 +480,12 @@ export function useAtualizarStatusOcorrencia() {
         autor_id: user!.id,
         valor_anterior: statusAnterior,
         valor_novo: novoStatus,
-        conteudo: novoStatus === 'aguardando_terceiro' ? (aguardandoDe || null) : null,
+        conteudo:
+          novoStatus === 'aguardando_terceiro'
+            ? aguardandoDe || null
+            : novoStatus === 'cancelado'
+            ? motivo?.trim() || null
+            : null,
       });
     },
     onSuccess: (_, vars) => {
