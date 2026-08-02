@@ -159,19 +159,25 @@ export const PRIORIDADE_LABELS: Record<OcorrenciaPrioridade, string> = {
 export const STATUS_LABELS: Record<OcorrenciaStatus, string> = {
   aberto: 'Aberto',
   em_andamento: 'Em Andamento',
-  aguardando_terceiro: 'Aguardando Terceiro',
+  aguardando_terceiro: 'Aguardando Retorno',
   resolvido: 'Resolvido',
   cancelado: 'Cancelado',
 };
 
-// Rótulos curtos de status (botões/filtros)
-export const STATUS_LABELS_LEGACY: Record<OcorrenciaStatus, string> = {
-  aberto: 'Aberto',
-  em_andamento: 'Em Andamento',
-  aguardando_terceiro: 'Aguardando Terceiro',
-  resolvido: 'Resolvido',
-  cancelado: 'Cancelado',
-};
+/**
+ * Label contextual do status: em "Aguardando Retorno" mostra de quem
+ * se aguarda (ex.: "Aguardando Casa"), tornando o badge auto-explicativo.
+ */
+export function getStatusLabel(
+  status: OcorrenciaStatus,
+  aguardandoDe?: string | null
+): string {
+  if (status === 'aguardando_terceiro' && aguardandoDe) {
+    const label = AGUARDANDO_DE_LABELS[aguardandoDe as OcorrenciaAguardandoDe];
+    if (label) return `Aguardando ${label}`;
+  }
+  return STATUS_LABELS[status];
+}
 
 export const PRIORIDADE_COLORS: Record<OcorrenciaPrioridade, string> = {
   baixa: 'text-muted-foreground border-muted-foreground/50',
