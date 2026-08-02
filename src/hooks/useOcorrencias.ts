@@ -274,6 +274,13 @@ interface CriarOcorrenciaPayload {
   parceiro_id?: string;
   aposta_id?: string;
   wallet_id?: string;
+  wallet_origem_id?: string;
+  wallet_destino_id?: string;
+  endereco_destino_externo?: string;
+  network?: string;
+  coin?: string;
+  quantidade_cripto?: number;
+  tx_hash?: string;
   contexto_metadata?: Record<string, unknown>;
   valor_risco?: number;
   moeda?: string;
@@ -304,6 +311,13 @@ export function useCriarOcorrencia() {
           parceiro_id: payload.parceiro_id || null,
           aposta_id: payload.aposta_id || null,
           wallet_id: payload.wallet_id || null,
+          wallet_origem_id: payload.wallet_origem_id || null,
+          wallet_destino_id: payload.wallet_destino_id || null,
+          endereco_destino_externo: payload.endereco_destino_externo || null,
+          network: payload.network || null,
+          coin: payload.coin || null,
+          quantidade_cripto: payload.quantidade_cripto ?? null,
+          tx_hash: payload.tx_hash || null,
           contexto_metadata: payload.contexto_metadata || null,
           valor_risco: payload.valor_risco || 0,
           moeda: payload.moeda || 'BRL',
