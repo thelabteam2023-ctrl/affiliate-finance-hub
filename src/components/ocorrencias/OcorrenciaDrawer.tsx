@@ -24,6 +24,9 @@ import { ResolucaoFinanceiraDialog } from './ResolucaoFinanceiraDialog';
 import { EditarOcorrenciaDialog } from './EditarOcorrenciaDialog';
 import { TimelineEvento } from './TimelineEvento';
 import { AguardandoDeDialog } from './AguardandoDeDialog';
+import { ExcluirOcorrenciaDialog } from './ExcluirOcorrenciaDialog';
+import { useRole } from '@/hooks/useRole';
+import { useRestaurarOcorrencia } from '@/hooks/useOcorrencias';
 import type { OcorrenciaStatus, OcorrenciaEvento, OcorrenciaDesfecho } from '@/types/ocorrencias';
 import { STATUS_LABELS, EVENTO_TIPO_LABELS, SUB_MOTIVO_LABELS, DESFECHO_LABELS } from '@/types/ocorrencias';
 import {
@@ -42,6 +45,8 @@ import {
   RefreshCw,
   DollarSign,
   Pencil,
+  Trash2,
+  ArchiveRestore,
 } from 'lucide-react';
 
 import { formatDistanceToNow } from 'date-fns';
@@ -87,6 +92,10 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
   const [resolucaoOpen, setResolucaoOpen] = useState(false);
   const [editarOpen, setEditarOpen] = useState(false);
   const [aguardandoOpen, setAguardandoOpen] = useState(false);
+  const [excluirOpen, setExcluirOpen] = useState(false);
+  const { isOwnerOrAdmin, isSystemOwner } = useRole();
+  const podeExcluir = isOwnerOrAdmin || isSystemOwner;
+  const { mutate: restaurar, isPending: restaurando } = useRestaurarOcorrencia();
 
   const memberMap = new Map(members.map((m) => [m.user_id, m]));
 
@@ -223,10 +232,59 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                     <span className="text-[10px] font-bold uppercase tracking-wider">Editar</span>
                   </Button>
                 )}
+
+                {podeExcluir && !(ocorrencia as any).deleted_at && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-muted-foreground hover:text-destructive gap-2"
+                    onClick={() => setExcluirOpen(true)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Excluir</span>
+                  </Button>
+                )}
+
+                {podeExcluir && (ocorrencia as any).deleted_at && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2 gap-2"
+                    disabled={restaurando}
+                    onClick={() => restaurar(ocorrencia.id)}
+                  >
+                    <ArchiveRestore className="h-3.5 w-3.5" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Restaurar</span>
+                  </Button>
+                )}
               </div>
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              {(ocorrencia as any).deleted_at && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-destructive mb-1">
+                    Ocorrência arquivada
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Arquivada por {getMemberName((ocorrencia as any).deleted_by)} em{' '}
+                    {new Date((ocorrencia as any).deleted_at).toLocaleString('pt-BR')}.
+                    {(ocorrencia as any).delete_reason
+                      ? ` Motivo: ${(ocorrencia as any).delete_reason}`
+                      : ''}
+                  </p>
+                </div>
+              )}
+
+              {(ocorrencia as any).cancel_reason && ocorrencia.status === 'cancelado' && (
+                <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    Motivo do cancelamento
+                  </p>
+                  <p className="text-sm text-foreground">{(ocorrencia as any).cancel_reason}</p>
+                </div>
+              )}
+
               {/* Financial Risk Card */}
               {ocorrencia.valor_risco > 0 && (
                 <div className="relative group overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-5 shadow-sm transition-all hover:shadow-md hover:border-primary/30">
