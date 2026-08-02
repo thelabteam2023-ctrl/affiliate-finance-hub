@@ -207,7 +207,7 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                   </div>
                 </div>
                 <div className="h-4 w-px bg-border" />
-                <StatusBadge status={ocorrencia.status} />
+                <StatusBadge status={ocorrencia.status} aguardandoDe={(ocorrencia as any).aguardando_de} />
                 <TipoBadge tipo={ocorrencia.tipo} />
                 
                 <div className="flex-1" />
