@@ -212,6 +212,18 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   });
 
   const { data: contasEWallets = [] } = useParceiroContas(selectedParceiroId);
+  const walletsDoParceiro = useMemo(
+    () => (contasEWallets as any[]).filter((c) => c.tipo === 'wallet'),
+    [contasEWallets]
+  );
+  const opcoesEntidade = useMemo(
+    () => (isWalletCtx ? walletsDoParceiro : (contasEWallets as any[])),
+    [isWalletCtx, walletsDoParceiro, contasEWallets]
+  );
+  const walletOrigem = useMemo(
+    () => walletsDoParceiro.find((w) => w.id === selectedEntidadeId) || null,
+    [walletsDoParceiro, selectedEntidadeId]
+  );
 
   const subMotivos = tipoSelecionado === 'movimentacao_financeira'
     ? (SUB_MOTIVOS_MOVIMENTACAO[contextoEntidade] || [])
@@ -229,6 +241,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     try {
       const isBookmaker = data.contexto_entidade === 'bookmaker';
       const isBanco = data.contexto_entidade === 'banco';
+      const isWallet = data.contexto_entidade === 'wallet';
       const bkSelecionado = isBookmaker ? bookmakers.find(bk => bk.id === data.entidade_id) : null;
 
       await criar({
@@ -240,11 +253,21 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
         executor_id: executorId,
         bookmaker_id: isBookmaker ? data.entidade_id : contextoInicial?.bookmaker_id,
         conta_bancaria_id: isBanco && (contasEWallets.find(c => c.id === data.entidade_id)?.tipo === 'banco') ? data.entidade_id : undefined,
-        wallet_id: isBanco && (contasEWallets.find(c => c.id === data.entidade_id)?.tipo === 'wallet') ? data.entidade_id : undefined,
+        wallet_id:
+          (isBanco || isWallet) && contasEWallets.find(c => c.id === data.entidade_id)?.tipo === 'wallet'
+            ? data.entidade_id
+            : undefined,
+        wallet_origem_id: isWallet ? data.entidade_id : undefined,
+        wallet_destino_id: isWallet && data.destino_tipo === 'wallet_interna' ? data.wallet_destino_id || undefined : undefined,
+        endereco_destino_externo: isWallet && data.destino_tipo === 'externo' ? data.endereco_destino_externo?.trim() || undefined : undefined,
+        network: isWallet ? (data.network?.trim() || walletOrigem?.network || undefined) : undefined,
+        coin: isWallet ? data.coin?.trim().toUpperCase() || undefined : undefined,
+        quantidade_cripto: isWallet ? Number(data.quantidade_cripto) || undefined : undefined,
+        tx_hash: isWallet ? data.tx_hash?.trim() || undefined : undefined,
         projeto_id: contextoInicial?.projeto_id,
-        parceiro_id: isBanco ? selectedParceiroId || undefined : contextoInicial?.parceiro_id,
+        parceiro_id: isBanco || isWallet ? selectedParceiroId || undefined : contextoInicial?.parceiro_id,
         valor_risco: data.valor_risco || 0,
-        moeda: bkSelecionado?.moeda || 'BRL',
+        moeda: isWallet ? 'USD' : bkSelecionado?.moeda || 'BRL',
         data_ocorrencia: format(new Date(), 'yyyy-MM-dd'),
       });
       onOpenChange(false);
@@ -260,6 +283,10 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     };
     const isValid = await form.trigger(fieldsByStep[step]);
     if (isValid) {
+      if (step === 1 && contextoEntidade === 'wallet' && !selectedParceiroId) {
+        toast.error('Selecione o parceiro dono da carteira de origem.');
+        return;
+      }
       if (step === 2 && isValueExceedingBalance) {
         toast.error('O valor em disputa não pode exceder o saldo disponível na casa.');
         return;
