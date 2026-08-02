@@ -654,13 +654,19 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Ativo</FormLabel>
-                          {moedasDaWallet.length > 0 ? (
+                          {ativosDisponiveis.length > 0 ? (
                             <Select onValueChange={field.onChange} value={field.value || ''}>
                               <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione o ativo..." /></SelectTrigger></FormControl>
                               <SelectContent>
-                                {moedasDaWallet.map((m: string) => (
-                                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                                ))}
+                                {ativosDisponiveis.map((m: string) => {
+                                  const s = saldosAtivos.find((x) => x.coin === m);
+                                  return (
+                                    <SelectItem key={m} value={m}>
+                                      {m}
+                                      {s ? ` — ${s.saldo_disponivel_coin.toLocaleString('pt-BR', { maximumFractionDigits: 8 })} disp.` : ''}
+                                    </SelectItem>
+                                  );
+                                })}
                               </SelectContent>
                             </Select>
                           ) : (
@@ -674,13 +680,60 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       name="quantidade_cripto"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Quantidade</FormLabel>
-                          <FormControl><Input type="number" step="0.00000001" className="h-10 bg-background font-mono" {...field} /></FormControl>
+                          <div className="flex items-center justify-between mb-2 gap-2">
+                            <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground mb-0">Quantidade em disputa</FormLabel>
+                            {saldoDisponivelCoin !== null && (
+                              <button
+                                type="button"
+                                onClick={() => form.setValue('quantidade_cripto', saldoDisponivelCoin)}
+                                className="text-[10px] font-bold uppercase text-primary hover:underline"
+                              >
+                                Usar saldo total
+                              </button>
+                            )}
+                          </div>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.00000001"
+                              max={saldoDisponivelCoin ?? undefined}
+                              className={cn('h-10 bg-background font-mono', isQuantidadeExcedente && 'border-destructive text-destructive')}
+                              {...field}
+                            />
+                          </FormControl>
+                          <p className={cn('text-[10px] mt-1', isQuantidadeExcedente ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
+                            {loadingSaldos
+                              ? 'Carregando saldo da carteira...'
+                              : saldoDisponivelCoin !== null
+                                ? isQuantidadeExcedente
+                                  ? `Excede o saldo disponível (${saldoDisponivelCoin.toLocaleString('pt-BR', { maximumFractionDigits: 8 })} ${coinSelecionada}).`
+                                  : `Disponível: ${saldoDisponivelCoin.toLocaleString('pt-BR', { maximumFractionDigits: 8 })} ${coinSelecionada}${valorDisputaUsd > 0 ? ` · ≈ US$ ${valorDisputaUsd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} em disputa` : ''}`
+                                : 'Saldo indisponível — valor registrado sem validação automática.'}
+                          </p>
                         </FormItem>
                       )}
                     />
                   </div>
+                  {saldoDisponivelCoin !== null && quantidadeCripto > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                        <span className="text-muted-foreground">Exposição da carteira</span>
+                        <span className={cn(isQuantidadeExcedente ? 'text-destructive' : 'text-primary')}>{exposicaoWallet.toFixed(1)}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-background rounded-full overflow-hidden border border-border/20">
+                        <div
+                          className={cn('h-full transition-all duration-500', isQuantidadeExcedente ? 'bg-destructive' : 'bg-primary')}
+                          style={{ width: `${Math.min(exposicaoWallet, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
 
+                  <details className="group rounded-lg border border-border/50 bg-background/40 p-3">
+                    <summary className="cursor-pointer list-none text-[11px] font-bold uppercase text-muted-foreground select-none">
+                      Detalhes de rastreio (opcional)
+                    </summary>
+                    <div className="mt-3 space-y-4">
                   <FormField
                     control={form.control}
                     name="endereco_destino_externo"
@@ -702,6 +755,8 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       </FormItem>
                     )}
                   />
+                    </div>
+                  </details>
                 </div>
                 )}
 
