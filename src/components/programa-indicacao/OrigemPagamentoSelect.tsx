@@ -931,7 +931,7 @@ export function OrigemPagamentoSelect({
                   onValueChange={handleWalletChange}
                   disabled={disabled}
                 >
-                  <SelectTrigger className="text-center [&>span]:w-full [&>span]:text-center">
+                  <SelectTrigger>
                     <SelectValue placeholder="Escolha uma wallet..." />
                   </SelectTrigger>
                   <SelectContent>
