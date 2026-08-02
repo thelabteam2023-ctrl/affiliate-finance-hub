@@ -398,11 +398,11 @@ export function CalendarioLucros({
   const renderLegend = () => (
     <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/75">
       <span>Menos</span>
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-border/20 bg-muted/15" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-200 dark:border-success/20 bg-emerald-100 dark:bg-success/14" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-300 dark:border-success/25 bg-emerald-200 dark:bg-success/24" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-400 dark:border-success/30 bg-emerald-300 dark:bg-success/38" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-600 dark:border-success/35 bg-emerald-500 dark:bg-success/58" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-border/10 bg-muted/10 dark:bg-muted/5" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-100 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-200 dark:border-emerald-500/30 bg-emerald-100 dark:bg-emerald-500/25" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-600 dark:border-emerald-500/40 bg-emerald-500 dark:bg-emerald-500/60" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-700 dark:border-emerald-400 bg-emerald-600 dark:bg-emerald-500" />
       <span>Mais</span>
     </div>
   );
