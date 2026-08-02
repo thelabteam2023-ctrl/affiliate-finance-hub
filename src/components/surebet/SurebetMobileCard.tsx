@@ -13,7 +13,7 @@ import { Select, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Plus, Check, Trash2 } from 'lucide-react';
 import { BookmakerMetaRow } from '@/components/bookmakers/BookmakerSelectOption';
-import { BookmakerSearchableSelectContent } from '@/components/bookmakers/BookmakerSearchableSelectContent';
+import { BookmakerSearchableSelectContent, resolveBookmakerSelectValue } from '@/components/bookmakers/BookmakerSearchableSelectContent';
 import { BookmakerLogo } from '@/components/ui/bookmaker-logo';
 import { type OddEntry, type LegScenario } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
@@ -252,7 +252,7 @@ export function SurebetMobileCard({
           <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Casa</label>
           <Select 
             value={entry.bookmaker_id}
-            onValueChange={(v) => onUpdateOdd(pernaIndex, "bookmaker_id", v)}
+            onValueChange={(v) => onUpdateOdd(pernaIndex, "bookmaker_id", resolveBookmakerSelectValue(v))}
           >
             <SelectTrigger className="h-9 text-xs w-full">
               <SelectValue placeholder="Selecione a casa">
@@ -268,6 +268,7 @@ export function SurebetMobileCard({
             </SelectTrigger>
             <BookmakerSearchableSelectContent
               bookmakers={bookmakers}
+              clearable
             />
           </Select>
           <BookmakerMetaRow 
@@ -455,7 +456,7 @@ export function SurebetMobileCard({
               </div>
               <Select 
                 value={addEntry.bookmaker_id}
-                onValueChange={(v) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'bookmaker_id', v)}
+                onValueChange={(v) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'bookmaker_id', resolveBookmakerSelectValue(v))}
               >
                 <SelectTrigger className="h-8 text-xs w-full">
                   <SelectValue placeholder="Casa...">
@@ -473,7 +474,7 @@ export function SurebetMobileCard({
                     )}
                   </SelectValue>
                 </SelectTrigger>
-                <BookmakerSearchableSelectContent bookmakers={subBookmakers} />
+                <BookmakerSearchableSelectContent bookmakers={subBookmakers} clearable />
               </Select>
               <div className="grid grid-cols-2 gap-2">
                 <Input 
