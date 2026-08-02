@@ -5,6 +5,7 @@ import {
   PRIORIDADE_LABELS,
   STATUS_LABELS,
   TIPO_LABELS,
+  getStatusLabel,
 } from '@/types/ocorrencias';
 import {
   AlertTriangle,
