@@ -334,11 +334,52 @@ export function RelatorioConfigDialog({
                     {secoes.filter(s => s.enabled).map(secao => (
                       <div key={secao.id} className="border-t pt-4 first:border-0 border-slate-200">
                         <h2 className="text-sm font-bold mb-3 uppercase tracking-tight text-slate-700">{secao.label}</h2>
-                        <div className="h-20 w-full bg-slate-50 rounded border border-dashed border-slate-200 flex items-center justify-center text-[10px] text-slate-400 italic">
-                          Conteúdo da seção {secao.label}...
-                        </div>
+                        
+                        {secao.id === 'vinculos' ? (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-4 gap-2 text-[8px] font-bold text-slate-500 border-b pb-1">
+                              <span>VÍNCULO</span>
+                              <span className="text-center">CASAS</span>
+                              <span className="text-right">BÔNUS</span>
+                              <span className="text-center">PART.</span>
+                            </div>
+                            {(historicoContas?.historicoParceirosLista || []).slice(0, 3).map((p, i) => (
+                              <div key={i} className="grid grid-cols-4 gap-2 text-[9px] border-b border-slate-50 pb-1 items-center">
+                                <span className="font-medium truncate">{p.nome}</span>
+                                <span className="text-center">{p.totalContas}</span>
+                                <span className="text-right font-bold">{formatCurrency(1250 / (i + 1))}</span>
+                                <span className="text-center text-slate-500">18%</span>
+                              </div>
+                            ))}
+                            {(!historicoContas?.historicoParceirosLista || historicoContas.historicoParceirosLista.length === 0) && (
+                              <div className="text-[9px] text-slate-400 italic text-center py-2">
+                                Dados reais de vínculos serão exibidos aqui...
+                              </div>
+                            )}
+                          </div>
+                        ) : secao.id === 'resumo' ? (
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1">
+                              <span className="text-slate-600">Lucro Realizado (Net Profit)</span>
+                              <span className="font-bold text-emerald-600">{formatCurrency(resultado?.netProfit || 0)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1">
+                              <span className="text-slate-600">ROI Operacional</span>
+                              <span className="font-bold">{resultado?.roi?.toFixed(2)}%</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[9px]">
+                              <span className="text-slate-600">Capital Operável</span>
+                              <span className="font-bold">{formatCurrency(resultado?.saldoBookmakers || 0)}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-16 w-full bg-slate-50 rounded border border-dashed border-slate-200 flex items-center justify-center text-[8px] text-slate-400 italic">
+                            Dados da seção {secao.label} serão renderizados no PDF final...
+                          </div>
+                        )}
                       </div>
                     ))}
+
                   </div>
                 </div>
               </ScrollArea>
