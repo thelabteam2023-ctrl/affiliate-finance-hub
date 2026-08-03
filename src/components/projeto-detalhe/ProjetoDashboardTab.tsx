@@ -534,24 +534,58 @@ export function ProjetoDashboardTab({ projetoId, refreshTrigger = 0 }: ProjetoDa
       {/* Performance por Esporte */}
       <Card className="overflow-hidden">
         <CardHeader className="flex flex-col gap-3 space-y-0 p-4 pb-2 sm:flex-row sm:items-center sm:justify-between sm:p-6 sm:pb-2">
-          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <div className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
-            Performance por Esporte
-          </CardTitle>
-          {esportesData.length > 0 && (
-            <Select value={selectedEsporte} onValueChange={setSelectedEsporte}>
-              <SelectTrigger className="h-8 w-full text-sm sm:w-[180px]">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {esportesData.map(esporte => (
-                  <SelectItem key={esporte.esporte} value={esporte.esporte}>
-                    {esporte.esporte} ({esporte.totalApostas})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+            <CardTitle className="text-base sm:text-lg">
+              Performance por Esporte
+            </CardTitle>
+          </div>
+          <div className="flex items-center gap-2">
+            {esportesData.length > 0 && (
+              <Select value={selectedEsporte} onValueChange={setSelectedEsporte}>
+                <SelectTrigger className="h-8 w-full text-sm sm:w-[180px]">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {esportesData.map(esporte => (
+                    <SelectItem key={esporte.esporte} value={esporte.esporte}>
+                      {esporte.esporte} ({esporte.totalApostas})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <ExportMenu
+              getData={() => apostasUnificadas.map(a => transformApostaToExport(a, "Visão Geral", convertToConsolidation))}
+              abaOrigem="Visão Geral"
+              filename={`dashboard-${projetoId}`}
+              filtrosAplicados={{ periodo: period }}
+              projectData={projeto ? {
+                projeto: {
+                  nome: projeto.nome,
+                  tipo_projeto: projeto.tipo_projeto,
+                  status: projeto.status,
+                  moeda_consolidacao: moedaConsolidacao,
+                },
+                resultado: resultado || {
+                  totalVolume: 0,
+                  lucroBruto: 0,
+                  roiTotal: 0,
+                  lucroLiquido: 0,
+                  moedaConsolidacao: moedaConsolidacao || "BRL",
+                  totalVolumePendente: 0,
+                  totalVolumeLiquidado: 0,
+                  totalApostas: 0,
+                  totalProfit: 0,
+                  roiLiquidado: 0,
+                  lucroOperacional: 0
+                },
+                breakdowns: breakdowns,
+                periodo: { de: dateRange?.start || null, ate: dateRange?.end || null },
+                formatCurrency: formatCurrency,
+              } : undefined}
+            />
+          </div>
         </CardHeader>
         <CardContent className="overflow-hidden p-2 pt-0 sm:p-6 sm:pt-0">
           <ModernBarChart
