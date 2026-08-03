@@ -357,41 +357,83 @@ export function RelatorioConfigDialog({
                   {/* Active Sections Preview */}
                   <div className="space-y-6">
                     {secoes.filter(s => s.enabled).map(secao => (
-                      <div key={secao.id} className="border-t pt-4 first:border-0 border-slate-200">
-                        <h2 className="text-sm font-bold mb-3 uppercase tracking-tight text-slate-700">{secao.label}</h2>
+                      <div key={secao.id} className="mb-7">
+                        <h2 className="text-[12px] font-bold uppercase tracking-[1px] text-[#6C7280] mb-3">{secao.label}</h2>
                         
-                        {secao.id === 'vinculos' ? (
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-4 gap-2 text-[8px] font-bold text-slate-500 border-b pb-1">
-                              <span>VÍNCULO</span>
-                              <span className="text-center">CASAS</span>
-                              <span className="text-right">BÔNUS</span>
-                              <span className="text-center">PART.</span>
-                            </div>
-                            {(historicoContas?.historicoParceirosLista || []).slice(0, 5).map((p, i) => {
-                              const bonusVal = p.totalBonus || 0;
-                              const totalBonusAll = (historicoContas?.historicoParceirosLista || []).reduce((acc, curr) => acc + (curr.totalBonus || 0), 0);
-                              const part = totalBonusAll > 0 ? (bonusVal / totalBonusAll) * 100 : 0;
-                              
-                              return (
-                                <div key={i} className="grid grid-cols-4 gap-2 text-[9px] border-b border-slate-50 pb-1 items-center">
-                                  <span className="font-medium truncate">{p.nome}</span>
-                                  <span className="text-center">{p.totalContas}</span>
-                                  <span className="text-right font-bold">{formatCurrency(bonusVal)}</span>
-                                  <span className="text-center text-slate-500">{part.toFixed(1)}%</span>
+                        {secao.id === 'resumo' ? (
+                          <div className="grid grid-cols-3 gap-3 mb-4">
+                            {[
+                              { label: 'Lucro Realizado', val: resultado?.netProfit || 0, sub: 'Resultado líquido', color: (resultado?.netProfit || 0) >= 0 ? '#34D399' : '#F87171' },
+                              { label: 'ROI Operacional', val: `${(resultado?.roi || 0).toFixed(1)}%`, sub: 'Eficiência capital', color: '#3C63FF' },
+                              { label: 'Total Depositado', val: resultado?.totalDepositos || 0, sub: 'Aporte bruto', color: '#F2F3F6' },
+                            ].map((kpi, idx) => (
+                              <div key={idx} className="bg-[#12141A] border border-[#1F222C] rounded-[10px] p-4 border-l-[3px]" style={{ borderLeftColor: kpi.color }}>
+                                <div className="text-[9.5px] font-bold uppercase tracking-[0.8px] text-[#6C7280] mb-2">{kpi.label}</div>
+                                <div className="text-[18px] font-bold font-mono" style={{ color: kpi.color }}>
+                                  {typeof kpi.val === 'number' ? formatCurrency(kpi.val) : kpi.val}
                                 </div>
-                              );
-                            })}
-                            {(!historicoContas?.historicoParceirosLista || historicoContas.historicoParceirosLista.length === 0) && (
-                              <div className="text-[9px] text-slate-400 italic text-center py-2">
-                                Nenhuma contribuição identificada no período.
+                                <div className="text-[9px] text-[#8990A3] mt-1">{kpi.sub}</div>
                               </div>
-                            )}
-
+                            ))}
                           </div>
-                        ) : secao.id === 'bonusPerformance' ? (
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1">
+                        ) : secao.id === 'vinculos' ? (
+                          <div className="bg-[#12141A] border border-[#1F222C] rounded-[10px] overflow-hidden">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-[#171A22] border-b border-[#1F222C]">
+                                  <th className="p-3 text-[9.5px] font-bold uppercase text-[#6C7280]">Vínculo</th>
+                                  <th className="p-3 text-[9.5px] font-bold uppercase text-[#6C7280] text-center">Casas</th>
+                                  <th className="p-3 text-[9.5px] font-bold uppercase text-[#6C7280] text-right">Bônus</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(historicoContas?.historicoParceirosLista || []).slice(0, 3).map((p, i) => (
+                                  <tr key={i} className="border-b border-[#1B1E27] last:border-0">
+                                    <td className="p-3 text-[11px] font-medium">{p.nome}</td>
+                                    <td className="p-3 text-[11px] text-center">{p.totalContas}</td>
+                                    <td className="p-3 text-[11px] font-bold text-right font-mono">{formatCurrency(p.totalBonus || 0)}</td>
+                                  </tr>
+                                ))}
+                                {(!historicoContas?.historicoParceirosLista || historicoContas.historicoParceirosLista.length === 0) && (
+                                  <tr>
+                                    <td colSpan={3} className="p-4 text-[11px] text-[#4B5061] text-center italic">
+                                      Nenhuma contribuição identificada.
+                                    </td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : secao.id === 'modulos' ? (
+                          <div className="bg-[#12141A] border border-[#1F222C] rounded-[10px] p-4 space-y-3">
+                            {(breakdowns?.lucro?.contributions || []).slice(0, 3).map((c, i) => (
+                              <div key={i}>
+                                <div className="flex justify-between text-[11px] mb-1.5 font-medium">
+                                  <span>{c.moduleName}</span>
+                                  <span className="font-bold font-mono" style={{ color: c.value >= 0 ? '#34D399' : '#F87171' }}>
+                                    {c.value >= 0 ? '+' : ''}{formatCurrency(c.value)}
+                                  </span>
+                                </div>
+                                <div className="h-1.5 bg-[#171A22] rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full rounded-full" 
+                                    style={{ 
+                                      width: '70%', 
+                                      backgroundColor: c.value >= 0 ? '#34D399' : '#F87171' 
+                                    }} 
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="bg-[#12141A] border border-[#1F222C] rounded-[10px] p-4 text-[11px] text-[#8990A3] text-center italic">
+                            Conteúdo da seção em prévia simplificada...
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
                               <span className="text-slate-600">Bônus Creditado</span>
                               <span className="font-bold text-slate-800">{formatCurrency(breakdowns?.bonusPerformance?.bonusCreditado || 0)}</span>
                             </div>
