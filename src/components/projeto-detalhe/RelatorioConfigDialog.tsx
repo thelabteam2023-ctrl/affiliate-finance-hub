@@ -128,6 +128,7 @@ export function RelatorioConfigDialog({
       if (formato === 'pdf') {
         await exportRelatorioExecutivo({
           projeto: {
+            id: projetoId,
             nome: projeto.nome,
             tipo_projeto: projeto.tipo_projeto,
             status: projeto.status,
@@ -137,6 +138,7 @@ export function RelatorioConfigDialog({
           periodo: { de: dateRange?.start || null, ate: dateRange?.end || null },
           resultado,
           breakdowns,
+          historicoContas,
           formatCurrency,
           config: {
             secoes: secoes.reduce((acc, s) => ({ ...acc, [s.id]: s.enabled }), {}),
