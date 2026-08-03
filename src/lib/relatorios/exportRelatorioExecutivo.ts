@@ -228,8 +228,46 @@ export async function exportRelatorioExecutivo({
     currentY = (doc as any).lastAutoTable.finalY + 40;
   }
 
+  // --- PERFORMANCE DE BÔNUS ---
+  if (configSecoes.bonusPerformance && breakdowns?.bonusPerformance) {
+    if (currentY > pageHeight - 150) {
+      doc.addPage();
+      drawHeader();
+      currentY = 130;
+    }
+
+    doc.setFontSize(14);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "bold");
+    doc.text("Performance de Bônus", margin, currentY);
+
+    const bp = breakdowns.bonusPerformance;
+
+    autoTable(doc, {
+      startY: currentY + 10,
+      margin: { left: margin, right: margin },
+      head: [["Indicador de Bônus", "Valor"]],
+      body: [
+        ["Total de Bônus Creditados", formatCurrency(bp.bonusCreditado)],
+        ["Total de Juice (Perdas Operacionais)", formatCurrency(bp.juice)],
+        ["Total Líquido Extraído", formatCurrency(bp.extracaoLiquida)],
+        ["Taxa de Extração (%)", `${bp.taxaExtracao.toFixed(1)}%`],
+        ["Quantidade de Operações de Bônus", bp.quantidadeOperacoes.toString()],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [5, 150, 105] as [number, number, number], textColor: 255 },
+      styles: { fontSize: 9 },
+      columnStyles: {
+        1: { fontStyle: "bold", halign: "right" }
+      }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 40;
+  }
+
   // --- CONTRIBUIÇÃO POR VÍNCULO (PARCEIROS) ---
   if (configSecoes.vinculos && historicoContas) {
+
     if (currentY > pageHeight - 150) {
       doc.addPage();
       drawHeader();
