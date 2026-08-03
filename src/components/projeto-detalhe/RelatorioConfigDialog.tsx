@@ -148,8 +148,6 @@ export function RelatorioConfigDialog({
         toast.success("Relatório gerado com sucesso!");
         onOpenChange(false);
       } else {
-        // Para outros formatos, poderíamos integrar com a lógica de useExportApostas
-        // mas o foco solicitado foi o Relatório do Projeto (PDF/Executivo)
         toast.info("Exportação para este formato será implementada em breve.");
       }
     } catch (error: any) {
@@ -173,136 +171,185 @@ export function RelatorioConfigDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex gap-6 overflow-hidden flex-grow">
-          <ScrollArea className={`${showPreview ? 'w-[300px]' : 'w-full'} flex-shrink-0 pr-4`}>
+        <div className="flex gap-6 overflow-hidden flex-grow px-1">
+          <ScrollArea className={`${showPreview ? 'w-[300px]' : 'w-full'} flex-shrink-0 pr-4 h-full`}>
             <div className="grid gap-6 py-4">
-          {/* Período */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              Período de Análise
-            </Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Select value={period} onValueChange={(v: StandardPeriodFilter) => setPeriod(v)}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Selecione o período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hoje">Hoje</SelectItem>
-                  <SelectItem value="ontem">Ontem</SelectItem>
-                  <SelectItem value="7dias">Últimos 7 dias</SelectItem>
-                  <SelectItem value="30dias">Últimos 30 dias</SelectItem>
-                  <SelectItem value="mes_atual">Mês Atual</SelectItem>
-                  <SelectItem value="mes_anterior">Mês Anterior</SelectItem>
-                  <SelectItem value="trimestre">Trimestre</SelectItem>
-                  <SelectItem value="ano">Este Ano</SelectItem>
-                  <SelectItem value="total">Todo o Período</SelectItem>
-                  <SelectItem value="custom">Personalizado</SelectItem>
-                </SelectContent>
-              </Select>
-              {period === "custom" && (
-                <div className="flex items-center gap-2 w-full">
-                  <DatePicker 
-                    value={customDateRange?.from ? format(customDateRange.from, 'yyyy-MM-dd') : ''}
-                    onChange={(d) => {
-                      const date = d ? new Date(d + 'T12:00:00') : undefined;
-                      setCustomDateRange(prev => ({ from: date, to: prev?.to }));
-                    }}
-                    placeholder="Início"
-                  />
-                  <DatePicker 
-                    value={customDateRange?.to ? format(customDateRange.to, 'yyyy-MM-dd') : ''}
-                    onChange={(d) => {
-                      const date = d ? new Date(d + 'T12:00:00') : undefined;
-                      setCustomDateRange(prev => ({ from: prev?.from, to: date }));
-                    }}
-                    placeholder="Fim"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Modelo */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              Modelo do Relatório
-            </Label>
-            <div className="grid grid-cols-1 gap-2">
-              <div 
-                className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${modelo === 'executivo' ? 'bg-primary/5 border-primary' : 'hover:bg-accent'}`}
-                onClick={() => setModelo('executivo')}
-              >
-                <TrendingUp className={`h-5 w-5 mt-0.5 ${modelo === 'executivo' ? 'text-primary' : 'text-muted-foreground'}`} />
-                <div>
-                  <div className="text-sm font-medium">Relatório Executivo</div>
-                  <div className="text-xs text-muted-foreground">Resumo financeiro, ROI e performance global.</div>
+              {/* Período */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  Período de Análise
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Select value={period} onValueChange={(v: StandardPeriodFilter) => setPeriod(v)}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione o período" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hoje">Hoje</SelectItem>
+                      <SelectItem value="ontem">Ontem</SelectItem>
+                      <SelectItem value="7dias">Últimos 7 dias</SelectItem>
+                      <SelectItem value="30dias">Últimos 30 dias</SelectItem>
+                      <SelectItem value="mes_atual">Mês Atual</SelectItem>
+                      <SelectItem value="mes_anterior">Mês Anterior</SelectItem>
+                      <SelectItem value="trimestre">Trimestre</SelectItem>
+                      <SelectItem value="ano">Este Ano</SelectItem>
+                      <SelectItem value="total">Todo o Período</SelectItem>
+                      <SelectItem value="custom">Personalizado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {period === "custom" && (
+                    <div className="flex items-center gap-2 w-full">
+                      <DatePicker 
+                        value={customDateRange?.from ? format(customDateRange.from, 'yyyy-MM-dd') : ''}
+                        onChange={(d) => {
+                          const date = d ? new Date(d + 'T12:00:00') : undefined;
+                          setCustomDateRange(prev => ({ from: date, to: prev?.to }));
+                        }}
+                        placeholder="Início"
+                      />
+                      <DatePicker 
+                        value={customDateRange?.to ? format(customDateRange.to, 'yyyy-MM-dd') : ''}
+                        onChange={(d) => {
+                          const date = d ? new Date(d + 'T12:00:00') : undefined;
+                          setCustomDateRange(prev => ({ from: prev?.from, to: date }));
+                        }}
+                        placeholder="Fim"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
-              <div 
-                className={`flex items-start gap-3 p-3 rounded-lg border opacity-50 cursor-not-allowed`}
-              >
-                <Target className="h-5 w-5 mt-0.5 text-muted-foreground" />
-                <div>
-                  <div className="text-sm font-medium">Relatório Operacional (Em breve)</div>
-                  <div className="text-xs text-muted-foreground">Detalhamento por esporte, casa e estratégias.</div>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Seleção de Seções */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium flex items-center gap-2">
-              <Layout className="h-4 w-4 text-muted-foreground" />
-              Conteúdo do Relatório
-            </Label>
-            <div className="grid grid-cols-1 gap-2 border rounded-lg p-3 bg-accent/5">
-              {secoes.map((secao) => (
-                <div key={secao.id} className="flex items-center justify-between py-1.5 first:pt-0 last:pb-0 border-b last:border-0 border-accent/20">
-                  <div className="flex items-center gap-2">
-                    <secao.icon className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{secao.label}</span>
+              {/* Modelo */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                  Modelo do Relatório
+                </Label>
+                <div className="grid grid-cols-1 gap-2">
+                  <div 
+                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${modelo === 'executivo' ? 'bg-primary/5 border-primary' : 'hover:bg-accent'}`}
+                    onClick={() => setModelo('executivo')}
+                  >
+                    <TrendingUp className={`h-5 w-5 mt-0.5 ${modelo === 'executivo' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <div>
+                      <div className="text-sm font-medium">Relatório Executivo</div>
+                      <div className="text-xs text-muted-foreground">Resumo financeiro, ROI e performance global.</div>
+                    </div>
                   </div>
-                  <Checkbox 
-                    checked={secao.enabled} 
-                    onCheckedChange={(checked) => {
-                      setSecoes(prev => prev.map(s => s.id === secao.id ? { ...s, enabled: !!checked } : s));
-                    }} 
-                  />
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
 
-          {/* Formato */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium flex items-center gap-2">
-              <Download className="h-4 w-4 text-muted-foreground" />
-              Formato de Exportação
-            </Label>
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { id: 'pdf', label: 'PDF', icon: FileText, color: 'text-red-500' },
-                { id: 'xlsx', label: 'Excel', icon: FileSpreadsheet, color: 'text-emerald-600' },
-                { id: 'csv', label: 'CSV', icon: FileSpreadsheet, color: 'text-emerald-500' },
-                { id: 'xml', label: 'XML', icon: FileCode, color: 'text-blue-500' }
-              ].map((f) => (
-                <div 
-                  key={f.id}
-                  className={`flex flex-col items-center justify-center p-2 rounded-lg border cursor-pointer transition-colors ${formato === f.id ? 'bg-primary/5 border-primary' : 'hover:bg-accent'}`}
-                  onClick={() => setFormato(f.id as FormatoExportacao)}
-                >
-                  <f.icon className={`h-5 w-5 mb-1 ${f.color}`} />
-                  <span className="text-[10px] font-medium">{f.label}</span>
+              {/* Seleção de Seções */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Layout className="h-4 w-4 text-muted-foreground" />
+                  Conteúdo do Relatório
+                </Label>
+                <div className="grid grid-cols-1 gap-2 border rounded-lg p-3 bg-accent/5">
+                  {secoes.map((secao) => (
+                    <div key={secao.id} className="flex items-center justify-between py-1.5 first:pt-0 last:pb-0 border-b last:border-0 border-accent/20">
+                      <div className="flex items-center gap-2">
+                        <secao.icon className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{secao.label}</span>
+                      </div>
+                      <Checkbox 
+                        checked={secao.enabled} 
+                        onCheckedChange={(checked) => {
+                          setSecoes(prev => prev.map(s => s.id === secao.id ? { ...s, enabled: !!checked } : s));
+                        }} 
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              {/* Formato */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Download className="h-4 w-4 text-muted-foreground" />
+                  Formato de Exportação
+                </Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: 'pdf', label: 'PDF', icon: FileText, color: 'text-red-500' },
+                    { id: 'xlsx', label: 'Excel', icon: FileSpreadsheet, color: 'text-emerald-600' },
+                    { id: 'csv', label: 'CSV', icon: FileSpreadsheet, color: 'text-emerald-500' },
+                    { id: 'xml', label: 'XML', icon: FileCode, color: 'text-blue-500' }
+                  ].map((f) => (
+                    <div 
+                      key={f.id}
+                      className={`flex flex-col items-center justify-center p-2 rounded-lg border cursor-pointer transition-colors ${formato === f.id ? 'bg-primary/5 border-primary' : 'hover:bg-accent'}`}
+                      onClick={() => setFormato(f.id as FormatoExportacao)}
+                    >
+                      <f.icon className={`h-5 w-5 mb-1 ${f.color}`} />
+                      <span className="text-[10px] font-medium">{f.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          </ScrollArea>
+
+          {showPreview && (
+            <div className="flex-grow border rounded-lg bg-accent/5 overflow-hidden flex flex-col p-4 min-w-0">
+              <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-primary" />
+                  Pré-visualização do PDF
+                </h3>
+              </div>
+              <ScrollArea className="flex-grow bg-white border shadow-inner">
+                <div className="p-8 text-black min-h-full font-sans bg-white">
+                  {/* Header Preview */}
+                  <div className="flex justify-between items-start border-b pb-4 mb-6 text-black">
+                    <div>
+                      <div className="h-10 w-32 bg-slate-200 rounded flex items-center justify-center text-[10px] text-slate-400">LOGO</div>
+                      <h1 className="text-2xl font-bold mt-4 text-black">Relatório de Performance</h1>
+                    </div>
+                    <div className="text-[9px] text-slate-500 text-right">
+                      Emitido em: {format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}
+                    </div>
+                  </div>
+
+                  {/* Identification Block */}
+                  <div className="bg-slate-50 p-4 rounded-lg mb-6 grid grid-cols-2 gap-4 text-black">
+                    <div>
+                      <span className="text-[10px] text-slate-500 block uppercase tracking-wider font-semibold">Projeto</span>
+                      <span className="font-bold text-xs">{projeto?.nome}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 block uppercase tracking-wider font-semibold">Período</span>
+                      <span className="font-bold text-xs">
+                        {dateRange?.start && dateRange?.end 
+                          ? `${format(dateRange.start, "dd/MM/yy")} a ${format(dateRange.end, "dd/MM/yy")}`
+                          : "Todo o período"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Active Sections Preview */}
+                  <div className="space-y-6">
+                    {secoes.filter(s => s.enabled).map(secao => (
+                      <div key={secao.id} className="border-t pt-4 first:border-0 border-slate-200">
+                        <h2 className="text-sm font-bold mb-3 uppercase tracking-tight text-slate-700">{secao.label}</h2>
+                        <div className="h-20 w-full bg-slate-50 rounded border border-dashed border-slate-200 flex items-center justify-center text-[10px] text-slate-400 italic">
+                          Conteúdo da seção {secao.label}...
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </ScrollArea>
+            </div>
+          )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0 pt-4 border-t mt-4">
+          <Button variant="outline" onClick={() => setShowPreview(!showPreview)} className="mr-auto">
+            {showPreview ? 'Ocultar Prévia' : 'Ver Prévia'}
+          </Button>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={generating}>
             Cancelar
           </Button>
