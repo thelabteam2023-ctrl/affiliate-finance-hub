@@ -47,6 +47,7 @@ export async function exportRelatorioExecutivo({
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 40;
   const contentWidth = pageWidth - (margin * 2);
+  const lucroReal = resultado.netProfit;
 
   // Helper colors
   const colors = {
