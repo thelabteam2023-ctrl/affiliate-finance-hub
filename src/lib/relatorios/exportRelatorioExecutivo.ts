@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { ProjetoResultado } from "@/hooks/useProjetoResultado";
 import type { ProjetoKpiBreakdowns } from "@/types/moduleBreakdown";
-import logoAsset from "@/assets/HORIZONTAL_OFICIAL_SEMFUNDO-5.png.asset.json";
+import logoAsset from "@/assets/HORIZONTAL_OFICIAL_2-2.png.asset.json";
 
 interface ExportRelatorioExecutivoProps {
   projeto: {
@@ -61,8 +61,8 @@ export async function exportRelatorioExecutivo({
 
   const drawHeader = () => {
     // Logo
-    const logoWidth = 100;
-    const logoHeight = 25; // Proporcional aproximado
+    const logoWidth = 140;
+    const logoHeight = 40; 
     doc.addImage(logoAsset.url, 'PNG', margin, 35, logoWidth, logoHeight);
 
     doc.setFontSize(22);
@@ -100,7 +100,7 @@ export async function exportRelatorioExecutivo({
   drawHeader();
   
   doc.setFillColor(colors.bg[0], colors.bg[1], colors.bg[2]);
-  doc.rect(margin, 120, contentWidth, 75, "F");
+  doc.rect(margin, 120, contentWidth, 60, "F");
   
   doc.setFontSize(11);
   doc.setTextColor(71, 85, 105); // slate-600
@@ -121,12 +121,6 @@ export async function exportRelatorioExecutivo({
   doc.setFont("helvetica", "bold");
   doc.text(periodoTxt, margin + 80, 175);
 
-  doc.setFont("helvetica", "normal");
-  doc.text(`Tipo:`, margin + 220, 160);
-  doc.text(projeto.tipo_projeto || "Híbrido", margin + 270, 160);
-  
-  doc.text(`Status:`, margin + 220, 175);
-  doc.text(projeto.status, margin + 270, 175);
 
   // --- RESUMO EXECUTIVO (KPIs Financeiros) ---
   if (configSecoes.resumo) {
