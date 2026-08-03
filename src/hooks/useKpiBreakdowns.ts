@@ -8,7 +8,9 @@ import {
   type RawAposta,
   type RawApostaPerna,
   type RawLedgerExtra,
+  filterApostasLiquidadas
 } from './useProjetoDashboardData';
+
 import { 
   ProjetoKpiBreakdowns, 
   KpiBreakdown, 
@@ -768,7 +770,7 @@ function deriveBreakdowns(
   const roiTotal = volumeLiquidadoTotal > 0 ? (lucroTotal / volumeLiquidadoTotal) * 100 : null;
 
   // === VOLUME TEMPORAL STATS ===
-  const volumeTemporalStats = deriveVolumeTemporalStats(rawData.apostas, volumeBreakdown.total, rawData, convert, moedaConsolidacao);
+  const volumeTemporalStats = deriveVolumeTemporalStats(rawData.apostas, volumeBreakdown.total);
 
 
   return {
