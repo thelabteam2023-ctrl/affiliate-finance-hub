@@ -100,7 +100,7 @@ export async function exportRelatorioExecutivo({
   drawHeader();
   
   doc.setFillColor(colors.bg[0], colors.bg[1], colors.bg[2]);
-  doc.rect(margin, 120, contentWidth, 75, "F");
+  doc.rect(margin, 120, contentWidth, 60, "F");
   
   doc.setFontSize(11);
   doc.setTextColor(71, 85, 105); // slate-600
