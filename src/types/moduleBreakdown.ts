@@ -78,10 +78,22 @@ export interface VolumeTemporalStats {
   densidadeOperacional: number;
   /** Volume projetado (run rate) = volumeMedio * diasTotaisPeriodo */
   volumeProjetado: number | null;
+  /** Histórico diário para gráficos */
+  dailyHistory?: { date: string; profit: number; cumulativeProfit: number }[];
+}
+
+
+export interface BonusPerformanceStats {
+  bonusCreditado: number;
+  juice: number;
+  extracaoLiquida: number;
+  taxaExtracao: number;
+  quantidadeOperacoes: number;
 }
 
 /**
  * Interface para breakdowns de todos os KPIs
+
  */
 export interface ProjetoKpiBreakdowns {
   /** Breakdown do KPI de Apostas (quantidade) */
@@ -103,7 +115,11 @@ export interface ProjetoKpiBreakdowns {
 
   /** Estatísticas temporais de volume */
   volumeTemporal: VolumeTemporalStats;
+
+  /** Performance de bônus (extração) */
+  bonusPerformance?: BonusPerformanceStats;
 }
+
 
 /**
  * Helper para criar uma contribuição de módulo

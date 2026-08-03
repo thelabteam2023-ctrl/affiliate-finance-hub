@@ -228,8 +228,46 @@ export async function exportRelatorioExecutivo({
     currentY = (doc as any).lastAutoTable.finalY + 40;
   }
 
+  // --- PERFORMANCE DE BÔNUS ---
+  if (configSecoes.bonusPerformance && breakdowns?.bonusPerformance) {
+    if (currentY > pageHeight - 150) {
+      doc.addPage();
+      drawHeader();
+      currentY = 130;
+    }
+
+    doc.setFontSize(14);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "bold");
+    doc.text("Performance de Bônus", margin, currentY);
+
+    const bp = breakdowns.bonusPerformance;
+
+    autoTable(doc, {
+      startY: currentY + 10,
+      margin: { left: margin, right: margin },
+      head: [["Indicador de Bônus", "Valor"]],
+      body: [
+        ["Total de Bônus Creditados", formatCurrency(bp.bonusCreditado)],
+        ["Total de Juice (Perdas Operacionais)", formatCurrency(bp.juice)],
+        ["Total Líquido Extraído", formatCurrency(bp.extracaoLiquida)],
+        ["Taxa de Extração (%)", `${bp.taxaExtracao.toFixed(1)}%`],
+        ["Quantidade de Operações de Bônus", bp.quantidadeOperacoes.toString()],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [5, 150, 105] as [number, number, number], textColor: 255 },
+      styles: { fontSize: 9 },
+      columnStyles: {
+        1: { fontStyle: "bold", halign: "right" }
+      }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 40;
+  }
+
   // --- CONTRIBUIÇÃO POR VÍNCULO (PARCEIROS) ---
   if (configSecoes.vinculos && historicoContas) {
+
     if (currentY > pageHeight - 150) {
       doc.addPage();
       drawHeader();
@@ -302,12 +340,69 @@ export async function exportRelatorioExecutivo({
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(71, 85, 105);
-  insights.forEach((insight, i) => {
-    doc.text(insight, margin, currentY + 25 + (i * 15));
+    insights.forEach((insight, i) => {
+      doc.text(insight, margin, currentY + 25 + (i * 15));
     });
+    
+    currentY += (insights.length * 15) + 40;
+  }
+
+  // --- VISÃO TEMPORAL (GRÁFICO DE LINHAS MANUAL) ---
+  if (configSecoes.evolucao && breakdowns?.volumeTemporal?.dailyHistory) {
+    if (currentY > pageHeight - 200) {
+      doc.addPage();
+      drawHeader();
+      currentY = 130;
+    }
+
+    doc.setFontSize(14);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "bold");
+    doc.text("Evolução do Período", margin, currentY);
+
+    const history = breakdowns.volumeTemporal.dailyHistory;
+    const chartHeight = 120;
+    const chartWidth = pageWidth - (margin * 2);
+    const chartX = margin;
+    const chartY = currentY + 20;
+
+    // Eixos
+    doc.setDrawColor(203, 213, 225);
+    doc.line(chartX, chartY + chartHeight, chartX + chartWidth, chartY + chartHeight); // X
+    doc.line(chartX, chartY, chartX, chartY + chartHeight); // Y
+
+    if (history.length > 1) {
+      const maxProfit = Math.max(...history.map(h => h.cumulativeProfit), 0.01);
+      const minProfit = Math.min(...history.map(h => h.cumulativeProfit), 0);
+      const range = maxProfit - minProfit;
+
+      doc.setDrawColor(5, 150, 105);
+      doc.setLineWidth(1.5);
+      
+      history.forEach((point, i) => {
+        if (i === 0) return;
+        const prev = history[i - 1];
+        
+        const x1 = chartX + ((i - 1) / (history.length - 1)) * chartWidth;
+        const y1 = chartY + chartHeight - ((prev.cumulativeProfit - minProfit) / range) * chartHeight;
+        const x2 = chartX + (i / (history.length - 1)) * chartWidth;
+        const y2 = chartY + chartHeight - ((point.cumulativeProfit - minProfit) / range) * chartHeight;
+        
+        doc.line(x1, y1, x2, y2);
+      });
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(formatCurrency(maxProfit), chartX + 5, chartY + 10);
+      doc.text(formatCurrency(minProfit), chartX + 5, chartY + chartHeight - 5);
+      doc.text("Evolução do Lucro Acumulado (Consolidado)", chartX + chartWidth/2, chartY + chartHeight + 15, { align: "center" });
+    }
+
+    currentY = chartY + chartHeight + 40;
   }
 
   drawFooter();
+
 
   const safeName = projeto.nome.replace(/[^a-zA-Z0-9]/g, "_");
   doc.save(`Relatorio_${safeName}_${format(new Date(), "yyyyMMdd")}.pdf`);
