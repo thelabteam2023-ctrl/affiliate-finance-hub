@@ -22,6 +22,9 @@ interface ExportRelatorioExecutivoProps {
   resultado: ProjetoResultado;
   breakdowns: ProjetoKpiBreakdowns | null;
   formatCurrency: (value: number) => string;
+  config?: {
+    secoes: Record<string, boolean>;
+  };
 }
 
 export async function exportRelatorioExecutivo({
@@ -31,8 +34,15 @@ export async function exportRelatorioExecutivo({
   resultado,
   breakdowns,
   formatCurrency,
+  config,
 }: ExportRelatorioExecutivoProps) {
   const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+  const configSecoes = config?.secoes || {
+    resumo: true,
+    operacional: true,
+    modulos: true,
+    insights: true
+  };
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 40;
@@ -110,69 +120,72 @@ export async function exportRelatorioExecutivo({
   doc.text(projeto.status, margin + 270, 140);
 
   // --- RESUMO EXECUTIVO (KPIs Financeiros) ---
-  doc.setFontSize(14);
-  doc.setTextColor(30, 41, 59);
-  doc.setFont("helvetica", "bold");
-  doc.text("Resumo Financeiro", margin, 205);
-  
-  const lucroReal = resultado.netProfit;
-  const isPositivo = lucroReal >= 0;
+  if (configSecoes.resumo) {
+    doc.setFontSize(14);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "bold");
+    doc.text("Resumo Financeiro", margin, 205);
+    
+    const lucroReal = resultado.netProfit;
+    const isPositivo = lucroReal >= 0;
 
-  autoTable(doc, {
-    startY: 215,
-    margin: { left: margin, right: margin },
-    head: [["Indicador", "Valor Atual", "Impacto"]],
-    body: [
-      ["Lucro Realizado (Net Profit)", formatCurrency(lucroReal), isPositivo ? "POSITIVO" : "ATENÇÃO"],
-      ["ROI Operacional", resultado.roi !== null ? `${resultado.roi.toFixed(2)}%` : "N/A", "-"],
-      ["Total Depositado", formatCurrency(resultado.totalDepositos), "Entrada"],
-      ["Total Sacado", formatCurrency(resultado.totalSaques), "Realização"],
-      ["Capital Operável (Casas)", formatCurrency(resultado.saldoBookmakers), "Em Giro"],
-      ["Saldo Irrecuperável", formatCurrency(resultado.saldoIrrecuperavel), "Risco"],
-    ],
-    theme: "striped",
-    headStyles: { fillColor: colors.primary, textColor: 255 },
-    styles: { fontSize: 9 },
-    columnStyles: {
-      1: { fontStyle: "bold", halign: "right" },
-      2: { halign: "center" }
-    }
-  });
+    autoTable(doc, {
+      startY: 215,
+      margin: { left: margin, right: margin },
+      head: [["Indicador", "Valor Atual", "Impacto"]],
+      body: [
+        ["Lucro Realizado (Net Profit)", formatCurrency(lucroReal), isPositivo ? "POSITIVO" : "ATENÇÃO"],
+        ["ROI Operacional", resultado.roi !== null ? `${resultado.roi.toFixed(2)}%` : "N/A", "-"],
+        ["Total Depositado", formatCurrency(resultado.totalDepositos), "Entrada"],
+        ["Total Sacado", formatCurrency(resultado.totalSaques), "Realização"],
+        ["Capital Operável (Casas)", formatCurrency(resultado.saldoBookmakers), "Em Giro"],
+        ["Saldo Irrecuperável", formatCurrency(resultado.saldoIrrecuperavel), "Risco"],
+      ],
+      theme: "striped",
+      headStyles: { fillColor: colors.primary, textColor: 255 },
+      styles: { fontSize: 9 },
+      columnStyles: {
+        1: { fontStyle: "bold", halign: "right" },
+        2: { halign: "center" }
+      }
+    });
+  }
 
-  let currentY = (doc as any).lastAutoTable.finalY + 40;
+  let currentY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 40 : 205;
 
   // --- OPERAÇÃO ---
-  doc.setFontSize(14);
-  doc.setTextColor(30, 41, 59);
-  doc.setFont("helvetica", "bold");
-  doc.text("Indicadores Operacionais", margin, currentY);
+  if (configSecoes.operacional) {
+    doc.setFontSize(14);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "bold");
+    doc.text("Indicadores Operacionais", margin, currentY);
 
-  const volumeTotal = resultado.totalStaked;
-  const totalApostas = breakdowns?.apostas?.total || 0;
-  
-  autoTable(doc, {
-    startY: currentY + 10,
-    margin: { left: margin, right: margin },
-    head: [["Métrica Operacional", "Valor"]],
-    body: [
-      ["Volume Total Transacionado", formatCurrency(volumeTotal)],
-      ["Quantidade de Apostas", totalApostas.toString()],
-      ["Ticket Médio", totalApostas > 0 ? formatCurrency(volumeTotal / totalApostas) : "N/A"],
-      ["Lucro Bruto (Apostas)", formatCurrency(resultado.grossProfitFromBets)],
-      ["Créditos Promocionais/Giros", formatCurrency(resultado.lucroGirosGratis + resultado.lucroCashback)],
-    ],
-    theme: "grid",
-    headStyles: { fillColor: [71, 85, 105] as [number, number, number], textColor: 255 },
-    styles: { fontSize: 9 },
-    columnStyles: {
-      1: { fontStyle: "bold", halign: "right" }
-    }
-  });
-
-  currentY = (doc as any).lastAutoTable.finalY + 40;
+    const volumeTotal = resultado.totalStaked;
+    const totalApostas = breakdowns?.apostas?.total || 0;
+    
+    autoTable(doc, {
+      startY: currentY + 10,
+      margin: { left: margin, right: margin },
+      head: [["Métrica Operacional", "Valor"]],
+      body: [
+        ["Volume Total Transacionado", formatCurrency(volumeTotal)],
+        ["Quantidade de Apostas", totalApostas.toString()],
+        ["Ticket Médio", totalApostas > 0 ? formatCurrency(volumeTotal / totalApostas) : "N/A"],
+        ["Lucro Bruto (Apostas)", formatCurrency(resultado.grossProfitFromBets)],
+        ["Créditos Promocionais/Giros", formatCurrency(resultado.lucroGirosGratis + resultado.lucroCashback)],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [71, 85, 105] as [number, number, number], textColor: 255 },
+      styles: { fontSize: 9 },
+      columnStyles: {
+        1: { fontStyle: "bold", halign: "right" }
+      }
+    });
+    currentY = (doc as any).lastAutoTable.finalY + 40;
+  }
 
   // --- BREAKDOWN POR MÓDULO (LUCRO) ---
-  if (breakdowns?.lucro?.contributions) {
+  if (configSecoes.modulos && breakdowns?.lucro?.contributions) {
     doc.setFontSize(14);
     doc.setTextColor(30, 41, 59);
     doc.setFont("helvetica", "bold");
@@ -202,16 +215,17 @@ export async function exportRelatorioExecutivo({
 
 
   // --- INSIGHTS AUTOMÁTICOS ---
-  if (currentY > pageHeight - 150) {
-    doc.addPage();
-    drawHeader();
-    currentY = 100;
-  }
+  if (configSecoes.insights) {
+    if (currentY > pageHeight - 150) {
+      doc.addPage();
+      drawHeader();
+      currentY = 100;
+    }
 
-  doc.setFontSize(14);
-  doc.setTextColor(30, 41, 59);
-  doc.setFont("helvetica", "bold");
-  doc.text("Destaques e Observações", margin, currentY);
+    doc.setFontSize(14);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "bold");
+    doc.text("Destaques e Observações", margin, currentY);
 
   const insights = [];
   if (lucroReal > 0) insights.push("- O projeto apresenta lucratividade real positiva no período analisado.");
@@ -226,7 +240,8 @@ export async function exportRelatorioExecutivo({
   doc.setTextColor(71, 85, 105);
   insights.forEach((insight, i) => {
     doc.text(insight, margin, currentY + 25 + (i * 15));
-  });
+    });
+  }
 
   drawFooter();
 
