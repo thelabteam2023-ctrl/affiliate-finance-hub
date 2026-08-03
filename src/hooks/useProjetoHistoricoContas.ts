@@ -13,6 +13,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useProjetoCurrency } from "./useProjetoCurrency";
 
 interface ContaHistorico {
   id: string;
@@ -73,6 +74,8 @@ export function useProjetoHistoricoContas({
   dataInicio, 
   dataFim 
 }: UseProjetoHistoricoContasProps): HistoricoContasResult {
+  const { convertToConsolidation } = useProjetoCurrency(projetoId);
+
   // Query principal unificada
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["projeto-painel-contas", projetoId, dataInicio?.toISOString(), dataFim?.toISOString()],
@@ -115,7 +118,17 @@ export function useProjetoHistoricoContas({
       // REGRA: Excluímos FREEBET (SNR) para evitar bitributação no lucro operacional (paridade com aba Bônus)
       let bonusQuery = supabase
         .from("project_bookmaker_link_bonuses")
-        .select("id, bookmaker_id, status, bonus_amount, valor_brl_referencia, credited_at, tipo_bonus")
+        .select(`
+          id, 
+          bookmaker_id, 
+          status, 
+          bonus_amount, 
+          currency,
+          valor_consolidado_snapshot,
+          valor_brl_referencia, 
+          credited_at, 
+          tipo_bonus
+        `)
         .eq("project_id", projetoId)
         .neq("tipo_bonus", "FREEBET")
         .in("status", ["credited", "finalized", "bonus_consumed", "rollover_completed"]);
@@ -241,7 +254,12 @@ export function useProjetoHistoricoContas({
         if (parceiro) {
           const stats = parceirosMap.get(parceiro.id);
           if (stats) {
-            stats.totalBonus += (bonus.bonus_amount || 0);
+            // REGRA SSOT: Priorizar snapshot consolidado se existir, senão converter live
+            const valorConsolidado = bonus.valor_consolidado_snapshot 
+              ? Number(bonus.valor_consolidado_snapshot)
+              : convertToConsolidation(Number(bonus.bonus_amount || 0), bonus.currency || 'BRL');
+            
+            stats.totalBonus += valorConsolidado;
           }
         }
       });
