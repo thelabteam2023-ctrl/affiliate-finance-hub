@@ -60,19 +60,25 @@ export async function exportRelatorioExecutivo({
   };
 
   const drawHeader = () => {
-    // Top line
-    doc.setDrawColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-    doc.setLineWidth(2);
-    doc.line(margin, 30, pageWidth - margin, 30);
+    // Logo
+    const logoWidth = 100;
+    const logoHeight = 25; // Proporcional aproximado
+    doc.addImage(logoAsset.url, 'PNG', margin, 35, logoWidth, logoHeight);
 
     doc.setFontSize(22);
     doc.setTextColor(30, 41, 59); // slate-800
-    doc.text("Relatório Executivo de Performance", margin, 65);
+    doc.setFont("helvetica", "bold");
+    doc.text("Relatório de Performance", margin, 90);
 
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
     const dataEmissao = format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR });
-    doc.text(`Emitido em: ${dataEmissao}`, pageWidth - margin, 65, { align: "right" });
+    doc.text(`Emitido em: ${dataEmissao}`, pageWidth - margin, 90, { align: "right" });
+
+    // Divider
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.setLineWidth(1);
+    doc.line(margin, 105, pageWidth - margin, 105);
   };
 
   const drawFooter = () => {
