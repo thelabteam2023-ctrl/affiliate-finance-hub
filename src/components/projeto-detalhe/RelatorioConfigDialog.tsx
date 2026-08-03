@@ -90,7 +90,9 @@ export function RelatorioConfigDialog({
     { id: 'investidores', label: 'Performance por Investidor (CPF)', enabled: false, icon: Users },
     { id: 'casas', label: 'Performance por Casa', enabled: false, icon: Briefcase },
     { id: 'insights', label: 'Insights e Recomendações', enabled: true, icon: Target },
+    { id: 'evolucao', label: 'Visão Temporal (Gráficos)', enabled: true, icon: BarChart3 },
   ]);
+
 
 
   const { 
@@ -396,7 +398,24 @@ export function RelatorioConfigDialog({
                               </span>
                             </div>
                           </div>
+                        ) : secao.id === 'evolucao' ? (
+                          <div className="space-y-3">
+                            <div className="h-20 w-full bg-slate-50 rounded border border-slate-100 relative flex flex-col justify-end p-2 overflow-hidden">
+                              <div className="absolute inset-0 flex items-end px-2 pb-2">
+                                <svg viewBox="0 0 100 40" className="w-full h-full text-emerald-500 opacity-20" preserveAspectRatio="none">
+                                  <path d="M0 40 L20 30 L40 35 L60 15 L80 20 L100 5 L100 40 Z" fill="currentColor" />
+                                  <path d="M0 40 L20 30 L40 35 L60 15 L80 20 L100 5" fill="none" stroke="currentColor" strokeWidth="2" />
+                                </svg>
+                              </div>
+                              <div className="flex justify-between text-[7px] text-slate-400 relative z-10">
+                                <span>{format(dataInicio || new Date(), 'dd/MM')}</span>
+                                <span>{format(dataFim || new Date(), 'dd/MM')}</span>
+                              </div>
+                            </div>
+                            <p className="text-[8px] text-slate-500 italic text-center">Gráfico de evolução do lucro acumulado no período.</p>
+                          </div>
                         ) : secao.id === 'resumo' ? (
+
 
                           <div className="space-y-2">
                             <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1">

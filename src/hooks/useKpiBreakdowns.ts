@@ -736,7 +736,9 @@ function deriveBreakdowns(
     extrasAgrupados.ajuste_saldo?.porMoeda || [],
     extrasAgrupados.promocional?.porMoeda || [],
     extrasAgrupados.freebet?.porMoeda || [],
+    extrasAgrupados.bonus?.porMoeda || [], // Adicionado para auditoria de cancelamento
   );
+
 
   // === ROI ===
   // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado definido
