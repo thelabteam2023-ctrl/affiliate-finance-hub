@@ -191,8 +191,17 @@ export function ProjetoDashboardTab({ projetoId, refreshTrigger = 0 }: ProjetoDa
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency, formatChartAxis, convertToConsolidation, convertToConsolidationOficial, moedaConsolidacao, cotacaoOficialUSD, projeto } = useProjetoCurrency(projetoId);
+  const { 
+    formatCurrency, 
+    formatChartAxis, 
+    convertToConsolidation, 
+    convertToConsolidationOficial, 
+    moedaConsolidacao, 
+    cotacaoOficialUSD, 
+    projeto 
+  } = useProjetoCurrency(projetoId);
   const { cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP } = useCotacoes();
+
 
   
   // Hook global de logos
