@@ -40,11 +40,11 @@ export async function exportRelatorioExecutivo({
 
   // Helper colors
   const colors = {
-    primary: [37, 99, 235], // blue-600
-    secondary: [100, 116, 139], // slate-500
-    success: [5, 150, 105], // emerald-600
-    danger: [220, 38, 38], // red-600
-    bg: [248, 250, 252], // slate-50
+    primary: [37, 99, 235] as [number, number, number],
+    secondary: [100, 116, 139] as [number, number, number],
+    success: [5, 150, 105] as [number, number, number],
+    danger: [220, 38, 38] as [number, number, number],
+    bg: [248, 250, 252] as [number, number, number],
   };
 
   const drawHeader = () => {
@@ -147,8 +147,8 @@ export async function exportRelatorioExecutivo({
   doc.setFont("helvetica", "bold");
   doc.text("Indicadores Operacionais", margin, currentY);
 
-  const volumeTotal = breakdowns?.volumeTemporal?.reduce((acc, v) => acc + v.valor, 0) || resultado.totalStaked;
-  const totalApostas = breakdowns?.apostas?.count || 0;
+  const volumeTotal = resultado.totalStaked;
+  const totalApostas = breakdowns?.apostas?.total || 0;
   
   autoTable(doc, {
     startY: currentY + 10,
@@ -158,12 +158,11 @@ export async function exportRelatorioExecutivo({
       ["Volume Total Transacionado", formatCurrency(volumeTotal)],
       ["Quantidade de Apostas", totalApostas.toString()],
       ["Ticket Médio", totalApostas > 0 ? formatCurrency(volumeTotal / totalApostas) : "N/A"],
-      ["Bônus Brutos Recebidos", formatCurrency(breakdowns?.bonus?.total || 0)],
       ["Lucro Bruto (Apostas)", formatCurrency(resultado.grossProfitFromBets)],
       ["Créditos Promocionais/Giros", formatCurrency(resultado.lucroGirosGratis + resultado.lucroCashback)],
     ],
     theme: "grid",
-    headStyles: { fillColor: [71, 85, 105], textColor: 255 },
+    headStyles: { fillColor: [71, 85, 105] as [number, number, number], textColor: 255 },
     styles: { fontSize: 9 },
     columnStyles: {
       1: { fontStyle: "bold", halign: "right" }
@@ -172,33 +171,35 @@ export async function exportRelatorioExecutivo({
 
   currentY = (doc as any).lastAutoTable.finalY + 40;
 
-  // --- BREAKDOWN POR ESTRATÉGIA ---
-  if (breakdowns?.apostas?.lucroPorEstrategia) {
+  // --- BREAKDOWN POR MÓDULO (LUCRO) ---
+  if (breakdowns?.lucro?.contributions) {
     doc.setFontSize(14);
     doc.setTextColor(30, 41, 59);
     doc.setFont("helvetica", "bold");
-    doc.text("Performance por Estratégia", margin, currentY);
+    doc.text("Performance por Módulo", margin, currentY);
 
-    const estrategiasBody = Object.entries(breakdowns.apostas.lucroPorEstrategia).map(([key, value]) => [
-      key,
-      formatCurrency(value)
+    const contribBody = breakdowns.lucro.contributions.map(c => [
+      c.moduleName,
+      c.details || "-",
+      formatCurrency(c.value)
     ]);
 
     autoTable(doc, {
       startY: currentY + 10,
       margin: { left: margin, right: margin },
-      head: [["Estratégia", "Lucro Consolidado"]],
-      body: estrategiasBody,
+      head: [["Módulo", "Detalhes", "Resultado"]],
+      body: contribBody,
       theme: "striped",
-      headStyles: { fillColor: [148, 163, 184], textColor: 30 },
+      headStyles: { fillColor: [148, 163, 184] as [number, number, number], textColor: 30 },
       styles: { fontSize: 9 },
       columnStyles: {
-        1: { fontStyle: "bold", halign: "right" }
+        2: { fontStyle: "bold", halign: "right" }
       }
     });
     
     currentY = (doc as any).lastAutoTable.finalY + 40;
   }
+
 
   // --- INSIGHTS AUTOMÁTICOS ---
   if (currentY > pageHeight - 150) {
