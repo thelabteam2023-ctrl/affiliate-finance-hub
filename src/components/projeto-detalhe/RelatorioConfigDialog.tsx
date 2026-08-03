@@ -9,7 +9,12 @@ import {
   Target,
   FileSpreadsheet,
   FileCode,
-  Loader2
+  Loader2,
+  Users,
+  Briefcase,
+  Layers,
+  Zap,
+  Layout
 } from "lucide-react";
 import {
   Dialog,
@@ -21,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -45,8 +51,15 @@ interface RelatorioConfigDialogProps {
   projetoId: string;
 }
 
-type RelatorioModelo = 'executivo' | 'financeiro' | 'operacional';
+type RelatorioModelo = 'executivo' | 'financeiro' | 'operacional' | 'investidores';
 type FormatoExportacao = 'pdf' | 'xlsx' | 'csv' | 'xml';
+
+interface SecaoConfig {
+  id: string;
+  label: string;
+  enabled: boolean;
+  icon: any;
+}
 
 export function RelatorioConfigDialog({
   open,
@@ -59,6 +72,14 @@ export function RelatorioConfigDialog({
   const [period, setPeriod] = useState<StandardPeriodFilter>("mes_atual");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [generating, setGenerating] = useState(false);
+  const [secoes, setSecoes] = useState<SecaoConfig[]>([
+    { id: 'resumo', label: 'Resumo Financeiro', enabled: true, icon: TrendingUp },
+    { id: 'operacional', label: 'Indicadores Operacionais', enabled: true, icon: Zap },
+    { id: 'modulos', label: 'Performance por Módulo', enabled: true, icon: Layers },
+    { id: 'investidores', label: 'Performance por Investidor (CPF)', enabled: false, icon: Users },
+    { id: 'casas', label: 'Performance por Casa', enabled: false, icon: Briefcase },
+    { id: 'insights', label: 'Insights e Recomendações', enabled: true, icon: Target },
+  ]);
 
   const { 
     convertToConsolidation, 
@@ -110,6 +131,9 @@ export function RelatorioConfigDialog({
           resultado,
           breakdowns,
           formatCurrency,
+          config: {
+            secoes: secoes.reduce((acc, s) => ({ ...acc, [s.id]: s.enabled }), {}),
+          }
         });
         toast.success("Relatório gerado com sucesso!");
         onOpenChange(false);
@@ -213,6 +237,30 @@ export function RelatorioConfigDialog({
                   <div className="text-xs text-muted-foreground">Detalhamento por esporte, casa e estratégias.</div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Seleção de Seções */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium flex items-center gap-2">
+              <Layout className="h-4 w-4 text-muted-foreground" />
+              Conteúdo do Relatório
+            </Label>
+            <div className="grid grid-cols-1 gap-2 border rounded-lg p-3 bg-accent/5">
+              {secoes.map((secao) => (
+                <div key={secao.id} className="flex items-center justify-between py-1.5 first:pt-0 last:pb-0 border-b last:border-0 border-accent/20">
+                  <div className="flex items-center gap-2">
+                    <secao.icon className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{secao.label}</span>
+                  </div>
+                  <Checkbox 
+                    checked={secao.enabled} 
+                    onCheckedChange={(checked) => {
+                      setSecoes(prev => prev.map(s => s.id === secao.id ? { ...s, enabled: !!checked } : s));
+                    }} 
+                  />
+                </div>
+              ))}
             </div>
           </div>
 
