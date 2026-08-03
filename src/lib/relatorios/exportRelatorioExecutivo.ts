@@ -79,10 +79,10 @@ export async function exportRelatorioExecutivo({
     const titleX = margin + logoWidth + 20;
     doc.text("Relatório de Performance", titleX, 65);
 
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
     const dataEmissao = format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR });
-    doc.text(`Emitido em: ${dataEmissao}`, pageWidth - margin, 65, { align: "right" });
+    doc.text(`Emitido em: ${dataEmissao}`, pageWidth - margin, 45, { align: "right" });
 
 
     // Divider
