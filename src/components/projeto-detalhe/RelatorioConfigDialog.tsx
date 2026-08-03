@@ -308,44 +308,51 @@ export function RelatorioConfigDialog({
                   Pré-visualização do PDF
                 </h3>
               </div>
-              <ScrollArea className="flex-grow bg-white border shadow-inner">
-                <div className="p-8 text-black min-h-full font-sans bg-white">
-                  {/* Header Preview */}
-                  <div className="flex justify-between items-start border-b pb-4 mb-6 text-black">
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-32 flex items-center justify-center">
-                        <img src={logoAsset.url} alt="Logo" className="max-h-full max-w-full object-contain" />
+              <ScrollArea className="flex-grow bg-[#0A0B0F] border shadow-inner">
+                <div className="p-8 text-[#F2F3F6] min-h-full font-sans bg-[#0A0B0F] selection:bg-primary/30">
+                  {/* Header Preview - Design Dark SaaS Premium */}
+                  <div className="flex flex-col gap-3 border-b border-[#23262F] pb-5 mb-7">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <img src={logoAsset.url} alt="Logo" className="h-[22px]" />
+                        <span className="text-[14px] font-bold tracking-[1px] uppercase">LABBET</span>
                       </div>
-                      <div className="h-8 w-[1px] bg-slate-200"></div>
-                      <h1 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Relatório de Performance</h1>
+                      <div className="text-[10px] text-[#6C7280] text-right leading-tight">
+                        {format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}<br/>
+                        <span className="opacity-70">DOC-ID: {projetoId.slice(0, 8).toUpperCase()}</span>
+                      </div>
                     </div>
-                    <div className="h-[1px] bg-slate-100 mt-2"></div>
-
-
-                    <div className="text-[9px] text-slate-500 text-right">
-                      Emitido em: {format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}
+                    
+                    <div className="mt-1">
+                      <h1 className="text-[26px] font-bold tracking-[-0.3px] leading-tight">Relatório de Performance</h1>
+                      <div className="text-[11px] text-[#8990A3] mt-1 font-medium">Análise executiva de resultados operacionais e eficiência financeira</div>
                     </div>
-
                   </div>
 
-
-                  {/* Identification Block */}
-                  <div className="bg-slate-50 p-4 rounded-lg mb-6 flex items-center justify-between text-black">
-                    <div className="flex flex-col gap-1 flex-1">
-                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Projeto</span>
-                      <span className="font-bold text-xs truncate max-w-[200px]">{projeto?.nome}</span>
+                  {/* Identification Meta Bar - Regra 4.2: label acima → valor abaixo */}
+                  <div className="bg-[#12141A] border border-[#1F222C] rounded-[10px] mb-7 flex items-stretch">
+                    <div className="flex-1 p-4 border-r border-[#1F222C]">
+                      <div className="text-[9px] text-[#6C7280] uppercase tracking-[0.8px] font-bold mb-1">Projeto</div>
+                      <div className="font-bold text-[13px] truncate">{projeto?.nome}</div>
                     </div>
-                    <div className="w-[1px] h-8 bg-slate-200 mx-4" />
-                    <div className="flex flex-col gap-1 flex-1">
-                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Período</span>
-                      <span className="font-bold text-xs">
+                    <div className="flex-1 p-4 border-r border-[#1F222C]">
+                      <div className="text-[9px] text-[#6C7280] uppercase tracking-[0.8px] font-bold mb-1">Período</div>
+                      <div className="font-bold text-[13px]">
                         {dateRange?.start && dateRange?.end 
                           ? `${format(dateRange.start, "dd/MM/yy")} a ${format(dateRange.end, "dd/MM/yy")}`
                           : "Todo o período"}
-                      </span>
+                      </div>
                     </div>
-
+                    <div className="flex-1 p-4">
+                      <div className="text-[9px] text-[#6C7280] uppercase tracking-[0.8px] font-bold mb-1">Status</div>
+                      <div className="flex items-center">
+                        <span className="inline-block px-2 py-0.5 rounded-full bg-[#34D399]/14 text-[#34D399] text-[9px] font-bold uppercase tracking-[0.3px]">
+                          {projeto?.status || 'ATIVO'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
+
 
                   {/* Active Sections Preview */}
                   <div className="space-y-6">
