@@ -61,8 +61,8 @@ export async function exportRelatorioExecutivo({
 
   const drawHeader = () => {
     // Logo
-    const logoWidth = 100;
-    const logoHeight = 25; // Proporcional aproximado
+    const logoWidth = 140;
+    const logoHeight = 40; 
     doc.addImage(logoAsset.url, 'PNG', margin, 35, logoWidth, logoHeight);
 
     doc.setFontSize(22);
