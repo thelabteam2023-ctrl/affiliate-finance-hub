@@ -242,6 +242,7 @@ export async function exportRelatorioExecutivo({
     doc.text("Contribuição por Vínculo", margin, currentY);
 
     const partners = partnersData.sort((a, b) => (b.totalBonus || 0) - (a.totalBonus || 0));
+
     const totalBonusProjeto = partners.reduce((acc, p) => acc + (p.totalBonus || 0), 0);
 
     const partnerBody = partners.map(p => {

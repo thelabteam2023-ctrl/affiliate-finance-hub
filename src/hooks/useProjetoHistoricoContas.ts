@@ -104,9 +104,10 @@ export function useProjetoHistoricoContas(projetoId: string): HistoricoContasRes
       // 3. Buscar bônus creditados ou finalizados para cálculo de performance
       const { data: bonusData, error: bonusError } = await supabase
         .from("project_bookmaker_link_bonuses")
-        .select("id, bookmaker_id, status, amount, converted_amount")
+        .select("id, bookmaker_id, status, bonus_amount, valor_brl_referencia")
         .eq("project_id", projetoId)
         .in("status", ["credited", "finalized", "bonus_consumed", "rollover_completed"]);
+
 
       
       if (bonusError) throw bonusError;
@@ -219,7 +220,7 @@ export function useProjetoHistoricoContas(projetoId: string): HistoricoContasRes
         if (parceiro) {
           const stats = parceirosMap.get(parceiro.id);
           if (stats) {
-            stats.totalBonus += (bonus.amount || 0);
+            stats.totalBonus += (bonus.bonus_amount || 0);
           }
         }
       });

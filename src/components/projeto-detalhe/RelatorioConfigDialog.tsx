@@ -48,6 +48,8 @@ import { useCotacoes } from "@/hooks/useCotacoes";
 import { toast } from "sonner";
 import { useProjetoHistoricoContas } from "@/hooks/useProjetoHistoricoContas";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import logoAsset from "@/assets/HORIZONTAL_OFICIAL_2-2.png.asset.json";
+
 
 interface RelatorioConfigDialogProps {
   open: boolean;
