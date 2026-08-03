@@ -770,7 +770,7 @@ function deriveBreakdowns(
   const roiTotal = volumeLiquidadoTotal > 0 ? (lucroTotal / volumeLiquidadoTotal) * 100 : null;
 
   // === VOLUME TEMPORAL STATS ===
-  const volumeTemporalStats = deriveVolumeTemporalStats(rawData.apostas, volumeBreakdown.total);
+  const volumeTemporalStats = deriveVolumeTemporalStats(rawData.apostas, volumeBreakdown.total, rawData, convert, moedaConsolidacao);
 
 
   return {
