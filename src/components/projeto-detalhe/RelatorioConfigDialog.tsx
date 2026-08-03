@@ -319,27 +319,31 @@ export function RelatorioConfigDialog({
                       <div className="h-8 w-[1px] bg-slate-200"></div>
                       <h1 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Relatório de Performance</h1>
                     </div>
+                    <div className="h-[1px] bg-slate-100 mt-2"></div>
 
-                    <div className="text-[9px] text-slate-500 text-right">
+
+                    <div className="text-[9px] text-slate-500 text-right self-center">
                       Emitido em: {format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}
                     </div>
+
                   </div>
 
 
                   {/* Identification Block */}
                   <div className="bg-slate-50 p-4 rounded-lg mb-6 grid grid-cols-2 gap-4 text-black">
-                    <div>
-                      <span className="text-[10px] text-slate-500 block uppercase tracking-wider font-semibold">Projeto</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Projeto</span>
                       <span className="font-bold text-xs">{projeto?.nome}</span>
                     </div>
-                    <div>
-                      <span className="text-[10px] text-slate-500 block uppercase tracking-wider font-semibold">Período</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Período</span>
                       <span className="font-bold text-xs">
                         {dateRange?.start && dateRange?.end 
                           ? `${format(dateRange.start, "dd/MM/yy")} a ${format(dateRange.end, "dd/MM/yy")}`
                           : "Todo o período"}
                       </span>
                     </div>
+
                   </div>
 
                   {/* Active Sections Preview */}

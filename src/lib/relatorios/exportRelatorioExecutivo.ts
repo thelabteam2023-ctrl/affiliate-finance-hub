@@ -82,7 +82,8 @@ export async function exportRelatorioExecutivo({
     doc.setFontSize(9);
     doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
     const dataEmissao = format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR });
-    doc.text(`Emitido em: ${dataEmissao}`, pageWidth - margin, 65, { align: "right" });
+    doc.text(`Emitido em: ${dataEmissao}`, pageWidth - margin, 78, { align: "right" });
+
 
 
     // Divider
@@ -120,17 +121,18 @@ export async function exportRelatorioExecutivo({
   
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(`Projeto:`, margin + 15, 145);
+  doc.text(`Projeto:`, margin + 15, 150);
   doc.setFont("helvetica", "bold");
-  doc.text(projeto.nome, margin + 70, 145);
+  doc.text(projeto.nome, margin + 70, 150);
   
   doc.setFont("helvetica", "normal");
-  doc.text(`Período:`, margin + 180, 145);
+  doc.text(`Período:`, margin + 180, 150);
   const periodoTxt = periodo.de && periodo.ate 
     ? `${format(periodo.de, "dd/MM/yy")} a ${format(periodo.ate, "dd/MM/yy")}`
     : "Todo o período";
   doc.setFont("helvetica", "bold");
-  doc.text(periodoTxt, margin + 235, 145);
+  doc.text(periodoTxt, margin + 235, 150);
+
 
 
 
