@@ -48,6 +48,8 @@ import { useCotacoes } from "@/hooks/useCotacoes";
 import { toast } from "sonner";
 import { useProjetoHistoricoContas } from "@/hooks/useProjetoHistoricoContas";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import logoAsset from "@/assets/HORIZONTAL_OFICIAL_2-2.png.asset.json";
+
 
 interface RelatorioConfigDialogProps {
   open: boolean;
@@ -304,14 +306,19 @@ export function RelatorioConfigDialog({
                 <div className="p-8 text-black min-h-full font-sans bg-white">
                   {/* Header Preview */}
                   <div className="flex justify-between items-start border-b pb-4 mb-6 text-black">
-                    <div>
-                      <div className="h-10 w-32 bg-slate-200 rounded flex items-center justify-center text-[10px] text-slate-400">LOGO</div>
-                      <h1 className="text-2xl font-bold mt-4 text-black">Relatório de Performance</h1>
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-32 flex items-center justify-center">
+                        <img src={logoAsset.url} alt="Logo" className="max-h-full max-w-full object-contain" />
+                      </div>
+                      <div className="h-8 w-[1px] bg-slate-200"></div>
+                      <h1 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Relatório de Performance</h1>
                     </div>
+
                     <div className="text-[9px] text-slate-500 text-right">
                       Emitido em: {format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}
                     </div>
                   </div>
+
 
                   {/* Identification Block */}
                   <div className="bg-slate-50 p-4 rounded-lg mb-6 grid grid-cols-2 gap-4 text-black">
@@ -343,19 +350,26 @@ export function RelatorioConfigDialog({
                               <span className="text-right">BÔNUS</span>
                               <span className="text-center">PART.</span>
                             </div>
-                            {(historicoContas?.historicoParceirosLista || []).slice(0, 3).map((p, i) => (
-                              <div key={i} className="grid grid-cols-4 gap-2 text-[9px] border-b border-slate-50 pb-1 items-center">
-                                <span className="font-medium truncate">{p.nome}</span>
-                                <span className="text-center">{p.totalContas}</span>
-                                <span className="text-right font-bold">{formatCurrency(1250 / (i + 1))}</span>
-                                <span className="text-center text-slate-500">18%</span>
-                              </div>
-                            ))}
+                            {(historicoContas?.historicoParceirosLista || []).slice(0, 5).map((p, i) => {
+                              const bonusVal = p.totalBonus || 0;
+                              const totalBonusAll = (historicoContas?.historicoParceirosLista || []).reduce((acc, curr) => acc + (curr.totalBonus || 0), 0);
+                              const part = totalBonusAll > 0 ? (bonusVal / totalBonusAll) * 100 : 0;
+                              
+                              return (
+                                <div key={i} className="grid grid-cols-4 gap-2 text-[9px] border-b border-slate-50 pb-1 items-center">
+                                  <span className="font-medium truncate">{p.nome}</span>
+                                  <span className="text-center">{p.totalContas}</span>
+                                  <span className="text-right font-bold">{formatCurrency(bonusVal)}</span>
+                                  <span className="text-center text-slate-500">{part.toFixed(1)}%</span>
+                                </div>
+                              );
+                            })}
                             {(!historicoContas?.historicoParceirosLista || historicoContas.historicoParceirosLista.length === 0) && (
                               <div className="text-[9px] text-slate-400 italic text-center py-2">
-                                Dados reais de vínculos serão exibidos aqui...
+                                Nenhuma contribuição identificada no período.
                               </div>
                             )}
+
                           </div>
                         ) : secao.id === 'resumo' ? (
                           <div className="space-y-2">

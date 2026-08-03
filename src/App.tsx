@@ -1,3 +1,13 @@
+/**
+ * Labbet ERP - Sistema Profissional de Gestão de Apostas
+ * 
+ * Auditoria e Evolução do Relatório de Performance – Conteúdo, Indicadores e Design
+ * 
+ * 1. Correção do módulo "Contribuição por Vínculo": Consolidação real de bônus via ledger.
+ * 2. Resgate de indicadores: Bônus creditados, convertidos e extração.
+ * 3. Design Profissional: Estética executiva de BI, tipografia refinada e hierarquia clara.
+ * 4. Identidade Visual: Integração da marca oficial LABBET.
+ */
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import { ThemeProvider } from "next-themes";

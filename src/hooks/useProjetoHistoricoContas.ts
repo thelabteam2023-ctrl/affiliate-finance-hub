@@ -26,7 +26,9 @@ interface ParceiroHistorico {
   id: string;
   nome: string;
   totalContas: number;
+  totalBonus: number;
 }
+
 
 interface HistoricoContasResult {
   // BLOCO A — Estado Atual
@@ -99,12 +101,14 @@ export function useProjetoHistoricoContas(projetoId: string): HistoricoContasRes
       
       if (historicoError) throw historicoError;
 
-      // 3. Buscar bônus ativos (creditados)
+      // 3. Buscar bônus creditados ou finalizados para cálculo de performance
       const { data: bonusData, error: bonusError } = await supabase
         .from("project_bookmaker_link_bonuses")
-        .select("id, bookmaker_id, status")
+        .select("id, bookmaker_id, status, bonus_amount, valor_brl_referencia")
         .eq("project_id", projetoId)
-        .eq("status", "credited");
+        .in("status", ["credited", "finalized", "bonus_consumed", "rollover_completed"]);
+
+
       
       if (bonusError) throw bonusError;
 
@@ -165,9 +169,20 @@ export function useProjetoHistoricoContas(projetoId: string): HistoricoContasRes
       const historicoContasLimitadasLista = historicoContasLista.filter(c => c.foiLimitada);
       const historicoContasLimitadas = historicoContasLimitadasLista.length;
       
-      // Parceiros únicos histórico
-      const parceirosMap = new Map<string, { nome: string; contas: Set<string> }>();
+      // Parceiros únicos histórico com bônus gerado
+      const parceirosMap = new Map<string, { nome: string; contas: Set<string>; totalBonus: number }>();
       
+      // Mapear bookmakers para parceiros para facilitar busca
+      const bookmakerToParceiro = new Map<string, { id: string, nome: string }>();
+      bookmarkersAtuais?.forEach(b => {
+        if (b.parceiro_id) {
+          bookmakerToParceiro.set(b.id, { 
+            id: b.parceiro_id, 
+            nome: (b as any).parceiros?.nome || "Parceiro" 
+          });
+        }
+      });
+
       historicoData?.forEach(h => {
         if (h.parceiro_id && h.parceiro_nome) {
           const existing = parceirosMap.get(h.parceiro_id);
@@ -176,7 +191,8 @@ export function useProjetoHistoricoContas(projetoId: string): HistoricoContasRes
           } else {
             parceirosMap.set(h.parceiro_id, {
               nome: h.parceiro_nome,
-              contas: new Set(h.bookmaker_id ? [h.bookmaker_id] : [])
+              contas: new Set(h.bookmaker_id ? [h.bookmaker_id] : []),
+              totalBonus: 0
             });
           }
         }
@@ -191,8 +207,20 @@ export function useProjetoHistoricoContas(projetoId: string): HistoricoContasRes
           } else {
             parceirosMap.set(b.parceiro_id, {
               nome: parceiroNome,
-              contas: new Set([b.id])
+              contas: new Set([b.id]),
+              totalBonus: 0
             });
+          }
+        }
+      });
+
+      // Calcular bônus por parceiro
+      bonusData?.forEach(bonus => {
+        const parceiro = bookmakerToParceiro.get(bonus.bookmaker_id);
+        if (parceiro) {
+          const stats = parceirosMap.get(parceiro.id);
+          if (stats) {
+            stats.totalBonus += (bonus.bonus_amount || 0);
           }
         }
       });
@@ -201,11 +229,13 @@ export function useProjetoHistoricoContas(projetoId: string): HistoricoContasRes
         .map(([id, data]) => ({
           id,
           nome: data.nome,
-          totalContas: data.contas.size
+          totalContas: data.contas.size,
+          totalBonus: data.totalBonus
         }))
-        .sort((a, b) => b.totalContas - a.totalContas);
+        .sort((a, b) => b.totalBonus - a.totalBonus);
       
       const historicoParceirosUnicos = historicoParceirosLista.length;
+
 
       // ============ BLOCO C — Indicadores Operacionais ============
       // Bookmakers com bônus ativo

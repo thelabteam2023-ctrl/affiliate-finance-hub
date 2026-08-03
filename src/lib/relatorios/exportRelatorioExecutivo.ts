@@ -74,12 +74,16 @@ export async function exportRelatorioExecutivo({
     doc.setFontSize(22);
     doc.setTextColor(30, 41, 59); // slate-800
     doc.setFont("helvetica", "bold");
-    doc.text("Relatório de Performance", margin, 90);
+    
+    // Título ao lado da logo (reposicionado para estética executiva)
+    const titleX = margin + logoWidth + 20;
+    doc.text("Relatório de Performance", titleX, 65);
 
     doc.setFontSize(9);
     doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
     const dataEmissao = format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR });
-    doc.text(`Emitido em: ${dataEmissao}`, pageWidth - margin, 90, { align: "right" });
+    doc.text(`Emitido em: ${dataEmissao}`, pageWidth - margin, 65, { align: "right" });
+
 
     // Divider
     doc.setDrawColor(226, 232, 240); // slate-200
@@ -106,7 +110,8 @@ export async function exportRelatorioExecutivo({
   drawHeader();
   
   doc.setFillColor(colors.bg[0], colors.bg[1], colors.bg[2]);
-  doc.rect(margin, 120, contentWidth, 60, "F");
+  doc.rect(margin, 115, contentWidth, 55, "F");
+
   
   doc.setFontSize(11);
   doc.setTextColor(71, 85, 105); // slate-600
@@ -115,17 +120,18 @@ export async function exportRelatorioExecutivo({
   
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(`Projeto:`, margin + 15, 160);
+  doc.text(`Projeto:`, margin + 15, 145);
   doc.setFont("helvetica", "bold");
-  doc.text(projeto.nome, margin + 80, 160);
+  doc.text(projeto.nome, margin + 70, 145);
   
   doc.setFont("helvetica", "normal");
-  doc.text(`Período:`, margin + 15, 175);
+  doc.text(`Período:`, margin + 180, 145);
   const periodoTxt = periodo.de && periodo.ate 
     ? `${format(periodo.de, "dd/MM/yy")} a ${format(periodo.ate, "dd/MM/yy")}`
     : "Todo o período";
   doc.setFont("helvetica", "bold");
-  doc.text(periodoTxt, margin + 80, 175);
+  doc.text(periodoTxt, margin + 235, 145);
+
 
 
   // --- RESUMO EXECUTIVO (KPIs Financeiros) ---
@@ -235,25 +241,23 @@ export async function exportRelatorioExecutivo({
     doc.setFont("helvetica", "bold");
     doc.text("Contribuição por Vínculo", margin, currentY);
 
-    const partners = historicoContas.historicoParceirosLista || [];
-    const bonusList = historicoContas.contasComBonusLista || [];
-    const totalBonus = bonusList.reduce((acc, b) => acc + (b.total_bonus || 0), 0);
+    const partnersData = historicoContas.historicoParceirosLista || [];
+    const partners = [...partnersData].sort((a: any, b: any) => (b.totalBonus || 0) - (a.totalBonus || 0));
+    const totalBonusProjeto = partners.reduce((acc: number, p: any) => acc + (p.totalBonus || 0), 0);
+
 
     const partnerBody = partners.map(p => {
-      // Encontrar bônus gerados por esse parceiro
-      const partnerBonus = bonusList
-        .filter(b => b.parceiro_nome === p.nome)
-        .reduce((acc, b) => acc + (b.total_bonus || 0), 0);
-      
-      const participation = totalBonus > 0 ? (partnerBonus / totalBonus) * 100 : 0;
+      const bonusGerados = p.totalBonus || 0;
+      const participation = totalBonusProjeto > 0 ? (bonusGerados / totalBonusProjeto) * 100 : 0;
 
       return [
         p.nome,
         p.totalContas.toString(),
-        formatCurrency(partnerBonus),
+        formatCurrency(bonusGerados),
         `${participation.toFixed(1)}%`
       ];
     });
+
 
     autoTable(doc, {
       startY: currentY + 10,
