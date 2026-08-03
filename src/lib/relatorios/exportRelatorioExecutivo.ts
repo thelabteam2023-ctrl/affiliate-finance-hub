@@ -39,6 +39,7 @@ export async function exportRelatorioExecutivo({
   periodo,
   resultado,
   breakdowns,
+  historicoContas,
   formatCurrency,
   config,
 }: ExportRelatorioExecutivoProps) {
