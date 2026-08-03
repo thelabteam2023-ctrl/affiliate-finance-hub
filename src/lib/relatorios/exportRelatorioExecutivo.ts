@@ -121,12 +121,6 @@ export async function exportRelatorioExecutivo({
   doc.setFont("helvetica", "bold");
   doc.text(periodoTxt, margin + 80, 175);
 
-  doc.setFont("helvetica", "normal");
-  doc.text(`Tipo:`, margin + 220, 160);
-  doc.text(projeto.tipo_projeto || "Híbrido", margin + 270, 160);
-  
-  doc.text(`Status:`, margin + 220, 175);
-  doc.text(projeto.status, margin + 270, 175);
 
   // --- RESUMO EXECUTIVO (KPIs Financeiros) ---
   if (configSecoes.resumo) {
