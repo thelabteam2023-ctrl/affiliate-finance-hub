@@ -21,6 +21,10 @@ import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
+import { ExportMenu } from "./ExportMenu";
+import { useProjetoResultado } from "@/hooks/useProjetoResultado";
+import { useKpiBreakdowns } from "@/hooks/useKpiBreakdowns";
+
 import { fetchProjetoExtras, type ProjetoExtraEntry } from "@/services/fetchProjetoExtras";
 import { useCalendarApostasRpc } from "@/hooks/useCalendarApostasRpc";
 import { useCanonicalCalendarDaily, transformCanonicalDailyForCharts } from "@/hooks/useCanonicalCalendarDaily";
@@ -187,8 +191,9 @@ export function ProjetoDashboardTab({ projetoId, refreshTrigger = 0 }: ProjetoDa
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency, formatChartAxis, convertToConsolidation, convertToConsolidationOficial, moedaConsolidacao, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
+  const { formatCurrency, formatChartAxis, convertToConsolidation, convertToConsolidationOficial, moedaConsolidacao, cotacaoOficialUSD, projeto } = useProjetoCurrency(projetoId);
   const { cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP } = useCotacoes();
+
   
   // Hook global de logos
   const { logoMap: catalogLogoMap, getLogoUrl: getCatalogLogoUrl } = useBookmakerLogoMap();
@@ -227,6 +232,26 @@ export function ProjetoDashboardTab({ projetoId, refreshTrigger = 0 }: ProjetoDa
     cotacaoUSD: cotacaoOficialUSD,
     cotacoes: cotacoesCalendario,
   });
+
+  // ---- useProjetoResultado e useKpiBreakdowns (para Relatório Executivo) ----
+  const { resultado } = useProjetoResultado({
+    projetoId,
+    dataInicio: dateRange?.start,
+    dataFim: dateRange?.end,
+    convertToConsolidation,
+    cotacaoKey: cotacaoOficialUSD,
+  });
+
+  const { breakdowns } = useKpiBreakdowns({
+    projetoId,
+    dataInicio: dateRange?.start,
+    dataFim: dateRange?.end,
+    moedaConsolidacao,
+    convertToConsolidation,
+    convertToConsolidationOficial,
+    cotacaoKey: cotacaoOficialUSD,
+  });
+
 
   // ---- Mesclar: lucro canônico + contagens da RPC de apostas ----
   const mergedCalendarData = useMemo(() => {

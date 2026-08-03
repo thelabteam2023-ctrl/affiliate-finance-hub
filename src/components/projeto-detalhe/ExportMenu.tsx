@@ -87,7 +87,7 @@ export function ExportMenu({
     try {
       await exportRelatorioExecutivo({
         projeto: projectData.projeto,
-        workspace: { nome: workspace.nome || "Workspace" },
+        workspace: { nome: (workspace as any).nome || "Workspace" },
         periodo: projectData.periodo,
         resultado: projectData.resultado,
         breakdowns: projectData.breakdowns,
