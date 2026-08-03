@@ -161,8 +161,8 @@ export function RelatorioConfigDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
+      <DialogContent className={`sm:max-w-[${showPreview ? '900px' : '480px'}] transition-all duration-300 max-h-[90vh] overflow-hidden flex flex-col`}>
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
             Configurar Relatório do Projeto
