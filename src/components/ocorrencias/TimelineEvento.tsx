@@ -1,11 +1,18 @@
+import { useState } from 'react';
 import { format } from 'date-fns';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { useEditarComentario } from '@/hooks/useOcorrencias';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 import {
   AlertCircle,
   ArrowRight,
+  Check,
   FilePlus2,
   Link2,
   MessageSquare,
@@ -15,6 +22,7 @@ import {
   UserPlus,
   UserMinus,
   Users,
+  X,
 } from 'lucide-react';
 import type { OcorrenciaEvento, OcorrenciaStatus, OcorrenciaPrioridade } from '@/types/ocorrencias';
 import {
@@ -103,6 +111,28 @@ function traduzirValor(campo: string | null | undefined, valor: string | null | 
  * Eventos legados sem valor_anterior/valor_novo caem no rótulo genérico.
  */
 export function TimelineEvento({ evento, autorNome, resolveNome }: Props) {
+  const { user } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(evento.conteudo || '');
+  const { mutate: editarComentario, isPending: editing } = useEditarComentario();
+
+  const isOwner = user?.id === evento.autor_id;
+  const canEdit = evento.tipo === 'comentario' && isOwner;
+
+  const handleSave = () => {
+    if (!editValue.trim() || editValue === evento.conteudo) {
+      setIsEditing(false);
+      return;
+    }
+    editarComentario({
+      eventoId: evento.id,
+      ocorrenciaId: evento.ocorrencia_id,
+      novoConteudo: editValue,
+    }, {
+      onSuccess: () => setIsEditing(false)
+    });
+  };
+
   const icon = ICONS[evento.tipo] || <AlertCircle className="h-3 w-3" />;
   const iconColor = ICON_COLORS[evento.tipo] || 'text-muted-foreground bg-muted border-border';
 
@@ -189,9 +219,61 @@ export function TimelineEvento({ evento, autorNome, resolveNome }: Props) {
       <div className="text-xs text-muted-foreground leading-relaxed">
         {renderCorpo()}
         {evento.tipo === 'comentario' && evento.conteudo && (
-          <p className="mt-1 text-foreground bg-muted/30 p-2 rounded-md border border-border/20 whitespace-pre-wrap">
-            {evento.conteudo}
-          </p>
+          <div className="group relative mt-1">
+            {isEditing ? (
+              <div className="space-y-2 mt-2">
+                <Textarea
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="min-h-[80px] text-xs bg-background focus-visible:ring-primary/30"
+                  autoFocus
+                />
+                <div className="flex items-center gap-2 justify-end">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-[10px] font-bold uppercase tracking-tight gap-1.5"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditValue(evento.conteudo || '');
+                    }}
+                    disabled={editing}
+                  >
+                    <X className="h-3 w-3" />
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-7 px-2 text-[10px] font-bold uppercase tracking-tight gap-1.5"
+                    onClick={handleSave}
+                    disabled={editing || !editValue.trim()}
+                  >
+                    {editing ? (
+                      <span className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Check className="h-3 w-3" />
+                    )}
+                    Salvar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-foreground bg-muted/30 p-2 rounded-md border border-border/20 whitespace-pre-wrap">
+                  {evento.conteudo}
+                </p>
+                {canEdit && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 p-1 rounded-md bg-background/80 border border-border/40 text-muted-foreground hover:text-primary transition-all shadow-sm"
+                    title="Editar comentário"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         )}
       </div>
     </div>

@@ -490,6 +490,51 @@ export function useAtualizarStatusOcorrencia() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.all(workspaceId!) });
+    },
+  });
+}
+
+// ============================================================
+// MUTATION: editar comentário
+// ============================================================
+export function useEditarComentario() {
+  const { workspaceId, user } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      eventoId,
+      ocorrenciaId,
+      novoConteudo,
+    }: {
+      eventoId: string;
+      ocorrenciaId: string;
+      novoConteudo: string;
+    }) => {
+      // 1. Atualizar o comentário
+      const { error } = await eventosTable()
+        .update({
+          conteudo: novoConteudo,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', eventoId)
+        .eq('ocorrencia_id', ocorrenciaId)
+        .eq('workspace_id', workspaceId!)
+        .eq('autor_id', user!.id)
+        .eq('tipo', 'comentario');
+
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.eventos(vars.ocorrenciaId) });
+      toast.success('Comentário atualizado');
+    },
+    onError: (err) => {
+      console.error('Erro ao editar comentário:', err);
+      toast.error('Não foi possível editar o comentário');
+    },
+  });
+}
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.detail(vars.id) });
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.eventos(vars.id) });
       if (vars.novoStatus === 'cancelado') {
