@@ -322,7 +322,7 @@ export function RelatorioConfigDialog({
                     <div className="h-[1px] bg-slate-100 mt-2"></div>
 
 
-                    <div className="text-[9px] text-slate-500 text-right self-center">
+                    <div className="text-[9px] text-slate-500 text-right">
                       Emitido em: {format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}
                     </div>
 
@@ -330,12 +330,13 @@ export function RelatorioConfigDialog({
 
 
                   {/* Identification Block */}
-                  <div className="bg-slate-50 p-4 rounded-lg mb-6 grid grid-cols-2 gap-4 text-black">
-                    <div className="flex flex-col gap-1">
+                  <div className="bg-slate-50 p-4 rounded-lg mb-6 flex items-center justify-between text-black">
+                    <div className="flex flex-col gap-1 flex-1">
                       <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Projeto</span>
-                      <span className="font-bold text-xs">{projeto?.nome}</span>
+                      <span className="font-bold text-xs truncate max-w-[200px]">{projeto?.nome}</span>
                     </div>
-                    <div className="flex flex-col gap-1">
+                    <div className="w-[1px] h-8 bg-slate-200 mx-4" />
+                    <div className="flex flex-col gap-1 flex-1">
                       <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Período</span>
                       <span className="font-bold text-xs">
                         {dateRange?.start && dateRange?.end 
