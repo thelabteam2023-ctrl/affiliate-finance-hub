@@ -99,7 +99,7 @@ export function ContasNoProjetoCard({ projetoId, hasForeignCurrency = false }: C
     parceirosAtivosLista,
     historicoParceirosLista,
     isLoading,
-  } = useProjetoHistoricoContas(projetoId);
+  } = useProjetoHistoricoContas({ projetoId });
 
   if (isLoading) {
     return (
