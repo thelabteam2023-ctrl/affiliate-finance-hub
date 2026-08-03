@@ -52,7 +52,6 @@ import { useProjetoHistoricoContas } from "@/hooks/useProjetoHistoricoContas";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import logoAsset from "@/assets/HORIZONTAL_OFICIAL_2-2.png.asset.json";
 
-
 interface RelatorioConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -93,8 +92,6 @@ export function RelatorioConfigDialog({
     { id: 'evolucao', label: 'Visão Temporal (Gráficos)', enabled: true, icon: BarChart3 },
   ]);
 
-
-
   const { 
     convertToConsolidation, 
     convertToConsolidationOficial, 
@@ -106,7 +103,7 @@ export function RelatorioConfigDialog({
 
   const dateRange = getDateRangeFromPeriod(period, customDateRange);
 
-  const { resultado, loading: loadingResultado } = useProjetoResultado({
+  const { resultado } = useProjetoResultado({
     projetoId,
     dataInicio: dateRange?.start,
     dataFim: dateRange?.end,
@@ -114,7 +111,7 @@ export function RelatorioConfigDialog({
     cotacaoKey: cotacaoOficialUSD,
   });
 
-  const { breakdowns, loading: loadingBreakdowns } = useKpiBreakdowns({
+  const { breakdowns } = useKpiBreakdowns({
     projetoId,
     dataInicio: dateRange?.start,
     dataFim: dateRange?.end,
@@ -353,11 +350,10 @@ export function RelatorioConfigDialog({
                     </div>
                   </div>
 
-
                   {/* Active Sections Preview */}
-                  <div className="space-y-6">
+                  <div className="space-y-7">
                     {secoes.filter(s => s.enabled).map(secao => (
-                      <div key={secao.id} className="mb-7">
+                      <div key={secao.id}>
                         <h2 className="text-[12px] font-bold uppercase tracking-[1px] text-[#6C7280] mb-3">{secao.label}</h2>
                         
                         {secao.id === 'resumo' ? (
@@ -433,68 +429,6 @@ export function RelatorioConfigDialog({
                         )}
                       </div>
                     ))}
-
-                              <span className="text-slate-600">Bônus Creditado</span>
-                              <span className="font-bold text-slate-800">{formatCurrency(breakdowns?.bonusPerformance?.bonusCreditado || 0)}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1">
-                              <span className="text-slate-600">Juice (Perdas)</span>
-                              <span className="font-bold text-red-600">{formatCurrency(breakdowns?.bonusPerformance?.juice || 0)}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1">
-                              <span className="text-slate-600">Extração Líquida</span>
-                              <span className="font-bold text-emerald-600">{formatCurrency(breakdowns?.bonusPerformance?.extracaoLiquida || 0)}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-[9px]">
-                              <span className="text-slate-600">Taxa de Extração</span>
-                              <span className="font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-sm">
-                                {breakdowns?.bonusPerformance?.taxaExtracao.toFixed(1)}%
-                              </span>
-                            </div>
-                          </div>
-                        ) : secao.id === 'evolucao' ? (
-                          <div className="space-y-3">
-                            <div className="h-20 w-full bg-slate-50 rounded border border-slate-100 relative flex flex-col justify-end p-2 overflow-hidden">
-                              <div className="absolute inset-0 flex items-end px-2 pb-2">
-                                <svg viewBox="0 0 100 40" className="w-full h-full text-emerald-500 opacity-20" preserveAspectRatio="none">
-                                  <path d="M0 40 L20 30 L40 35 L60 15 L80 20 L100 5 L100 40 Z" fill="currentColor" />
-                                  <path d="M0 40 L20 30 L40 35 L60 15 L80 20 L100 5" fill="none" stroke="currentColor" strokeWidth="2" />
-                                </svg>
-                              </div>
-                              <div className="flex justify-between text-[7px] text-slate-400 relative z-10">
-                                <span>{format(dateRange?.start || new Date(), 'dd/MM')}</span>
-                                <span>{format(dateRange?.end || new Date(), 'dd/MM')}</span>
-
-
-                              </div>
-                            </div>
-                            <p className="text-[8px] text-slate-500 italic text-center">Gráfico de evolução do lucro acumulado no período.</p>
-                          </div>
-                        ) : secao.id === 'resumo' ? (
-
-
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1">
-                              <span className="text-slate-600">Lucro Realizado (Net Profit)</span>
-                              <span className="font-bold text-emerald-600">{formatCurrency(resultado?.netProfit || 0)}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1">
-                              <span className="text-slate-600">ROI Operacional</span>
-                              <span className="font-bold">{resultado?.roi?.toFixed(2)}%</span>
-                            </div>
-                            <div className="flex justify-between items-center text-[9px]">
-                              <span className="text-slate-600">Capital Operável</span>
-                              <span className="font-bold">{formatCurrency(resultado?.saldoBookmakers || 0)}</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="h-16 w-full bg-slate-50 rounded border border-dashed border-slate-200 flex items-center justify-center text-[8px] text-slate-400 italic">
-                            Dados da seção {secao.label} serão renderizados no PDF final...
-                          </div>
-                        )}
-                      </div>
-                    ))}
-
                   </div>
                 </div>
               </ScrollArea>
@@ -502,27 +436,31 @@ export function RelatorioConfigDialog({
           )}
         </div>
 
-        <DialogFooter className="flex-shrink-0 pt-4 border-t mt-4">
-          <Button variant="outline" onClick={() => setShowPreview(!showPreview)} className="mr-auto">
-            {showPreview ? 'Ocultar Prévia' : 'Ver Prévia'}
-          </Button>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={generating}>
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleGenerate} 
-            disabled={generating || loadingResultado || !resultado}
-            className="min-w-[120px]"
-          >
-            {generating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Gerando...
-              </>
-            ) : (
-              'Gerar Relatório'
-            )}
-          </Button>
+        <DialogFooter className="flex-shrink-0 bg-accent/5 p-4 border-t">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowPreview(!showPreview)}
+              className="gap-2"
+            >
+              {showPreview ? "Ocultar Prévia" : "Ver Prévia"}
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button onClick={handleGenerate} disabled={generating} className="gap-2">
+              {generating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Gerar Relatório
+                </>
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
