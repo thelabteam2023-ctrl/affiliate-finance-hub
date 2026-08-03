@@ -115,6 +115,8 @@ export function RelatorioConfigDialog({
     cotacaoKey: cotacaoOficialUSD,
   });
 
+  const historicoContas = useProjetoHistoricoContas(projetoId);
+
   const handleGenerate = async () => {
     if (!projeto || !workspace || !resultado) {
       toast.error("Dados do projeto não carregados");
