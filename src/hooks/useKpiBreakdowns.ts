@@ -15,8 +15,10 @@ import {
   CurrencyBreakdownItem,
   VolumeTemporalStats,
   createModuleContribution, 
-  createKpiBreakdown 
+  createKpiBreakdown,
+  BonusPerformanceStats 
 } from '@/types/moduleBreakdown';
+
 import { ESTRATEGIA_LABELS, type ApostaEstrategia } from '@/lib/apostaConstants';
 import { getConsolidatedStake, getConsolidatedLucro, getConsolidatedLucroDirect, type PernaConsolidavel } from '@/utils/consolidatedValues';
 import { extractCivilDateKey } from '@/utils/dateUtils';
@@ -63,6 +65,15 @@ interface ModuleDataWithCurrency {
   lucroPorMoeda: CurrencyBreakdownItem[];
   lucroPorEstrategia?: Record<string, number>;
 }
+
+export interface BonusPerformanceStats {
+  bonusCreditado: number;
+  juice: number;
+  extracaoLiquida: number;
+  taxaExtracao: number;
+  quantidadeOperacoes: number;
+}
+
 
 function agregarPorMoeda(items: { valor: number; moeda: string }[]): CurrencyBreakdownItem[] {
   const map = new Map<string, number>();
