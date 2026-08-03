@@ -80,8 +80,17 @@ export interface VolumeTemporalStats {
   volumeProjetado: number | null;
 }
 
+export interface BonusPerformanceStats {
+  bonusCreditado: number;
+  juice: number;
+  extracaoLiquida: number;
+  taxaExtracao: number;
+  quantidadeOperacoes: number;
+}
+
 /**
  * Interface para breakdowns de todos os KPIs
+
  */
 export interface ProjetoKpiBreakdowns {
   /** Breakdown do KPI de Apostas (quantidade) */
@@ -103,7 +112,11 @@ export interface ProjetoKpiBreakdowns {
 
   /** Estatísticas temporais de volume */
   volumeTemporal: VolumeTemporalStats;
+
+  /** Performance de bônus (extração) */
+  bonusPerformance?: BonusPerformanceStats;
 }
+
 
 /**
  * Helper para criar uma contribuição de módulo

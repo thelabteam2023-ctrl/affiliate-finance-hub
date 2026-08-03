@@ -66,13 +66,6 @@ interface ModuleDataWithCurrency {
   lucroPorEstrategia?: Record<string, number>;
 }
 
-export interface BonusPerformanceStats {
-  bonusCreditado: number;
-  juice: number;
-  extracaoLiquida: number;
-  taxaExtracao: number;
-  quantidadeOperacoes: number;
-}
 
 
 function agregarPorMoeda(items: { valor: number; moeda: string }[]): CurrencyBreakdownItem[] {
@@ -328,9 +321,55 @@ function deriveBonusGanhosModule(
   return { count, volume: 0, lucro: 0, total, volumePorMoeda: [], lucroPorMoeda };
 }
 
+function deriveBonusPerformance(
+  rawData: ProjetoDashboardRawData,
+  moedaConsolidacao: string,
+  convert: ConvertFn,
+  convertOficial?: ConvertFn
+): BonusPerformanceStats {
+  const bonusConvert = convertOficial || convert;
+  
+  // 1. Bônus Creditado (congelado via snapshot quando possível)
+  const bonusCreditado = rawData.bonus.reduce((acc, b) => {
+    if (b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0) {
+      return acc + b.valor_consolidado_snapshot;
+    }
+    const moeda = b.currency || 'BRL';
+    const valor = Number(b.bonus_amount || 0);
+    return acc + bonusConvert(valor, moeda);
+  }, 0);
+
+  // 2. Juice (perdas em apostas vinculadas a bônus ou estratégia EXTRACAO_BONUS)
+  // Nota: juice é negativo no cálculo mas aqui queremos o valor absoluto para a taxa
+  const apostasBonus = rawData.apostas.filter(a => a.bonus_id || a.estrategia === 'EXTRACAO_BONUS');
+  const juiceRaw = apostasBonus.reduce((acc, a) => {
+    // pl_consolidado já é imutável via trigger
+    if (a.pl_consolidado !== null && a.consolidation_currency === moedaConsolidacao) {
+      const pl = Number(a.pl_consolidado);
+      return acc + (pl < 0 ? pl : 0);
+    }
+    const pernas = (rawData.apostas_pernas || []).filter(p => p.aposta_id === a.id);
+    const pl = getConsolidatedLucroDirect(a as any, pernas, convert, moedaConsolidacao);
+    return acc + (pl < 0 ? pl : 0);
+  }, 0);
+
+  const juice = Math.abs(juiceRaw);
+  const extracaoLiquida = bonusCreditado - juice;
+  const taxaExtracao = bonusCreditado > 0 ? (extracaoLiquida / bonusCreditado) * 100 : 0;
+
+  return {
+    bonusCreditado,
+    juice,
+    extracaoLiquida,
+    taxaExtracao,
+    quantidadeOperacoes: apostasBonus.length
+  };
+}
+
 // =====================================================
 // DERIVAÇÃO DE EXTRAS (substitui fetchProjetoExtras)
 // =====================================================
+
 
 interface ExtraAgrupado {
   total: number;
@@ -720,8 +759,10 @@ function deriveBreakdowns(
       currency: moedaConsolidacao,
     },
     volumeTemporal: volumeTemporalStats,
+    bonusPerformance: deriveBonusPerformance(rawData, moedaConsolidacao, convert, convertOficial),
   };
 }
+
 
 // =====================================================
 // HOOK PRINCIPAL
