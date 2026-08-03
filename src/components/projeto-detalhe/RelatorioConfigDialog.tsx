@@ -14,7 +14,8 @@ import {
   Briefcase,
   Layers,
   Zap,
-  Layout
+  Layout,
+  Eye
 } from "lucide-react";
 import {
   Dialog,
