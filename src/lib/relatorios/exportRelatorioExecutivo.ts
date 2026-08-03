@@ -82,7 +82,7 @@ export async function exportRelatorioExecutivo({
     doc.setFontSize(9);
     doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
     const dataEmissao = format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR });
-    doc.text(`Emitido em: ${dataEmissao}`, pageWidth - margin, 85, { align: "right" });
+    doc.text(`Emitido em: ${dataEmissao}`, pageWidth - margin, 65, { align: "right" });
 
 
 
@@ -117,21 +117,21 @@ export async function exportRelatorioExecutivo({
   doc.setFontSize(11);
   doc.setTextColor(71, 85, 105); // slate-600
   doc.setFont("helvetica", "bold");
-  doc.text("Identificação do Projeto", margin + 15, 138);
+  doc.text("Identificação do Projeto", margin + 15, 136);
   
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.text(`Projeto:`, margin + 15, 153);
   doc.setFont("helvetica", "bold");
-  doc.text(projeto.nome, margin + 70, 153);
+  doc.text(projeto.nome, margin + 55, 153);
   
   doc.setFont("helvetica", "normal");
-  doc.text(`Período:`, margin + 180, 153);
+  doc.text(`Período:`, margin + 220, 153);
   const periodoTxt = periodo.de && periodo.ate 
     ? `${format(periodo.de, "dd/MM/yy")} a ${format(periodo.ate, "dd/MM/yy")}`
     : "Todo o período";
   doc.setFont("helvetica", "bold");
-  doc.text(periodoTxt, margin + 235, 153);
+  doc.text(periodoTxt, margin + 265, 153);
 
 
 
