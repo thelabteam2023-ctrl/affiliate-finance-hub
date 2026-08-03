@@ -78,7 +78,10 @@ export interface VolumeTemporalStats {
   densidadeOperacional: number;
   /** Volume projetado (run rate) = volumeMedio * diasTotaisPeriodo */
   volumeProjetado: number | null;
+  /** Histórico diário para gráficos */
+  dailyHistory?: { date: string; profit: number; cumulativeProfit: number }[];
 }
+
 
 export interface BonusPerformanceStats {
   bonusCreditado: number;

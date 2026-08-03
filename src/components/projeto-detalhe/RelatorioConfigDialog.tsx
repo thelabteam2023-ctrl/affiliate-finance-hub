@@ -408,8 +408,9 @@ export function RelatorioConfigDialog({
                                 </svg>
                               </div>
                               <div className="flex justify-between text-[7px] text-slate-400 relative z-10">
-                                <span>{format(dataInicio || new Date(), 'dd/MM')}</span>
-                                <span>{format(dataFim || new Date(), 'dd/MM')}</span>
+                                <span>{format(selectedDataInicio || new Date(), 'dd/MM')}</span>
+                                <span>{format(selectedDataFim || new Date(), 'dd/MM')}</span>
+
                               </div>
                             </div>
                             <p className="text-[8px] text-slate-500 italic text-center">Gráfico de evolução do lucro acumulado no período.</p>
