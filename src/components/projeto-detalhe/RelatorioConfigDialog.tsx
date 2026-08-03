@@ -172,7 +172,9 @@ export function RelatorioConfigDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-6 py-4">
+        <div className="flex gap-6 overflow-hidden flex-grow">
+          <ScrollArea className={`${showPreview ? 'w-[300px]' : 'w-full'} flex-shrink-0 pr-4`}>
+            <div className="grid gap-6 py-4">
           {/* Período */}
           <div className="space-y-3">
             <Label className="text-sm font-medium flex items-center gap-2">
