@@ -574,8 +574,12 @@ export function calcularLucroCanonicoFromRpc(
 
 function deriveVolumeTemporalStats(
   apostas: RawAposta[],
-  volumeTotal: number
+  volumeTotal: number,
+  rawData?: ProjetoDashboardRawData,
+  convert?: ConvertFn,
+  moedaConsolidacao?: string
 ): VolumeTemporalStats {
+
   if (apostas.length === 0) {
     return {
       primeiraAposta: null,
