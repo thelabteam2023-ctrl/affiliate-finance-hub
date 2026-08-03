@@ -13,6 +13,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useProjetoCurrency } from "./useProjetoCurrency";
 
 interface ContaHistorico {
   id: string;
@@ -73,6 +74,8 @@ export function useProjetoHistoricoContas({
   dataInicio, 
   dataFim 
 }: UseProjetoHistoricoContasProps): HistoricoContasResult {
+  const { convertToConsolidation } = useProjetoCurrency(projetoId);
+
   // Query principal unificada
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["projeto-painel-contas", projetoId, dataInicio?.toISOString(), dataFim?.toISOString()],
@@ -241,7 +244,12 @@ export function useProjetoHistoricoContas({
         if (parceiro) {
           const stats = parceirosMap.get(parceiro.id);
           if (stats) {
-            stats.totalBonus += (bonus.bonus_amount || 0);
+            // REGRA SSOT: Priorizar snapshot consolidado se existir, senão converter live
+            const valorConsolidado = bonus.valor_consolidado_snapshot 
+              ? Number(bonus.valor_consolidado_snapshot)
+              : convertToConsolidation(Number(bonus.bonus_amount || 0), bonus.currency || 'BRL');
+            
+            stats.totalBonus += valorConsolidado;
           }
         }
       });
