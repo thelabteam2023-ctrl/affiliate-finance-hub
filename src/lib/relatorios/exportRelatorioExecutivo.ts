@@ -117,21 +117,21 @@ export async function exportRelatorioExecutivo({
   doc.setFontSize(11);
   doc.setTextColor(71, 85, 105); // slate-600
   doc.setFont("helvetica", "bold");
-  doc.text("Identificação do Projeto", margin + 15, 140);
+  doc.text("Identificação do Projeto", margin + 15, 138);
   
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(`Projeto:`, margin + 15, 150);
+  doc.text(`Projeto:`, margin + 15, 153);
   doc.setFont("helvetica", "bold");
-  doc.text(projeto.nome, margin + 70, 150);
+  doc.text(projeto.nome, margin + 70, 153);
   
   doc.setFont("helvetica", "normal");
-  doc.text(`Período:`, margin + 180, 150);
+  doc.text(`Período:`, margin + 180, 153);
   const periodoTxt = periodo.de && periodo.ate 
     ? `${format(periodo.de, "dd/MM/yy")} a ${format(periodo.ate, "dd/MM/yy")}`
     : "Todo o período";
   doc.setFont("helvetica", "bold");
-  doc.text(periodoTxt, margin + 235, 150);
+  doc.text(periodoTxt, margin + 235, 153);
 
 
 
