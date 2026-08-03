@@ -8,6 +8,7 @@ import logoAsset from "@/assets/HORIZONTAL_OFICIAL_2-2.png.asset.json";
 
 interface ExportRelatorioExecutivoProps {
   projeto: {
+    id: string;
     nome: string;
     tipo_projeto?: string;
     status: string;
@@ -22,6 +23,10 @@ interface ExportRelatorioExecutivoProps {
   };
   resultado: ProjetoResultado;
   breakdowns: ProjetoKpiBreakdowns | null;
+  historicoContas: {
+    historicoParceirosLista: any[];
+    contasComBonusLista: any[];
+  } | null;
   formatCurrency: (value: number) => string;
   config?: {
     secoes: Record<string, boolean>;
@@ -34,6 +39,7 @@ export async function exportRelatorioExecutivo({
   periodo,
   resultado,
   breakdowns,
+  historicoContas,
   formatCurrency,
   config,
 }: ExportRelatorioExecutivoProps) {
@@ -216,8 +222,59 @@ export async function exportRelatorioExecutivo({
     currentY = (doc as any).lastAutoTable.finalY + 40;
   }
 
+  // --- CONTRIBUIÇÃO POR VÍNCULO (PARCEIROS) ---
+  if (configSecoes.vinculos && historicoContas) {
+    if (currentY > pageHeight - 150) {
+      doc.addPage();
+      drawHeader();
+      currentY = 130;
+    }
+
+    doc.setFontSize(14);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "bold");
+    doc.text("Contribuição por Vínculo", margin, currentY);
+
+    const partners = historicoContas.historicoParceirosLista || [];
+    const bonusList = historicoContas.contasComBonusLista || [];
+    const totalBonus = bonusList.reduce((acc, b) => acc + (b.total_bonus || 0), 0);
+
+    const partnerBody = partners.map(p => {
+      // Encontrar bônus gerados por esse parceiro
+      const partnerBonus = bonusList
+        .filter(b => b.parceiro_nome === p.nome)
+        .reduce((acc, b) => acc + (b.total_bonus || 0), 0);
+      
+      const participation = totalBonus > 0 ? (partnerBonus / totalBonus) * 100 : 0;
+
+      return [
+        p.nome,
+        p.totalContas.toString(),
+        formatCurrency(partnerBonus),
+        `${participation.toFixed(1)}%`
+      ];
+    });
+
+    autoTable(doc, {
+      startY: currentY + 10,
+      margin: { left: margin, right: margin },
+      head: [["Vínculo (Pessoa)", "Casas Utilizadas", "Bônus Gerados", "Participação (%)"]],
+      body: partnerBody.length > 0 ? partnerBody : [["Nenhum vínculo identificado", "-", "-", "-"]],
+      theme: "striped",
+      headStyles: { fillColor: colors.primary, textColor: 255 },
+      styles: { fontSize: 9 },
+      columnStyles: {
+        1: { halign: "center" },
+        2: { fontStyle: "bold", halign: "right" },
+        3: { halign: "center" }
+      }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 40;
+  }
 
   // --- INSIGHTS AUTOMÁTICOS ---
+
   if (configSecoes.insights) {
     if (currentY > pageHeight - 150) {
       doc.addPage();
