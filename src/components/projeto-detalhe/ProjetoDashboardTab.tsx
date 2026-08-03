@@ -21,7 +21,7 @@ import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
-import { ExportMenu } from "./ExportMenu";
+import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { useProjetoResultado } from "@/hooks/useProjetoResultado";
 import { useKpiBreakdowns } from "@/hooks/useKpiBreakdowns";
 
@@ -568,17 +568,22 @@ export function ProjetoDashboardTab({ projetoId, refreshTrigger = 0 }: ProjetoDa
                   moeda_consolidacao: moedaConsolidacao,
                 },
                 resultado: resultado || {
-                  totalVolume: 0,
-                  lucroBruto: 0,
-                  roiTotal: 0,
-                  lucroLiquido: 0,
+                  netProfit: 0,
+                  roi: 0,
+                  totalStaked: 0,
+                  grossProfitFromBets: 0,
+                  lucroGirosGratis: 0,
+                  lucroCashback: 0,
+                  operationalLossesConfirmed: 0,
+                  operationalLossesPending: 0,
+                  operationalLossesReverted: 0,
+                  ajustesConciliacao: 0,
+                  temAjustesConciliacao: false,
+                  saldoBookmakers: 0,
+                  saldoIrrecuperavel: 0,
+                  totalDepositos: 0,
+                  totalSaques: 0,
                   moedaConsolidacao: moedaConsolidacao || "BRL",
-                  totalVolumePendente: 0,
-                  totalVolumeLiquidado: 0,
-                  totalApostas: 0,
-                  totalProfit: 0,
-                  roiLiquidado: 0,
-                  lucroOperacional: 0
                 },
                 breakdowns: breakdowns,
                 periodo: { de: dateRange?.start || null, ate: dateRange?.end || null },
