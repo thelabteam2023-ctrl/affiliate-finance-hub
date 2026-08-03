@@ -45,6 +45,8 @@ import { useKpiBreakdowns } from "@/hooks/useKpiBreakdowns";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { toast } from "sonner";
+import { useProjetoHistoricoContas } from "@/hooks/useProjetoHistoricoContas";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface RelatorioConfigDialogProps {
   open: boolean;
