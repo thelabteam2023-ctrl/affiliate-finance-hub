@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { ProjetoResultado } from "@/hooks/useProjetoResultado";
 import type { ProjetoKpiBreakdowns } from "@/types/moduleBreakdown";
+import logoAsset from "@/assets/HORIZONTAL_OFICIAL_SEMFUNDO-5.png.asset.json";
 
 interface ExportRelatorioExecutivoProps {
   projeto: {
