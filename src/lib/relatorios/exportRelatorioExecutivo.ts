@@ -130,16 +130,16 @@ export async function exportRelatorioExecutivo({
 
   // --- RESUMO EXECUTIVO (KPIs Financeiros) ---
   if (configSecoes.resumo) {
+    let yResumo = 220;
     doc.setFontSize(14);
     doc.setTextColor(30, 41, 59);
     doc.setFont("helvetica", "bold");
-    doc.text("Resumo Financeiro", margin, 205);
+    doc.text("Resumo Financeiro", margin, yResumo);
     
-    const lucroReal = resultado.netProfit;
     const isPositivo = lucroReal >= 0;
 
     autoTable(doc, {
-      startY: 215,
+      startY: yResumo + 10,
       margin: { left: margin, right: margin },
       head: [["Indicador", "Valor Atual", "Impacto"]],
       body: [
@@ -160,7 +160,7 @@ export async function exportRelatorioExecutivo({
     });
   }
 
-  let currentY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 40 : 205;
+  let currentY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 40 : 220;
 
   // --- OPERAÇÃO ---
   if (configSecoes.operacional) {
