@@ -120,17 +120,18 @@ export async function exportRelatorioExecutivo({
   
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(`Projeto:`, margin + 15, 145);
+  doc.text(`Projeto:`, margin + 15, 150);
   doc.setFont("helvetica", "bold");
-  doc.text(projeto.nome, margin + 70, 145);
+  doc.text(projeto.nome, margin + 70, 150);
   
   doc.setFont("helvetica", "normal");
-  doc.text(`Período:`, margin + 180, 145);
+  doc.text(`Período:`, margin + 180, 150);
   const periodoTxt = periodo.de && periodo.ate 
     ? `${format(periodo.de, "dd/MM/yy")} a ${format(periodo.ate, "dd/MM/yy")}`
     : "Todo o período";
   doc.setFont("helvetica", "bold");
-  doc.text(periodoTxt, margin + 235, 145);
+  doc.text(periodoTxt, margin + 235, 150);
+
 
 
 
