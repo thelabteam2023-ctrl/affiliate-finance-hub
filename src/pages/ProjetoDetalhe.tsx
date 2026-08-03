@@ -50,6 +50,7 @@ import {
   BarChart3,
   CalendarRange,
   Crosshair,
+  FileText,
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";

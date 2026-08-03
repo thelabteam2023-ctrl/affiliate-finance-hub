@@ -21,7 +21,7 @@ import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
-import { transformApostaToExport } from "./ExportMenu";
+import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { useProjetoResultado } from "@/hooks/useProjetoResultado";
 import { useKpiBreakdowns } from "@/hooks/useKpiBreakdowns";
 

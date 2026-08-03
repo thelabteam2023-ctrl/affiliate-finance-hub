@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DateRange } from "react-day-picker";
-import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { DatePicker } from "@/components/ui/date-picker";
 import { StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
 import { useAuth } from "@/hooks/useAuth";
 import { exportRelatorioExecutivo } from "@/lib/relatorios/exportRelatorioExecutivo";
@@ -70,7 +70,7 @@ export function RelatorioConfigDialog({
 
   const dateRange = getDateRangeFromPeriod(period, customDateRange);
 
-  const { resultado, isLoading: loadingResultado } = useProjetoResultado({
+  const { resultado, loading: loadingResultado } = useProjetoResultado({
     projetoId,
     dataInicio: dateRange?.start,
     dataFim: dateRange?.end,
@@ -78,7 +78,7 @@ export function RelatorioConfigDialog({
     cotacaoKey: cotacaoOficialUSD,
   });
 
-  const { breakdowns, isLoading: loadingBreakdowns } = useKpiBreakdowns({
+  const { breakdowns, loading: loadingBreakdowns } = useKpiBreakdowns({
     projetoId,
     dataInicio: dateRange?.start,
     dataFim: dateRange?.end,
@@ -164,11 +164,24 @@ export function RelatorioConfigDialog({
                 </SelectContent>
               </Select>
               {period === "custom" && (
-                <DatePickerWithRange
-                  date={customDateRange}
-                  onChange={setCustomDateRange}
-                  className="w-full"
-                />
+                <div className="flex items-center gap-2 w-full">
+                  <DatePicker 
+                    value={customDateRange?.from ? format(customDateRange.from, 'yyyy-MM-dd') : ''}
+                    onChange={(d) => {
+                      const date = d ? new Date(d) : undefined;
+                      setCustomDateRange(prev => ({ from: date, to: prev?.to }));
+                    }}
+                    placeholder="Início"
+                  />
+                  <DatePicker 
+                    value={customDateRange?.to ? format(customDateRange.to, 'yyyy-MM-dd') : ''}
+                    onChange={(d) => {
+                      const date = d ? new Date(d) : undefined;
+                      setCustomDateRange(prev => ({ from: prev?.from, to: date }));
+                    }}
+                    placeholder="Fim"
+                  />
+                </div>
               )}
             </div>
           </div>
