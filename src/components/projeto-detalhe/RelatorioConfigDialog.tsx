@@ -328,18 +328,19 @@ export function RelatorioConfigDialog({
 
                   {/* Identification Block */}
                   <div className="bg-slate-50 p-4 rounded-lg mb-6 grid grid-cols-2 gap-4 text-black">
-                    <div>
-                      <span className="text-[10px] text-slate-500 block uppercase tracking-wider font-semibold">Projeto</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Projeto</span>
                       <span className="font-bold text-xs">{projeto?.nome}</span>
                     </div>
-                    <div>
-                      <span className="text-[10px] text-slate-500 block uppercase tracking-wider font-semibold">Período</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Período</span>
                       <span className="font-bold text-xs">
                         {dateRange?.start && dateRange?.end 
                           ? `${format(dateRange.start, "dd/MM/yy")} a ${format(dateRange.end, "dd/MM/yy")}`
                           : "Todo o período"}
                       </span>
                     </div>
+
                   </div>
 
                   {/* Active Sections Preview */}
