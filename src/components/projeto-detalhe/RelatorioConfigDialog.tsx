@@ -408,8 +408,9 @@ export function RelatorioConfigDialog({
                                 </svg>
                               </div>
                               <div className="flex justify-between text-[7px] text-slate-400 relative z-10">
-                                <span>{format(selectedDataInicio || new Date(), 'dd/MM')}</span>
-                                <span>{format(selectedDataFim || new Date(), 'dd/MM')}</span>
+                                <span>{format(dateRange?.start || new Date(), 'dd/MM')}</span>
+                                <span>{format(dateRange?.end || new Date(), 'dd/MM')}</span>
+
 
                               </div>
                             </div>

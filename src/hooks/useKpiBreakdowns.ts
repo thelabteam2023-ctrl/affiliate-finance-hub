@@ -610,6 +610,7 @@ function deriveVolumeTemporalStats(
       mediaApostasPorDia: 0,
       densidadeOperacional: 0,
       volumeProjetado: null,
+      dailyHistory: []
     };
   }
 
@@ -625,6 +626,23 @@ function deriveVolumeTemporalStats(
   const mediaApostasPorDia = diasAtivos > 0 ? apostas.length / diasAtivos : 0;
   const densidadeOperacional = diasAtivos > 0 ? diasComOperacao / diasAtivos : 0;
 
+  // Gerar histórico diário para gráficos (usando apostas liquidadas para P&L acumulado)
+  const liquidadas = filterApostasLiquidadas(apostas);
+  const profitByDate = new Map<string, number>();
+  liquidadas.forEach(a => {
+    const dateKey = a.data_aposta.split('T')[0];
+    const profit = Number(a.pl_consolidado || 0);
+    profitByDate.set(dateKey, (profitByDate.get(dateKey) || 0) + profit);
+  });
+
+  const sortedDates = Array.from(datasSet).sort();
+  let cumulative = 0;
+  const dailyHistory = sortedDates.map(date => {
+    const dayProfit = profitByDate.get(date) || 0;
+    cumulative += dayProfit;
+    return { date, profit: dayProfit, cumulativeProfit: cumulative };
+  });
+
   return {
     primeiraAposta: minDate,
     ultimaAposta: maxDate,
@@ -633,9 +651,11 @@ function deriveVolumeTemporalStats(
     volumeMedioDiario,
     mediaApostasPorDia,
     densidadeOperacional,
-    volumeProjetado: null, // Calculated at UI level with period context
+    volumeProjetado: null,
+    dailyHistory
   };
 }
+
 
 // =====================================================
 // DERIVAÇÃO COMPLETA DOS BREAKDOWNS
