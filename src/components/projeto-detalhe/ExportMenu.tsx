@@ -81,28 +81,6 @@ export function ExportMenu({
   const [reportExporting, setReportExporting] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const handleExportRelatorio = useCallback(async () => {
-    if (!projectData || !workspace) return;
-    setReportExporting(true);
-    try {
-      await exportRelatorioExecutivo({
-        projeto: projectData.projeto,
-        workspace: { nome: (workspace as any)?.name || (workspace as any)?.nome || "Workspace" },
-
-
-
-        periodo: projectData.periodo,
-        resultado: projectData.resultado,
-        breakdowns: projectData.breakdowns,
-        formatCurrency: projectData.formatCurrency,
-      });
-    } finally {
-      setReportExporting(false);
-      setOpen(false);
-    }
-  }, [projectData, workspace]);
-
-
   const handleExport = useCallback(async (format: ExportFormat) => {
     const data = getData();
     const context: ExportContext = {
@@ -155,20 +133,6 @@ export function ExportMenu({
       </Tooltip>
 
       <DropdownMenuContent align="end" className="w-56">
-        {projectData && (
-          <>
-            <DropdownMenuItem
-              onClick={handleExportRelatorio}
-              disabled={reportExporting}
-              className="cursor-pointer font-medium"
-            >
-              <FileText className="mr-2 h-4 w-4 text-blue-600" />
-              <span>Relatório Executivo (PDF)</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-          </>
-        )}
-
         <DropdownMenuItem
           onClick={() => handleExport('xlsx')}
           disabled={exporting}

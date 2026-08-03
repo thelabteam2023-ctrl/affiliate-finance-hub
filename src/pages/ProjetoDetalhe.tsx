@@ -50,6 +50,7 @@ import {
   BarChart3,
   CalendarRange,
   Crosshair,
+  FileText,
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -58,6 +59,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { differenceInDays } from "date-fns";
@@ -82,6 +84,7 @@ import { ShareLinkDialog } from "@/components/shared/ShareLinkDialog";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
 import { ModuleActivationDialog } from "@/components/projeto-detalhe/ModuleActivationDialog";
+import { RelatorioConfigDialog } from "@/components/projeto-detalhe/RelatorioConfigDialog";
 // LimitationSection now rendered inside ProjetoIncidentesTab
 import { SetDefaultTabButton } from "@/components/projeto-detalhe/SetDefaultTabButton";
 import { useActionAccess } from "@/hooks/useModuleAccess";
@@ -166,6 +169,8 @@ export default function ProjetoDetalhe() {
     moduleId: string;
     targetTab: string;
   }>({ open: false, moduleId: "", targetTab: "" });
+
+  const [relatorioDialogOpen, setRelatorioDialogOpen] = useState(false);
   
   // Hook de formatação de moeda do projeto
   const { formatCurrency, formatChartAxis, convertToConsolidation, convertToConsolidationOficial, cotacaoOficialUSD } = useProjetoCurrency(id);
@@ -535,6 +540,14 @@ export default function ProjetoDetalhe() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => setRelatorioDialogOpen(true)}
+                      className="cursor-pointer"
+                    >
+                      <FileText className="h-4 w-4 mr-2 text-blue-600" />
+                      Relatório do Projeto
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={handleArchiveProject}
                       disabled={archiving}
@@ -1151,6 +1164,14 @@ export default function ProjetoDetalhe() {
         }}
         onSkip={() => {}}
       />
+      {/* Relatório Config Dialog */}
+      {id && (
+        <RelatorioConfigDialog 
+          open={relatorioDialogOpen}
+          onOpenChange={setRelatorioDialogOpen}
+          projetoId={id}
+        />
+      )}
     </div>
   );
 }
