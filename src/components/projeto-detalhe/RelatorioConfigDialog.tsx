@@ -118,7 +118,11 @@ export function RelatorioConfigDialog({
     cotacaoKey: cotacaoOficialUSD,
   });
 
-  const historicoContas = useProjetoHistoricoContas(projetoId);
+  const historicoContas = useProjetoHistoricoContas({ 
+    projetoId, 
+    dataInicio: dateRange?.start, 
+    dataFim: dateRange?.end 
+  });
 
   const handleGenerate = async () => {
     if (!projeto || !workspace || !resultado) {
