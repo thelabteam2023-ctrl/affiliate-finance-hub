@@ -94,7 +94,7 @@ async function fetchApostasFiltradas(
   const data = await fetchAllPaginated(() => {
     let q = supabase
       .from("apostas_unificada")
-      .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, resultado, stake, stake_total, stake_consolidado, esporte, bookmaker_id, forma_registro, estrategia, bonus_id, moeda_operacao, valor_brl_referencia, lucro_prejuizo_brl_referencia`)
+      .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, resultado, status, stake, stake_total, stake_consolidado, esporte, bookmaker_id, forma_registro, estrategia, bonus_id, moeda_operacao, valor_brl_referencia, lucro_prejuizo_brl_referencia`)
       .eq("projeto_id", projetoId)
       .eq("status", "LIQUIDADA")
       .is("cancelled_at", null)
@@ -156,7 +156,8 @@ async function fetchApostasFiltradas(
       id: item.id, data_aposta: item.data_aposta,
       lucro_prejuizo: item.lucro_prejuizo, pl_consolidado: item.pl_consolidado,
       consolidation_currency: item.consolidation_currency,
-      resultado: item.resultado, stake: item.stake || 0, stake_total: item.stake_total,
+      resultado: item.resultado, status: item.status,
+      stake: item.stake || 0, stake_total: item.stake_total,
       esporte: item.esporte || item.estrategia || 'N/A',
       bookmaker_id: item.bookmaker_id || 'unknown',
       bookmaker_nome: bkInfo.nome, parceiro_nome: bkInfo.parceiro_nome, logo_url: bkInfo.logo_url,
@@ -556,7 +557,7 @@ export function ProjetoDashboardTab({ projetoId, refreshTrigger = 0 }: ProjetoDa
               </Select>
             )}
             <ExportMenu
-              getData={() => apostasUnificadas.map(a => transformApostaToExport(a, "Visão Geral", convertToConsolidation))}
+              getData={() => apostasUnificadas.map(a => transformApostaToExport(a as any, "Visão Geral", convertToConsolidation))}
               abaOrigem="Visão Geral"
               filename={`dashboard-${projetoId}`}
               filtrosAplicados={{ periodo: period }}
