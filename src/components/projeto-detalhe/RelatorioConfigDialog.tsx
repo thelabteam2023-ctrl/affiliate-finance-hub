@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { format } from "date-fns";
 import { 
   FileText, 
   Download, 
@@ -168,7 +169,7 @@ export function RelatorioConfigDialog({
                   <DatePicker 
                     value={customDateRange?.from ? format(customDateRange.from, 'yyyy-MM-dd') : ''}
                     onChange={(d) => {
-                      const date = d ? new Date(d) : undefined;
+                      const date = d ? new Date(d + 'T12:00:00') : undefined;
                       setCustomDateRange(prev => ({ from: date, to: prev?.to }));
                     }}
                     placeholder="Início"
@@ -176,7 +177,7 @@ export function RelatorioConfigDialog({
                   <DatePicker 
                     value={customDateRange?.to ? format(customDateRange.to, 'yyyy-MM-dd') : ''}
                     onChange={(d) => {
-                      const date = d ? new Date(d) : undefined;
+                      const date = d ? new Date(d + 'T12:00:00') : undefined;
                       setCustomDateRange(prev => ({ from: prev?.from, to: date }));
                     }}
                     placeholder="Fim"
