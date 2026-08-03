@@ -319,10 +319,13 @@ export function RelatorioConfigDialog({
                       <div className="h-8 w-[1px] bg-slate-200"></div>
                       <h1 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Relatório de Performance</h1>
                     </div>
+                    <div className="h-[1px] bg-slate-100 mt-2"></div>
 
-                    <div className="text-[9px] text-slate-500 text-right">
+
+                    <div className="text-[9px] text-slate-500 text-right self-center">
                       Emitido em: {format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}
                     </div>
+
                   </div>
 
 

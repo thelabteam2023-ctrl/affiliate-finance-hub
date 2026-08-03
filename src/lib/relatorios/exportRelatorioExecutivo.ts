@@ -82,7 +82,7 @@ export async function exportRelatorioExecutivo({
     doc.setFontSize(9);
     doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
     const dataEmissao = format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR });
-    doc.text(`Emitido em: ${dataEmissao}`, pageWidth - margin, 80, { align: "right" });
+    doc.text(`Emitido em: ${dataEmissao}`, pageWidth - margin, 78, { align: "right" });
 
 
 
