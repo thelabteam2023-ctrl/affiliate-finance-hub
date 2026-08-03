@@ -16,10 +16,8 @@ import {
   Layers,
   Zap,
   Layout,
-  Eye,
-  Coins
+  Eye
 } from "lucide-react";
-
 import {
   Dialog,
   DialogContent,
@@ -51,6 +49,7 @@ import { toast } from "sonner";
 import { useProjetoHistoricoContas } from "@/hooks/useProjetoHistoricoContas";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import logoAsset from "@/assets/HORIZONTAL_OFICIAL_2-2.png.asset.json";
+
 
 interface RelatorioConfigDialogProps {
   open: boolean;
@@ -84,12 +83,10 @@ export function RelatorioConfigDialog({
     { id: 'resumo', label: 'Resumo Financeiro', enabled: true, icon: TrendingUp },
     { id: 'operacional', label: 'Indicadores Operacionais', enabled: true, icon: Zap },
     { id: 'modulos', label: 'Performance por Módulo', enabled: true, icon: Layers },
-    { id: 'bonusPerformance', label: 'Performance de Bônus', enabled: true, icon: Coins },
     { id: 'vinculos', label: 'Contribuição por Vínculo', enabled: true, icon: Users },
     { id: 'investidores', label: 'Performance por Investidor (CPF)', enabled: false, icon: Users },
     { id: 'casas', label: 'Performance por Casa', enabled: false, icon: Briefcase },
     { id: 'insights', label: 'Insights e Recomendações', enabled: true, icon: Target },
-    { id: 'evolucao', label: 'Visão Temporal (Gráficos)', enabled: true, icon: BarChart3 },
   ]);
 
   const { 
@@ -103,7 +100,7 @@ export function RelatorioConfigDialog({
 
   const dateRange = getDateRangeFromPeriod(period, customDateRange);
 
-  const { resultado } = useProjetoResultado({
+  const { resultado, loading: loadingResultado } = useProjetoResultado({
     projetoId,
     dataInicio: dateRange?.start,
     dataFim: dateRange?.end,
@@ -111,7 +108,7 @@ export function RelatorioConfigDialog({
     cotacaoKey: cotacaoOficialUSD,
   });
 
-  const { breakdowns } = useKpiBreakdowns({
+  const { breakdowns, loading: loadingBreakdowns } = useKpiBreakdowns({
     projetoId,
     dataInicio: dateRange?.start,
     dataFim: dateRange?.end,
@@ -305,130 +302,98 @@ export function RelatorioConfigDialog({
                   Pré-visualização do PDF
                 </h3>
               </div>
-              <ScrollArea className="flex-grow bg-[#0A0B0F] border shadow-inner">
-                <div className="p-8 text-[#F2F3F6] min-h-full font-sans bg-[#0A0B0F] selection:bg-primary/30">
-                  {/* Header Preview - Design Dark SaaS Premium */}
-                  <div className="flex flex-col gap-3 border-b border-[#23262F] pb-5 mb-7">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <img src={logoAsset.url} alt="Logo" className="h-[22px]" />
-                        <span className="text-[14px] font-bold tracking-[1px] uppercase">LABBET</span>
+              <ScrollArea className="flex-grow bg-white border shadow-inner">
+                <div className="p-8 text-black min-h-full font-sans bg-white">
+                  {/* Header Preview */}
+                  <div className="flex justify-between items-start border-b pb-4 mb-6 text-black">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-32 flex items-center justify-center">
+                        <img src={logoAsset.url} alt="Logo" className="max-h-full max-w-full object-contain" />
                       </div>
-                      <div className="text-[10px] text-[#6C7280] text-right leading-tight">
-                        {format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}<br/>
-                        <span className="opacity-70">DOC-ID: {projetoId.slice(0, 8).toUpperCase()}</span>
-                      </div>
+                      <div className="h-8 w-[1px] bg-slate-200"></div>
+                      <h1 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Relatório de Performance</h1>
                     </div>
-                    
-                    <div className="mt-1">
-                      <h1 className="text-[26px] font-bold tracking-[-0.3px] leading-tight">Relatório de Performance</h1>
-                      <div className="text-[11px] text-[#8990A3] mt-1 font-medium">Análise executiva de resultados operacionais e eficiência financeira</div>
+
+                    <div className="text-[9px] text-slate-500 text-right">
+                      Emitido em: {format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}
                     </div>
                   </div>
 
-                  {/* Identification Meta Bar - Regra 4.2: label acima → valor abaixo */}
-                  <div className="bg-[#12141A] border border-[#1F222C] rounded-[10px] mb-7 flex items-stretch">
-                    <div className="flex-1 p-4 border-r border-[#1F222C]">
-                      <div className="text-[9px] text-[#6C7280] uppercase tracking-[0.8px] font-bold mb-1">Projeto</div>
-                      <div className="font-bold text-[13px] truncate">{projeto?.nome}</div>
+
+                  {/* Identification Block */}
+                  <div className="bg-slate-50 p-4 rounded-lg mb-6 grid grid-cols-2 gap-4 text-black">
+                    <div>
+                      <span className="text-[10px] text-slate-500 block uppercase tracking-wider font-semibold">Projeto</span>
+                      <span className="font-bold text-xs">{projeto?.nome}</span>
                     </div>
-                    <div className="flex-1 p-4 border-r border-[#1F222C]">
-                      <div className="text-[9px] text-[#6C7280] uppercase tracking-[0.8px] font-bold mb-1">Período</div>
-                      <div className="font-bold text-[13px]">
+                    <div>
+                      <span className="text-[10px] text-slate-500 block uppercase tracking-wider font-semibold">Período</span>
+                      <span className="font-bold text-xs">
                         {dateRange?.start && dateRange?.end 
                           ? `${format(dateRange.start, "dd/MM/yy")} a ${format(dateRange.end, "dd/MM/yy")}`
                           : "Todo o período"}
-                      </div>
-                    </div>
-                    <div className="flex-1 p-4">
-                      <div className="text-[9px] text-[#6C7280] uppercase tracking-[0.8px] font-bold mb-1">Status</div>
-                      <div className="flex items-center">
-                        <span className="inline-block px-2 py-0.5 rounded-full bg-[#34D399]/14 text-[#34D399] text-[9px] font-bold uppercase tracking-[0.3px]">
-                          {projeto?.status || 'ATIVO'}
-                        </span>
-                      </div>
+                      </span>
                     </div>
                   </div>
 
                   {/* Active Sections Preview */}
-                  <div className="space-y-7">
+                  <div className="space-y-6">
                     {secoes.filter(s => s.enabled).map(secao => (
-                      <div key={secao.id}>
-                        <h2 className="text-[12px] font-bold uppercase tracking-[1px] text-[#6C7280] mb-3">{secao.label}</h2>
+                      <div key={secao.id} className="border-t pt-4 first:border-0 border-slate-200">
+                        <h2 className="text-sm font-bold mb-3 uppercase tracking-tight text-slate-700">{secao.label}</h2>
                         
-                        {secao.id === 'resumo' ? (
-                          <div className="grid grid-cols-3 gap-3 mb-4">
-                            {[
-                              { label: 'Lucro Realizado', val: resultado?.netProfit || 0, sub: 'Resultado líquido', color: (resultado?.netProfit || 0) >= 0 ? '#34D399' : '#F87171' },
-                              { label: 'ROI Operacional', val: `${(resultado?.roi || 0).toFixed(1)}%`, sub: 'Eficiência capital', color: '#3C63FF' },
-                              { label: 'Total Depositado', val: resultado?.totalDepositos || 0, sub: 'Aporte bruto', color: '#F2F3F6' },
-                            ].map((kpi, idx) => (
-                              <div key={idx} className="bg-[#12141A] border border-[#1F222C] rounded-[10px] p-4 border-l-[3px]" style={{ borderLeftColor: kpi.color }}>
-                                <div className="text-[9.5px] font-bold uppercase tracking-[0.8px] text-[#6C7280] mb-2">{kpi.label}</div>
-                                <div className="text-[18px] font-bold font-mono" style={{ color: kpi.color }}>
-                                  {typeof kpi.val === 'number' ? formatCurrency(kpi.val) : kpi.val}
+                        {secao.id === 'vinculos' ? (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-4 gap-2 text-[8px] font-bold text-slate-500 border-b pb-1">
+                              <span>VÍNCULO</span>
+                              <span className="text-center">CASAS</span>
+                              <span className="text-right">BÔNUS</span>
+                              <span className="text-center">PART.</span>
+                            </div>
+                            {(historicoContas?.historicoParceirosLista || []).slice(0, 5).map((p, i) => {
+                              const bonusVal = p.totalBonus || 0;
+                              const totalBonusAll = (historicoContas?.historicoParceirosLista || []).reduce((acc, curr) => acc + (curr.totalBonus || 0), 0);
+                              const part = totalBonusAll > 0 ? (bonusVal / totalBonusAll) * 100 : 0;
+                              
+                              return (
+                                <div key={i} className="grid grid-cols-4 gap-2 text-[9px] border-b border-slate-50 pb-1 items-center">
+                                  <span className="font-medium truncate">{p.nome}</span>
+                                  <span className="text-center">{p.totalContas}</span>
+                                  <span className="text-right font-bold">{formatCurrency(bonusVal)}</span>
+                                  <span className="text-center text-slate-500">{part.toFixed(1)}%</span>
                                 </div>
-                                <div className="text-[9px] text-[#8990A3] mt-1">{kpi.sub}</div>
+                              );
+                            })}
+                            {(!historicoContas?.historicoParceirosLista || historicoContas.historicoParceirosLista.length === 0) && (
+                              <div className="text-[9px] text-slate-400 italic text-center py-2">
+                                Nenhuma contribuição identificada no período.
                               </div>
-                            ))}
+                            )}
+
                           </div>
-                        ) : secao.id === 'vinculos' ? (
-                          <div className="bg-[#12141A] border border-[#1F222C] rounded-[10px] overflow-hidden">
-                            <table className="w-full text-left border-collapse">
-                              <thead>
-                                <tr className="bg-[#171A22] border-b border-[#1F222C]">
-                                  <th className="p-3 text-[9.5px] font-bold uppercase text-[#6C7280]">Vínculo</th>
-                                  <th className="p-3 text-[9.5px] font-bold uppercase text-[#6C7280] text-center">Casas</th>
-                                  <th className="p-3 text-[9.5px] font-bold uppercase text-[#6C7280] text-right">Bônus</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {(historicoContas?.historicoParceirosLista || []).slice(0, 3).map((p, i) => (
-                                  <tr key={i} className="border-b border-[#1B1E27] last:border-0">
-                                    <td className="p-3 text-[11px] font-medium">{p.nome}</td>
-                                    <td className="p-3 text-[11px] text-center">{p.totalContas}</td>
-                                    <td className="p-3 text-[11px] font-bold text-right font-mono">{formatCurrency(p.totalBonus || 0)}</td>
-                                  </tr>
-                                ))}
-                                {(!historicoContas?.historicoParceirosLista || historicoContas.historicoParceirosLista.length === 0) && (
-                                  <tr>
-                                    <td colSpan={3} className="p-4 text-[11px] text-[#4B5061] text-center italic">
-                                      Nenhuma contribuição identificada.
-                                    </td>
-                                  </tr>
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                        ) : secao.id === 'modulos' ? (
-                          <div className="bg-[#12141A] border border-[#1F222C] rounded-[10px] p-4 space-y-3">
-                            {(breakdowns?.lucro?.contributions || []).slice(0, 3).map((c, i) => (
-                              <div key={i}>
-                                <div className="flex justify-between text-[11px] mb-1.5 font-medium">
-                                  <span>{c.moduleName}</span>
-                                  <span className="font-bold font-mono" style={{ color: c.value >= 0 ? '#34D399' : '#F87171' }}>
-                                    {c.value >= 0 ? '+' : ''}{formatCurrency(c.value)}
-                                  </span>
-                                </div>
-                                <div className="h-1.5 bg-[#171A22] rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full rounded-full" 
-                                    style={{ 
-                                      width: '70%', 
-                                      backgroundColor: c.value >= 0 ? '#34D399' : '#F87171' 
-                                    }} 
-                                  />
-                                </div>
-                              </div>
-                            ))}
+                        ) : secao.id === 'resumo' ? (
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1">
+                              <span className="text-slate-600">Lucro Realizado (Net Profit)</span>
+                              <span className="font-bold text-emerald-600">{formatCurrency(resultado?.netProfit || 0)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1">
+                              <span className="text-slate-600">ROI Operacional</span>
+                              <span className="font-bold">{resultado?.roi?.toFixed(2)}%</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[9px]">
+                              <span className="text-slate-600">Capital Operável</span>
+                              <span className="font-bold">{formatCurrency(resultado?.saldoBookmakers || 0)}</span>
+                            </div>
                           </div>
                         ) : (
-                          <div className="bg-[#12141A] border border-[#1F222C] rounded-[10px] p-4 text-[11px] text-[#8990A3] text-center italic">
-                            Conteúdo da seção em prévia simplificada...
+                          <div className="h-16 w-full bg-slate-50 rounded border border-dashed border-slate-200 flex items-center justify-center text-[8px] text-slate-400 italic">
+                            Dados da seção {secao.label} serão renderizados no PDF final...
                           </div>
                         )}
                       </div>
                     ))}
+
                   </div>
                 </div>
               </ScrollArea>
@@ -436,31 +401,27 @@ export function RelatorioConfigDialog({
           )}
         </div>
 
-        <DialogFooter className="flex-shrink-0 bg-accent/5 p-4 border-t">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowPreview(!showPreview)}
-              className="gap-2"
-            >
-              {showPreview ? "Ocultar Prévia" : "Ver Prévia"}
-              <Eye className="h-4 w-4" />
-            </Button>
-            <Button onClick={handleGenerate} disabled={generating} className="gap-2">
-              {generating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Gerando...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4" />
-                  Gerar Relatório
-                </>
-              )}
-            </Button>
-          </div>
+        <DialogFooter className="flex-shrink-0 pt-4 border-t mt-4">
+          <Button variant="outline" onClick={() => setShowPreview(!showPreview)} className="mr-auto">
+            {showPreview ? 'Ocultar Prévia' : 'Ver Prévia'}
+          </Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={generating}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleGenerate} 
+            disabled={generating || loadingResultado || !resultado}
+            className="min-w-[120px]"
+          >
+            {generating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Gerando...
+              </>
+            ) : (
+              'Gerar Relatório'
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

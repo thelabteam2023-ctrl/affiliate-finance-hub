@@ -8,19 +8,15 @@ import {
   type RawAposta,
   type RawApostaPerna,
   type RawLedgerExtra,
-  filterApostasLiquidadas
 } from './useProjetoDashboardData';
-
 import { 
   ProjetoKpiBreakdowns, 
   KpiBreakdown, 
   CurrencyBreakdownItem,
   VolumeTemporalStats,
   createModuleContribution, 
-  createKpiBreakdown,
-  BonusPerformanceStats 
+  createKpiBreakdown 
 } from '@/types/moduleBreakdown';
-
 import { ESTRATEGIA_LABELS, type ApostaEstrategia } from '@/lib/apostaConstants';
 import { getConsolidatedStake, getConsolidatedLucro, getConsolidatedLucroDirect, type PernaConsolidavel } from '@/utils/consolidatedValues';
 import { extractCivilDateKey } from '@/utils/dateUtils';
@@ -67,8 +63,6 @@ interface ModuleDataWithCurrency {
   lucroPorMoeda: CurrencyBreakdownItem[];
   lucroPorEstrategia?: Record<string, number>;
 }
-
-
 
 function agregarPorMoeda(items: { valor: number; moeda: string }[]): CurrencyBreakdownItem[] {
   const map = new Map<string, number>();
@@ -323,55 +317,9 @@ function deriveBonusGanhosModule(
   return { count, volume: 0, lucro: 0, total, volumePorMoeda: [], lucroPorMoeda };
 }
 
-function deriveBonusPerformance(
-  rawData: ProjetoDashboardRawData,
-  moedaConsolidacao: string,
-  convert: ConvertFn,
-  convertOficial?: ConvertFn
-): BonusPerformanceStats {
-  const bonusConvert = convertOficial || convert;
-  
-  // 1. Bônus Creditado (congelado via snapshot quando possível)
-  const bonusCreditado = rawData.bonus.reduce((acc, b) => {
-    if (b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0) {
-      return acc + b.valor_consolidado_snapshot;
-    }
-    const moeda = b.currency || 'BRL';
-    const valor = Number(b.bonus_amount || 0);
-    return acc + bonusConvert(valor, moeda);
-  }, 0);
-
-  // 2. Juice (perdas em apostas vinculadas a bônus ou estratégia EXTRACAO_BONUS)
-  // Nota: juice é negativo no cálculo mas aqui queremos o valor absoluto para a taxa
-  const apostasBonus = rawData.apostas.filter(a => a.bonus_id || a.estrategia === 'EXTRACAO_BONUS');
-  const juiceRaw = apostasBonus.reduce((acc, a) => {
-    // pl_consolidado já é imutável via trigger
-    if (a.pl_consolidado !== null && a.consolidation_currency === moedaConsolidacao) {
-      const pl = Number(a.pl_consolidado);
-      return acc + (pl < 0 ? pl : 0);
-    }
-    const pernas = (rawData.apostas_pernas || []).filter(p => p.aposta_id === a.id);
-    const pl = getConsolidatedLucroDirect(a as any, pernas, convert, moedaConsolidacao);
-    return acc + (pl < 0 ? pl : 0);
-  }, 0);
-
-  const juice = Math.abs(juiceRaw);
-  const extracaoLiquida = bonusCreditado - juice;
-  const taxaExtracao = bonusCreditado > 0 ? (extracaoLiquida / bonusCreditado) * 100 : 0;
-
-  return {
-    bonusCreditado,
-    juice,
-    extracaoLiquida,
-    taxaExtracao,
-    quantidadeOperacoes: apostasBonus.length
-  };
-}
-
 // =====================================================
 // DERIVAÇÃO DE EXTRAS (substitui fetchProjetoExtras)
 // =====================================================
-
 
 interface ExtraAgrupado {
   total: number;
@@ -574,12 +522,8 @@ export function calcularLucroCanonicoFromRpc(
 
 function deriveVolumeTemporalStats(
   apostas: RawAposta[],
-  volumeTotal: number,
-  rawData?: ProjetoDashboardRawData,
-  convert?: ConvertFn,
-  moedaConsolidacao?: string
+  volumeTotal: number
 ): VolumeTemporalStats {
-
   if (apostas.length === 0) {
     return {
       primeiraAposta: null,
@@ -616,7 +560,6 @@ function deriveVolumeTemporalStats(
       mediaApostasPorDia: 0,
       densidadeOperacional: 0,
       volumeProjetado: null,
-      dailyHistory: []
     };
   }
 
@@ -632,23 +575,6 @@ function deriveVolumeTemporalStats(
   const mediaApostasPorDia = diasAtivos > 0 ? apostas.length / diasAtivos : 0;
   const densidadeOperacional = diasAtivos > 0 ? diasComOperacao / diasAtivos : 0;
 
-  // Gerar histórico diário para gráficos (usando apostas liquidadas para P&L acumulado)
-  const liquidadas = filterApostasLiquidadas(apostas);
-  const profitByDate = new Map<string, number>();
-  liquidadas.forEach(a => {
-    const dateKey = a.data_aposta.split('T')[0];
-    const profit = Number(a.pl_consolidado || 0);
-    profitByDate.set(dateKey, (profitByDate.get(dateKey) || 0) + profit);
-  });
-
-  const sortedDates = Array.from(datasSet).sort();
-  let cumulative = 0;
-  const dailyHistory = sortedDates.map(date => {
-    const dayProfit = profitByDate.get(date) || 0;
-    cumulative += dayProfit;
-    return { date, profit: dayProfit, cumulativeProfit: cumulative };
-  });
-
   return {
     primeiraAposta: minDate,
     ultimaAposta: maxDate,
@@ -657,11 +583,9 @@ function deriveVolumeTemporalStats(
     volumeMedioDiario,
     mediaApostasPorDia,
     densidadeOperacional,
-    volumeProjetado: null,
-    dailyHistory
+    volumeProjetado: null, // Calculated at UI level with period context
   };
 }
-
 
 // =====================================================
 // DERIVAÇÃO COMPLETA DOS BREAKDOWNS
@@ -762,9 +686,7 @@ function deriveBreakdowns(
     extrasAgrupados.ajuste_saldo?.porMoeda || [],
     extrasAgrupados.promocional?.porMoeda || [],
     extrasAgrupados.freebet?.porMoeda || [],
-    extrasAgrupados.bonus?.porMoeda || [], // Adicionado para auditoria de cancelamento
   );
-
 
   // === ROI ===
   // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado definido
@@ -774,8 +696,7 @@ function deriveBreakdowns(
   const roiTotal = volumeLiquidadoTotal > 0 ? (lucroTotal / volumeLiquidadoTotal) * 100 : null;
 
   // === VOLUME TEMPORAL STATS ===
-  const volumeTemporalStats = deriveVolumeTemporalStats(rawData.apostas, volumeBreakdown.total, rawData, convert, moedaConsolidacao);
-
+  const volumeTemporalStats = deriveVolumeTemporalStats(rawData.apostas, volumeBreakdown.total);
 
   return {
     apostas: apostasBreakdown,
@@ -788,11 +709,8 @@ function deriveBreakdowns(
       currency: moedaConsolidacao,
     },
     volumeTemporal: volumeTemporalStats,
-    bonusPerformance: deriveBonusPerformance(rawData, moedaConsolidacao, convert, convertOficial),
   };
 }
-
-
 
 // =====================================================
 // HOOK PRINCIPAL
