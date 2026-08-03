@@ -490,7 +490,18 @@ export function useAtualizarStatusOcorrencia() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.all(workspaceId!) });
+      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.detail(vars.id) });
+      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.eventos(vars.id) });
+      if (vars.novoStatus === 'cancelado') {
+        // Invalidar queries financeiras caso tenha havido estorno
+        qc.invalidateQueries({ queryKey: ['projeto-dashboard-data'] });
+        qc.invalidateQueries({ queryKey: ['central-operacoes-data'] });
+        qc.invalidateQueries({ queryKey: ['projeto-kpi'] });
+        qc.invalidateQueries({ queryKey: ['projeto-extras'] });
+      }
+      toast.success('Status atualizado');
     },
+    onError: () => toast.error('Erro ao atualizar status'),
   });
 }
 
@@ -533,20 +544,6 @@ export function useEditarComentario() {
       console.error('Erro ao editar comentário:', err);
       toast.error('Não foi possível editar o comentário');
     },
-  });
-}
-      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.detail(vars.id) });
-      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.eventos(vars.id) });
-      if (vars.novoStatus === 'cancelado') {
-        // Invalidar queries financeiras caso tenha havido estorno
-        qc.invalidateQueries({ queryKey: ['projeto-dashboard-data'] });
-        qc.invalidateQueries({ queryKey: ['central-operacoes-data'] });
-        qc.invalidateQueries({ queryKey: ['projeto-kpi'] });
-        qc.invalidateQueries({ queryKey: ['projeto-extras'] });
-      }
-      toast.success('Status atualizado');
-    },
-    onError: () => toast.error('Erro ao atualizar status'),
   });
 }
 
