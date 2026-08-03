@@ -8,6 +8,7 @@ import logoAsset from "@/assets/HORIZONTAL_OFICIAL_2-2.png.asset.json";
 
 interface ExportRelatorioExecutivoProps {
   projeto: {
+    id: string;
     nome: string;
     tipo_projeto?: string;
     status: string;
@@ -22,6 +23,10 @@ interface ExportRelatorioExecutivoProps {
   };
   resultado: ProjetoResultado;
   breakdowns: ProjetoKpiBreakdowns | null;
+  historicoContas: {
+    historicoParceirosLista: any[];
+    contasComBonusLista: any[];
+  } | null;
   formatCurrency: (value: number) => string;
   config?: {
     secoes: Record<string, boolean>;
