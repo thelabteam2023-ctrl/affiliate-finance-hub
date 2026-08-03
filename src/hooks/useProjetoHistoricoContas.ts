@@ -62,10 +62,20 @@ interface HistoricoContasResult {
   refetch: () => void;
 }
 
-export function useProjetoHistoricoContas(projetoId: string): HistoricoContasResult {
+interface UseProjetoHistoricoContasProps {
+  projetoId: string;
+  dataInicio?: Date | null;
+  dataFim?: Date | null;
+}
+
+export function useProjetoHistoricoContas({ 
+  projetoId, 
+  dataInicio, 
+  dataFim 
+}: UseProjetoHistoricoContasProps): HistoricoContasResult {
   // Query principal unificada
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["projeto-painel-contas", projetoId],
+    queryKey: ["projeto-painel-contas", projetoId, dataInicio?.toISOString(), dataFim?.toISOString()],
     queryFn: async () => {
       // 1. Buscar bookmakers atualmente vinculados com dados do catálogo
       const { data: bookmarkersAtuais, error: bookmarkersError } = await supabase
@@ -102,11 +112,22 @@ export function useProjetoHistoricoContas(projetoId: string): HistoricoContasRes
       if (historicoError) throw historicoError;
 
       // 3. Buscar bônus creditados ou finalizados para cálculo de performance
-      const { data: bonusData, error: bonusError } = await supabase
+      // REGRA: Excluímos FREEBET (SNR) para evitar bitributação no lucro operacional (paridade com aba Bônus)
+      let bonusQuery = supabase
         .from("project_bookmaker_link_bonuses")
-        .select("id, bookmaker_id, status, bonus_amount, valor_brl_referencia")
+        .select("id, bookmaker_id, status, bonus_amount, valor_brl_referencia, credited_at, tipo_bonus")
         .eq("project_id", projetoId)
+        .neq("tipo_bonus", "FREEBET")
         .in("status", ["credited", "finalized", "bonus_consumed", "rollover_completed"]);
+
+      if (dataInicio) {
+        bonusQuery = bonusQuery.gte("credited_at", dataInicio.toISOString());
+      }
+      if (dataFim) {
+        bonusQuery = bonusQuery.lte("credited_at", dataFim.toISOString());
+      }
+
+      const { data: bonusData, error: bonusError } = await bonusQuery;
 
 
       
