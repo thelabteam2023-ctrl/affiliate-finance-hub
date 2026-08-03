@@ -375,7 +375,29 @@ export function RelatorioConfigDialog({
                             )}
 
                           </div>
+                        ) : secao.id === 'bonusPerformance' ? (
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1">
+                              <span className="text-slate-600">Bônus Creditado</span>
+                              <span className="font-bold text-slate-800">{formatCurrency(breakdowns?.bonusPerformance?.bonusCreditado || 0)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1">
+                              <span className="text-slate-600">Juice (Perdas)</span>
+                              <span className="font-bold text-red-600">{formatCurrency(breakdowns?.bonusPerformance?.juice || 0)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1">
+                              <span className="text-slate-600">Extração Líquida</span>
+                              <span className="font-bold text-emerald-600">{formatCurrency(breakdowns?.bonusPerformance?.extracaoLiquida || 0)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[9px]">
+                              <span className="text-slate-600">Taxa de Extração</span>
+                              <span className="font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-sm">
+                                {breakdowns?.bonusPerformance?.taxaExtracao.toFixed(1)}%
+                              </span>
+                            </div>
+                          </div>
                         ) : secao.id === 'resumo' ? (
+
                           <div className="space-y-2">
                             <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1">
                               <span className="text-slate-600">Lucro Realizado (Net Profit)</span>
