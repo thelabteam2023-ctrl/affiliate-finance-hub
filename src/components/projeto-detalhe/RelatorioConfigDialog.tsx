@@ -319,6 +319,7 @@ export function RelatorioConfigDialog({
                     </div>
                   </div>
 
+
                   {/* Identification Block */}
                   <div className="bg-slate-50 p-4 rounded-lg mb-6 grid grid-cols-2 gap-4 text-black">
                     <div>
