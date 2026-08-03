@@ -81,7 +81,7 @@ export function RelatorioConfigDialog({
     { id: 'resumo', label: 'Resumo Financeiro', enabled: true, icon: TrendingUp },
     { id: 'operacional', label: 'Indicadores Operacionais', enabled: true, icon: Zap },
     { id: 'modulos', label: 'Performance por Módulo', enabled: true, icon: Layers },
-    { id: 'vinculos', label: 'Contribuição por Vínculo', enabled: false, icon: Users },
+    { id: 'vinculos', label: 'Contribuição por Vínculo', enabled: true, icon: Users },
     { id: 'investidores', label: 'Performance por Investidor (CPF)', enabled: false, icon: Users },
     { id: 'casas', label: 'Performance por Casa', enabled: false, icon: Briefcase },
     { id: 'insights', label: 'Insights e Recomendações', enabled: true, icon: Target },
