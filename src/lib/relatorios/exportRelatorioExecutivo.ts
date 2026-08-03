@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { ProjetoResultado } from "@/hooks/useProjetoResultado";
 import type { ProjetoKpiBreakdowns } from "@/types/moduleBreakdown";
+import logoAsset from "@/assets/HORIZONTAL_OFICIAL_SEMFUNDO-5.png.asset.json";
 
 interface ExportRelatorioExecutivoProps {
   projeto: {
@@ -59,19 +60,25 @@ export async function exportRelatorioExecutivo({
   };
 
   const drawHeader = () => {
-    // Top line
-    doc.setDrawColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-    doc.setLineWidth(2);
-    doc.line(margin, 30, pageWidth - margin, 30);
+    // Logo
+    const logoWidth = 100;
+    const logoHeight = 25; // Proporcional aproximado
+    doc.addImage(logoAsset.url, 'PNG', margin, 35, logoWidth, logoHeight);
 
     doc.setFontSize(22);
     doc.setTextColor(30, 41, 59); // slate-800
-    doc.text("Relatório Executivo de Performance", margin, 65);
+    doc.setFont("helvetica", "bold");
+    doc.text("Relatório de Performance", margin, 90);
 
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
     const dataEmissao = format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR });
-    doc.text(`Emitido em: ${dataEmissao}`, pageWidth - margin, 65, { align: "right" });
+    doc.text(`Emitido em: ${dataEmissao}`, pageWidth - margin, 90, { align: "right" });
+
+    // Divider
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.setLineWidth(1);
+    doc.line(margin, 105, pageWidth - margin, 105);
   };
 
   const drawFooter = () => {
@@ -93,45 +100,46 @@ export async function exportRelatorioExecutivo({
   drawHeader();
   
   doc.setFillColor(colors.bg[0], colors.bg[1], colors.bg[2]);
-  doc.rect(margin, 85, contentWidth, 90, "F");
+  doc.rect(margin, 120, contentWidth, 75, "F");
   
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setTextColor(71, 85, 105); // slate-600
   doc.setFont("helvetica", "bold");
-  doc.text("Identificação do Projeto", margin + 15, 105);
+  doc.text("Identificação do Projeto", margin + 15, 140);
   
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(`Projeto:`, margin + 15, 125);
-  doc.text(projeto.nome, margin + 80, 125);
+  doc.text(`Projeto:`, margin + 15, 160);
+  doc.setFont("helvetica", "bold");
+  doc.text(projeto.nome, margin + 80, 160);
   
-  doc.text(`Tipo:`, margin + 15, 140);
-  doc.text(projeto.tipo_projeto || "Híbrido", margin + 80, 140);
-  
-  doc.text(`Workspace:`, margin + 15, 155);
-  doc.text(workspace.nome, margin + 80, 155);
-  
-  doc.text(`Período:`, margin + 220, 125);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Período:`, margin + 15, 175);
   const periodoTxt = periodo.de && periodo.ate 
     ? `${format(periodo.de, "dd/MM/yy")} a ${format(periodo.ate, "dd/MM/yy")}`
     : "Todo o período";
-  doc.text(periodoTxt, margin + 270, 125);
+  doc.setFont("helvetica", "bold");
+  doc.text(periodoTxt, margin + 80, 175);
 
-  doc.text(`Status:`, margin + 220, 140);
-  doc.text(projeto.status, margin + 270, 140);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Tipo:`, margin + 220, 160);
+  doc.text(projeto.tipo_projeto || "Híbrido", margin + 270, 160);
+  
+  doc.text(`Status:`, margin + 220, 175);
+  doc.text(projeto.status, margin + 270, 175);
 
   // --- RESUMO EXECUTIVO (KPIs Financeiros) ---
   if (configSecoes.resumo) {
+    let yResumo = 220;
     doc.setFontSize(14);
     doc.setTextColor(30, 41, 59);
     doc.setFont("helvetica", "bold");
-    doc.text("Resumo Financeiro", margin, 205);
+    doc.text("Resumo Financeiro", margin, yResumo);
     
-    const lucroReal = resultado.netProfit;
     const isPositivo = lucroReal >= 0;
 
     autoTable(doc, {
-      startY: 215,
+      startY: yResumo + 10,
       margin: { left: margin, right: margin },
       head: [["Indicador", "Valor Atual", "Impacto"]],
       body: [
@@ -152,7 +160,7 @@ export async function exportRelatorioExecutivo({
     });
   }
 
-  let currentY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 40 : 205;
+  let currentY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 40 : 220;
 
   // --- OPERAÇÃO ---
   if (configSecoes.operacional) {
