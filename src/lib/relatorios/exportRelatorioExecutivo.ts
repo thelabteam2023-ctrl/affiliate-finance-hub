@@ -100,32 +100,33 @@ export async function exportRelatorioExecutivo({
   drawHeader();
   
   doc.setFillColor(colors.bg[0], colors.bg[1], colors.bg[2]);
-  doc.rect(margin, 85, contentWidth, 90, "F");
+  doc.rect(margin, 120, contentWidth, 75, "F");
   
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setTextColor(71, 85, 105); // slate-600
   doc.setFont("helvetica", "bold");
-  doc.text("Identificação do Projeto", margin + 15, 105);
+  doc.text("Identificação do Projeto", margin + 15, 140);
   
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(`Projeto:`, margin + 15, 125);
-  doc.text(projeto.nome, margin + 80, 125);
+  doc.text(`Projeto:`, margin + 15, 160);
+  doc.setFont("helvetica", "bold");
+  doc.text(projeto.nome, margin + 80, 160);
   
-  doc.text(`Tipo:`, margin + 15, 140);
-  doc.text(projeto.tipo_projeto || "Híbrido", margin + 80, 140);
-  
-  doc.text(`Workspace:`, margin + 15, 155);
-  doc.text(workspace.nome, margin + 80, 155);
-  
-  doc.text(`Período:`, margin + 220, 125);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Período:`, margin + 15, 175);
   const periodoTxt = periodo.de && periodo.ate 
     ? `${format(periodo.de, "dd/MM/yy")} a ${format(periodo.ate, "dd/MM/yy")}`
     : "Todo o período";
-  doc.text(periodoTxt, margin + 270, 125);
+  doc.setFont("helvetica", "bold");
+  doc.text(periodoTxt, margin + 80, 175);
 
-  doc.text(`Status:`, margin + 220, 140);
-  doc.text(projeto.status, margin + 270, 140);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Tipo:`, margin + 220, 160);
+  doc.text(projeto.tipo_projeto || "Híbrido", margin + 270, 160);
+  
+  doc.text(`Status:`, margin + 220, 175);
+  doc.text(projeto.status, margin + 270, 175);
 
   // --- RESUMO EXECUTIVO (KPIs Financeiros) ---
   if (configSecoes.resumo) {
