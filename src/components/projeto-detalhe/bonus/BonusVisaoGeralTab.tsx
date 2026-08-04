@@ -60,7 +60,7 @@ interface BonusResultEntry {
 export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false, periodFilter, actionsSlot }: BonusVisaoGeralTabProps) {
   const queryClient = useQueryClient();
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
-  const { formatCurrency, convertToConsolidation: convertToConsolidationTrabalho, convertToConsolidationOficial, isLoading: currencyLoading, moedaConsolidacao, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
+  const { formatCurrency, convertToConsolidation: convertToConsolidationTrabalho, convertToConsolidationOficial, isLoading: currencyLoading, moedaConsolidacao, cotacaoOficialUSD, isEffectiveRateLoaded } = useProjetoCurrency(projetoId);
   // CORREÇÃO: Usar cotação oficial para KPIs e gráficos analíticos (consistência com Visão Geral)
   // SNAPSHOT: Volume usa Cotação de Trabalho (congelada no registro), não PTAX live
   const convertToConsolidation = convertToConsolidationTrabalho;
@@ -501,7 +501,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
 
   // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
 
-  if ((loading && !loadedOnceRef.current) || currencyLoading) {
+  if ((loading && !loadedOnceRef.current) || (currencyLoading && !isEffectiveRateLoaded)) {
     return (
       <div className="space-y-4">
         <div className="grid gap-4 md:grid-cols-4">
