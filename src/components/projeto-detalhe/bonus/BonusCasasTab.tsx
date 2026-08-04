@@ -95,8 +95,15 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
     saving, 
     getBookmakersWithActiveBonus, 
     getBookmakersWithAnyBonus, 
-    getRolloverPercentage 
-  } = useProjectBonuses({ projectId: projetoId });
+    getRolloverPercentage,
+    bonuses: rawBonuses
+  } = useProjectBonuses({ 
+    projectId: projetoId,
+    dateRange: tabFilters.dateRange
+  });
+
+  // Filtrar bônus pelo range de datas para métricas consistentes
+  const bonuses = rawBonuses;
 
   // Filtros padronizados para a aba Por Casa (Bônus)
   const tabFilters = useTabFilters({
