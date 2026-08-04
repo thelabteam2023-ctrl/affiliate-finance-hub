@@ -264,7 +264,7 @@ export function ProjetoPunterTab({
   const tabFilters = useTabFilters({
     tabId: "punter",
     projetoId,
-    defaultPeriod: "mes_atual",
+    defaultPeriod: "ano",
     persist: true,
   });
   

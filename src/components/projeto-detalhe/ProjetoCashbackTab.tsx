@@ -33,7 +33,7 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
   
   // Estados gerais
   const [activeTab, setActiveTab] = useState("lancamentos");
-  const [period, setPeriod] = useState<StandardPeriodFilter>("mes_atual");
+  const [period, setPeriod] = useState<StandardPeriodFilter>("ano");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
 
   // Calcular datas baseado no período

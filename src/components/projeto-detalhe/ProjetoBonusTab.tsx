@@ -68,6 +68,7 @@ const formatCivilDate = (dateStr: string): string => {
 import { useProjectBonuses, ProjectBonus, BonusStatus, BonusFormData } from "@/hooks/useProjectBonuses";
 import { BonusDialog } from "./BonusDialog";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
+import { useTabFilters } from "@/hooks/useTabFilters";
 import { useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { FinancialMetricsPopover } from "./FinancialMetricsPopover";
 
@@ -152,6 +153,16 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
     updateBonus,
     deleteBonus,
   } = useProjectBonuses({ projectId: projetoId });
+
+  // === FILTROS LOCAIS DA ABA BÔNUS ===
+  const tabFilters = useTabFilters({
+    tabId: "bonus",
+    projetoId,
+    defaultPeriod: "ano",
+    persist: true,
+  });
+
+  const dateRange = tabFilters.dateRange;
 
   const activeBonusBookmakerIds = useMemo(() => {
     return new Set(
