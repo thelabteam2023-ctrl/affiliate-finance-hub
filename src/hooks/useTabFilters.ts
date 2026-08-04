@@ -259,7 +259,7 @@ export function useTabFilters({
   }, []);
 
   const clearFilters = useCallback(() => {
-    setPeriodState(defaultPeriod);
+    setPeriodState("ano");
     setCustomDateRangeState(undefined);
     setBookmakerIdsState([]);
     setParceiroIdsState([]);
