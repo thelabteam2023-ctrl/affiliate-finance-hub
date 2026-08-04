@@ -152,7 +152,10 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
     createBonus,
     updateBonus,
     deleteBonus,
-  } = useProjectBonuses({ projectId: projetoId });
+  } = useProjectBonuses({ 
+    projectId: projetoId,
+    dateRange: tabFilters.dateRange 
+  });
 
   // === FILTROS LOCAIS DA ABA BÔNUS ===
   const tabFilters = useTabFilters({
@@ -417,6 +420,17 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
           },
         ]}
       />
+
+      {/* Barra de Filtros de Tempo */}
+      <div className="flex flex-col gap-4">
+        <StandardTimeFilter
+          period={tabFilters.period}
+          customDateRange={tabFilters.customDateRange}
+          onPeriodChange={tabFilters.setPeriod}
+          onCustomDateRangeChange={tabFilters.setCustomDateRange}
+          onClear={tabFilters.clearFilters}
+        />
+      </div>
 
       {/* Top Bookmakers (optional) */}
       {topBookmakersList.length > 0 && (
