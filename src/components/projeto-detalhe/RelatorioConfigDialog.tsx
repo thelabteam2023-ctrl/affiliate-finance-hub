@@ -75,7 +75,7 @@ export function RelatorioConfigDialog({
   const { workspace } = useAuth();
   const [modelo, setModelo] = useState<RelatorioModelo>('executivo');
   const [formato, setFormato] = useState<FormatoExportacao>('pdf');
-  const [period, setPeriod] = useState<StandardPeriodFilter>("mes_atual");
+  const [period, setPeriod] = useState<StandardPeriodFilter>("ano");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [generating, setGenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -194,7 +194,7 @@ export function RelatorioConfigDialog({
                     <SelectContent>
                       <SelectItem value="semana_atual">Semana Atual</SelectItem>
                       <SelectItem value="mes_atual">Mês Atual</SelectItem>
-                      <SelectItem value="total">Todo o Período</SelectItem>
+                      <SelectItem value="ano">Ano</SelectItem>
                       <SelectItem value="custom">Personalizado</SelectItem>
                     </SelectContent>
                   </Select>

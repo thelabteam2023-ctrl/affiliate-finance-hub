@@ -117,7 +117,7 @@ export function getDateRangeFromPeriod(
 }
 
 /**
- * Hook de filtros independentes por aba.
+ * hook de filtros independentes por aba. Padrão inicial do sistema é "ano".
  * 
  * IMPORTANTE: Este hook cria estado LOCAL para cada aba.
  * Filtros de uma aba NÃO afetam outras abas.
