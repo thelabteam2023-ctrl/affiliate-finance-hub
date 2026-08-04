@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, Fragment, useRef } from "react";
+import { useTabFilters } from "@/hooks/useTabFilters";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
