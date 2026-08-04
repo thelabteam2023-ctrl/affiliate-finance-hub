@@ -1,7 +1,5 @@
 import { useState, useMemo } from "react";
-import { useTabFilters } from "@/hooks/useTabFilters";
-import { StandardTimeFilter } from "../StandardTimeFilter";
- import { formatCurrency } from "@/components/bookmakers/BookmakerSelectOption";
+import { formatCurrency } from "@/components/bookmakers/BookmakerSelectOption";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +45,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { differenceInDays, parseISO, format } from "date-fns";
+import { useTabFilters } from "@/hooks/useTabFilters";
+import { StandardTimeFilter } from "../StandardTimeFilter";
 
 const parseCivilDate = (dateStr: string): Date => {
   const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
@@ -732,7 +732,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                       <ScrollArea className="h-32">
                         <div className="space-y-2">
                           {activeBonuses.map(bonus => {
-                            const rolloverPercent = getRolloverPercentage(bonus.id);
+                            const rolloverPercent = getRolloverPercentage(bonus);
                             const hasRollover = bonus.rollover_target_amount && bonus.rollover_target_amount > 0;
                             
                             return (
