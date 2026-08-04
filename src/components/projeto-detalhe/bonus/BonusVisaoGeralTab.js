@@ -1,0 +1,826 @@
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useTabFilters } from "@/hooks/useTabFilters";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
+import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
+import { fetchChunkedIn } from "@/lib/fetchChunkedIn";
+import { useProjectBonuses } from "@/hooks/useProjectBonuses";
+import { useBonusContamination } from "@/hooks/useBonusContamination";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { useProjectBonusAnalytics } from "@/hooks/useProjectBonusAnalytics";
+import { SaldoOperavelCard } from "../SaldoOperavelCard";
+import { FinancialSummaryCompact } from "../FinancialSummaryCompact";
+import { differenceInDays, format, subDays, startOfDay, endOfDay } from "date-fns";
+import { parseLocalDate } from "@/lib/dateUtils";
+import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
+import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
+import { BonusContaminationAlert } from "./BonusContaminationAlert";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
+import { BonusResultadoLiquidoChart } from "./BonusResultadoLiquidoChart";
+import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
+import { extractCivilDateKey, extractLocalDateKey } from "@/utils/dateUtils";
+export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false, periodFilter, actionsSlot }) {
+    const tabFilters = useTabFilters({
+        tabId: "bonus-visao-geral",
+        projetoId,
+        defaultPeriod: "ano",
+        persist: true,
+    });
+    // Usamos o dateRange vindo dos props (que agora é controlado pelo useTabFilters no pai ou injetado via StandardTimeFilter)
+    // mas garantimos que a aba em si inicialize com o padrão correto.
+    const queryClient = useQueryClient();
+    const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
+    const { formatCurrency, convertToConsolidation: convertToConsolidationTrabalho, convertToConsolidationOficial, isLoading: currencyLoading, moedaConsolidacao, cotacaoOficialUSD, isEffectiveRateLoaded } = useProjetoCurrency(projetoId);
+    // CORREÇÃO: Usar cotação oficial para KPIs e gráficos analíticos (consistência com Visão Geral)
+    // SNAPSHOT: Volume usa Cotação de Trabalho (congelada no registro), não PTAX live
+    const convertToConsolidation = convertToConsolidationTrabalho;
+    const { summary: analyticsSummary, stats: analyticsStats } = useProjectBonusAnalytics(projetoId, convertToConsolidation);
+    const [bookmakersWithBonus, setBookmakersWithBonus] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const loadedOnceRef = useRef(false);
+    const summary = getSummary();
+    // Buscar ciclos do projeto para comparar meta vs realizado
+    const { data: todosCiclos = [] } = useQuery({
+        queryKey: ["bonus-ciclos", projetoId],
+        queryFn: async () => {
+            const { data } = await supabase
+                .from("projeto_ciclos")
+                .select("id, numero_ciclo, meta_volume, data_inicio, data_fim_prevista, data_fim_real, status, tipo_gatilho, metrica_acumuladora")
+                .eq("projeto_id", projetoId)
+                .order("data_inicio", { ascending: false });
+            return data || [];
+        },
+        staleTime: PERIOD_STALE_TIME,
+        gcTime: PERIOD_GC_TIME,
+    });
+    // Encontrar ciclo que cobre o período filtrado
+    const cicloAtivo = useMemo(() => {
+        if (!dateRange || todosCiclos.length === 0)
+            return null;
+        const filterMid = new Date((dateRange.start.getTime() + dateRange.end.getTime()) / 2);
+        const midStr = filterMid.toISOString().split("T")[0];
+        return todosCiclos.find(c => c.data_inicio <= midStr && c.data_fim_prevista >= midStr) || null;
+    }, [todosCiclos, dateRange]);
+    // Memoize to prevent infinite loops
+    const bookmakersInBonusMode = useMemo(() => getBookmakersWithActiveBonus(), [bonuses]);
+    // O hook useSaldoOperavel já calcula tudo corretamente via RPC canônica
+    // CRÍTICO: Listener para BroadcastChannel - invalida queries quando apostas são salvas/excluídas
+    const handleBetUpdate = useCallback(() => {
+        console.log("[BonusVisaoGeralTab] Aposta atualizada via BroadcastChannel, invalidando queries...");
+        // Invalidar query de apostas de bônus (gráfico de juice)
+        queryClient.invalidateQueries({ queryKey: ["bonus-bets-juice", projetoId] });
+        // Invalidar query de juice + pernas (Juice Médio, Performance de Bônus)
+        queryClient.invalidateQueries({ queryKey: ["bonus-bets-juice-pernas", projetoId] });
+        // Invalidar ajustes pós-limitação e perdas por cancelamento
+        queryClient.invalidateQueries({ queryKey: ["bonus-ajustes-pos-limitacao", projetoId] });
+        queryClient.invalidateQueries({ queryKey: ["bonus-perdas-cancelamento", projetoId] });
+        // Invalidar queries de resumo de bônus (Volume Operado, Performance)
+        queryClient.invalidateQueries({ queryKey: ["bonus-bets-summary", projetoId] });
+        queryClient.invalidateQueries({ queryKey: ["bonus-analytics", projetoId] });
+        // Invalidar queries de bônus gerais
+        queryClient.invalidateQueries({ queryKey: ["bonus", "project", projetoId] });
+        // Invalidar KPIs financeiros
+        queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+        queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+        // Calendário RPC
+        queryClient.invalidateQueries({ queryKey: ["calendar-apostas-rpc", projetoId] });
+    }, [queryClient, projetoId]);
+    // Hook centralizado para sincronização cross-window
+    useCrossWindowSync({
+        projetoId,
+        onSync: handleBetUpdate,
+    });
+    // Check for cross-strategy contamination
+    const { isContaminated, contaminatedBookmakers, totalNonBonusBets, loading: contaminationLoading } = useBonusContamination({ projetoId, bookmakersInBonusMode });
+    // Get bonuses expiring soon
+    const getExpiringSoon = (days) => {
+        const now = new Date();
+        return bonuses.filter(b => {
+            if (b.status !== 'credited' || !b.expires_at)
+                return false;
+            const [y, m, d] = b.expires_at.slice(0, 10).split('-').map(Number);
+            const expiresAt = new Date(y, m - 1, d);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const daysUntilExpiry = differenceInDays(expiresAt, today);
+            return daysUntilExpiry >= 0 && daysUntilExpiry <= days;
+        });
+    };
+    const expiring7Days = getExpiringSoon(7);
+    // expiring15Days removed - now using KPI with countdown
+    // Fetch apostas com bônus (juice/custo operacional) - inclui apostas com bonus_id OU estratégia EXTRACAO_BONUS
+    // IMPORTANTE: Buscar moeda_operacao para converter corretamente para moeda de consolidação
+    const { data: bonusBetsWithPernas = { bets: [], pernasMap: {} }, isLoading: betsLoading } = useQuery({
+        queryKey: ["bonus-bets-juice-pernas", projetoId],
+        queryFn: async () => {
+            const startDate = subDays(new Date(), 365).toISOString();
+            const selectFieldsBonus = "id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia, is_multicurrency";
+            const [dataBonusId, dataEstrategia] = await Promise.all([
+                fetchAllPaginated(() => supabase
+                    .from("apostas_unificada")
+                    .select(selectFieldsBonus)
+                    .eq("projeto_id", projetoId)
+                    .eq("status", "LIQUIDADA")
+                    .gte("data_aposta", startDate.split('T')[0])
+                    .not("bonus_id", "is", null)),
+                fetchAllPaginated(() => supabase
+                    .from("apostas_unificada")
+                    .select(selectFieldsBonus)
+                    .eq("projeto_id", projetoId)
+                    .eq("status", "LIQUIDADA")
+                    .gte("data_aposta", startDate.split('T')[0])
+                    .eq("estrategia", "EXTRACAO_BONUS")),
+            ]);
+            const allBets = [...dataBonusId, ...dataEstrategia];
+            const uniqueBets = Array.from(new Map(allBets.map(b => [b.id, b])).values());
+            // Buscar pernas para apostas multicurrency (conversão direta sem pivot BRL)
+            const multicurrencyIds = uniqueBets.filter(b => b.is_multicurrency).map(b => b.id);
+            let pernasMap = {};
+            if (multicurrencyIds.length > 0) {
+                const pernas = await fetchChunkedIn((idsChunk) => supabase
+                    .from("apostas_pernas")
+                    .select("aposta_id, moeda, lucro_prejuizo, resultado")
+                    .in("aposta_id", idsChunk), multicurrencyIds);
+                if (pernas) {
+                    for (const p of pernas) {
+                        if (!pernasMap[p.aposta_id])
+                            pernasMap[p.aposta_id] = [];
+                        pernasMap[p.aposta_id].push(p);
+                    }
+                }
+            }
+            return { bets: uniqueBets, pernasMap };
+        },
+        enabled: !!projetoId,
+        staleTime: PERIOD_STALE_TIME,
+        gcTime: PERIOD_GC_TIME,
+    });
+    // Note: Removed cash_ledger fetch - now using deposit_amount from bonus records
+    // This ensures the chart shows only capital tied to bonus campaigns, not global bookmaker deposits
+    useEffect(() => {
+        fetchBookmakersWithBonus();
+    }, [projetoId, bonuses]);
+    const fetchBookmakersWithBonus = async () => {
+        if (bookmakersInBonusMode.length === 0) {
+            setBookmakersWithBonus([]);
+            setLoading(false);
+            return;
+        }
+        try {
+            if (!loadedOnceRef.current)
+                setLoading(true);
+            const { data, error } = await supabase
+                .from("bookmakers")
+                .select(`
+          id,
+          nome,
+          login_username,
+          saldo_atual,
+          saldo_usd,
+          moeda,
+          bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url),
+          parceiros!bookmakers_parceiro_id_fkey (nome)
+        `)
+                .in("id", bookmakersInBonusMode);
+            if (error)
+                throw error;
+            // Calculate active bonus total per bookmaker (saldo_atual, não o valor inicial)
+            const bonusByBookmaker = {};
+            bonuses.forEach((b) => {
+                if (b.status === "credited" && (b.saldo_atual || 0) > 0) {
+                    bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.saldo_atual || 0);
+                }
+            });
+            const mapped = (data || []).map((bk) => {
+                const moeda = bk.moeda || "BRL";
+                const isUsdCurrency = moeda === "USD" || moeda === "USDT";
+                const saldoReal = isUsdCurrency
+                    ? Number(bk.saldo_usd ?? bk.saldo_atual ?? 0)
+                    : Number(bk.saldo_atual ?? 0);
+                return {
+                    id: bk.id,
+                    nome: bk.nome,
+                    login_username: bk.login_username,
+                    logo_url: bk.bookmakers_catalogo?.logo_url || null,
+                    parceiro_nome: bk.parceiros?.nome || null,
+                    saldo_real: saldoReal,
+                    bonus_ativo: bonusByBookmaker[bk.id] || 0,
+                    moeda,
+                };
+            });
+            // Sort by bonus amount descending
+            mapped.sort((a, b) => b.bonus_ativo - a.bonus_ativo);
+            setBookmakersWithBonus(mapped);
+        }
+        catch (error) {
+            console.error("Error fetching bookmakers:", error);
+        }
+        finally {
+            setLoading(false);
+            loadedOnceRef.current = true;
+        }
+    };
+    // Helper to format bonus in its original currency (for expiring alerts)
+    const formatBonusOriginalCurrency = (value, moeda = 'BRL') => {
+        const symbols = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£' };
+        return `${symbols[moeda] || moeda} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+    // Totais (sempre na moeda de consolidação do projeto)
+    const activeBonusTotalConsolidated = useMemo(() => {
+        if (currencyLoading)
+            return 0; // Não calcular com cotações fallback
+        return bonuses
+            .filter((b) => b.status === "credited" && (b.saldo_atual || 0) > 0)
+            .reduce((acc, b) => acc + convertToConsolidation(b.saldo_atual || 0, b.currency), 0);
+    }, [bonuses, convertToConsolidation, currencyLoading, cotacaoOficialUSD]);
+    // Fetch ajustes pós-limitação (financial_events com AJUSTE_POS_LIMITACAO)
+    const { data: ajustesPostLimitacao = [] } = useQuery({
+        queryKey: ["bonus-ajustes-pos-limitacao", projetoId],
+        queryFn: async () => {
+            const { data: bookmakers } = await supabase
+                .from("bookmakers")
+                .select("id, moeda")
+                .eq("projeto_id", projetoId);
+            if (!bookmakers || bookmakers.length === 0)
+                return [];
+            const bookmakerIds = bookmakers.map(b => b.id);
+            const moedaMap = new Map(bookmakers.map(b => [b.id, b.moeda || "BRL"]));
+            const { data, error } = await supabase
+                .from("financial_events")
+                .select("id, valor, bookmaker_id, moeda, metadata, created_at")
+                .in("bookmaker_id", bookmakerIds)
+                .eq("tipo_evento", "AJUSTE")
+                .not("metadata", "is", null);
+            if (error)
+                throw error;
+            return (data || []).filter(evt => {
+                try {
+                    const meta = typeof evt.metadata === "string" ? JSON.parse(evt.metadata) : evt.metadata;
+                    return meta?.tipo_ajuste === "AJUSTE_POS_LIMITACAO";
+                }
+                catch {
+                    return false;
+                }
+            }).map(evt => {
+                const meta = typeof evt.metadata === "string" ? JSON.parse(evt.metadata) : evt.metadata;
+                // Usar data_encerramento (data operacional real) em vez de created_at (data de registro)
+                const dataOperacional = meta?.data_encerramento || evt.created_at;
+                return {
+                    valor: Number(evt.valor) || 0,
+                    moeda: evt.moeda || moedaMap.get(evt.bookmaker_id) || "BRL",
+                    bookmaker_id: evt.bookmaker_id,
+                    data_operacional: dataOperacional,
+                };
+            });
+        },
+        enabled: !!projetoId,
+        staleTime: PERIOD_STALE_TIME,
+        gcTime: PERIOD_GC_TIME,
+    });
+    // Fetch perdas por cancelamento de bônus (cash_ledger com ajuste_motivo = BONUS_CANCELAMENTO)
+    // CORREÇÃO: Usar projeto_id_snapshot para capturar perdas de bookmakers já desvinculadas
+    const { data: perdasCancelamento = [] } = useQuery({
+        queryKey: ["bonus-perdas-cancelamento", projetoId],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from("cash_ledger")
+                .select("id, valor, moeda, origem_bookmaker_id, data_transacao, auditoria_metadata")
+                .eq("ajuste_motivo", "BONUS_CANCELAMENTO")
+                .eq("ajuste_direcao", "SAIDA")
+                .eq("projeto_id_snapshot", projetoId);
+            if (error)
+                throw error;
+            return (data || []).map(entry => {
+                const meta = typeof entry.auditoria_metadata === "string" ? JSON.parse(entry.auditoria_metadata) : entry.auditoria_metadata;
+                const valorPerdido = Number(meta?.valor_perdido ?? entry.valor) || 0;
+                return {
+                    valor: -valorPerdido, // Negativo pois é perda
+                    moeda: entry.moeda || "BRL",
+                    bookmaker_id: entry.origem_bookmaker_id || "",
+                    data_operacional: entry.data_transacao,
+                };
+            });
+        },
+        enabled: !!projetoId,
+        staleTime: PERIOD_STALE_TIME,
+        gcTime: PERIOD_GC_TIME,
+    });
+    // Performance de Bônus = Total de bônus creditados + Juice das operações + Ajustes Pós-Limitação - Perdas Cancelamento
+    // CRÍTICO: Converter TODOS os valores para moeda de consolidação do projeto
+    const bonusPerformance = useMemo(() => {
+        // GUARD: Não calcular enquanto cotações não estão disponíveis (evita distorção por fallback)
+        if (currencyLoading) {
+            return { totalBonusCreditado: 0, totalJuice: 0, totalPerdasCancelamento: 0, total: 0, performancePercent: 0, bonusPorMoeda: [], totalOperacoes: 0, juiceMedio: 0 };
+        }
+        // Filtrar bônus por período (usar credited_at como data de competência)
+        // CRÍTICO: Excluir FREEBET — o lucro SNR já está contabilizado no P&L da aposta (evita dupla contagem)
+        let eligibleBonuses = bonuses.filter(b => (b.status === "credited" || b.status === "finalized") &&
+            b.tipo_bonus !== "FREEBET");
+        if (dateRange?.start || dateRange?.end) {
+            eligibleBonuses = eligibleBonuses.filter(b => {
+                if (!b.credited_at)
+                    return true;
+                const creditDateStr = extractCivilDateKey(b.credited_at);
+                if (dateRange.start) {
+                    const startStr = format(dateRange.start, 'yyyy-MM-dd');
+                    if (creditDateStr < startStr)
+                        return false;
+                }
+                if (dateRange.end) {
+                    const endStr = format(dateRange.end, 'yyyy-MM-dd');
+                    if (creditDateStr > endStr)
+                        return false;
+                }
+                return true;
+            });
+        }
+        else {
+            // Se não houver dateRange (Mês Atual ou Ano não carregados ainda), não filtrar por segurança
+            // mas como defaultPeriod é "ano", isso raramente ocorrerá.
+        }
+        // SNAPSHOT-FIRST: Usar valor_consolidado_snapshot congelado no momento da inserção
+        // Fallback: conversão via cotação de trabalho para bônus antigos sem snapshot
+        const totalBonusCreditado = eligibleBonuses
+            .reduce((acc, b) => {
+            if (b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0) {
+                return acc + b.valor_consolidado_snapshot;
+            }
+            return acc + convertToConsolidationTrabalho(b.bonus_amount || 0, b.currency);
+        }, 0);
+        // Breakdown de bônus por moeda original
+        const bonusPorMoedaMap = {};
+        eligibleBonuses.forEach(b => {
+            const moeda = b.currency || "BRL";
+            bonusPorMoedaMap[moeda] = (bonusPorMoedaMap[moeda] || 0) + (b.bonus_amount || 0);
+        });
+        const bonusPorMoeda = Object.entries(bonusPorMoedaMap).map(([moeda, valor]) => ({
+            moeda,
+            valor,
+            label: `${moeda} original`,
+        }));
+        const moedaConsolidacaoProjeto = analyticsSummary.moeda_consolidacao || "USD";
+        const { bets: bonusBetsFlat, pernasMap } = bonusBetsWithPernas;
+        let totalOperacoes = 0;
+        const juiceBets = bonusBetsFlat.reduce((acc, bet) => {
+            const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
+            if (!isBonusBet)
+                return acc;
+            if (dateRange) {
+                // CORREÇÃO: data_aposta é timestamp REAL (com hora) — usar extractLocalDateKey
+                // (BRT) para paridade com BonusResultadoLiquidoChart. extractCivilDateKey
+                // agrupava por dia UTC, deslocando apostas de madrugada (BRT) para outro dia.
+                const betDateStr = extractLocalDateKey(bet.data_aposta);
+                const betDate = new Date(betDateStr + "T12:00:00");
+                if (betDate < startOfDay(dateRange.start) || betDate > endOfDay(dateRange.end))
+                    return acc;
+            }
+            totalOperacoes += 1;
+            return acc + getConsolidatedLucroDirect({
+                lucro_prejuizo: bet.lucro_prejuizo,
+                moeda_operacao: bet.moeda_operacao,
+                pl_consolidado: bet.pl_consolidado,
+                consolidation_currency: bet.consolidation_currency,
+                is_multicurrency: bet.is_multicurrency,
+            }, pernasMap[bet.id], convertToConsolidationTrabalho, moedaConsolidacaoProjeto);
+        }, 0);
+        // Somar ajustes pós-limitação ao juice - FILTRAR POR PERÍODO
+        let filteredAjustes = ajustesPostLimitacao;
+        if (dateRange?.start || dateRange?.end) {
+            filteredAjustes = ajustesPostLimitacao.filter(a => {
+                const ajusteDate = new Date(a.data_operacional);
+                if (dateRange.start && ajusteDate < startOfDay(dateRange.start))
+                    return false;
+                if (dateRange.end && ajusteDate > endOfDay(dateRange.end))
+                    return false;
+                return true;
+            });
+        }
+        const juiceAjustes = filteredAjustes.reduce((acc, a) => {
+            return acc + convertToConsolidationTrabalho(a.valor, a.moeda);
+        }, 0);
+        const totalJuice = juiceBets + juiceAjustes;
+        // Somar perdas por cancelamento de bônus - FILTRAR POR PERÍODO
+        let filteredPerdas = perdasCancelamento;
+        if (dateRange?.start || dateRange?.end) {
+            filteredPerdas = perdasCancelamento.filter(p => {
+                const perdaDate = new Date(p.data_operacional);
+                if (dateRange.start && perdaDate < startOfDay(dateRange.start))
+                    return false;
+                if (dateRange.end && perdaDate > endOfDay(dateRange.end))
+                    return false;
+                return true;
+            });
+        }
+        const totalPerdasCancelamento = filteredPerdas.reduce((acc, p) => {
+            return acc + convertToConsolidationTrabalho(p.valor, p.moeda);
+        }, 0);
+        const total = totalBonusCreditado + totalJuice + totalPerdasCancelamento;
+        const performancePercent = totalBonusCreditado > 0
+            ? ((total / totalBonusCreditado) * 100)
+            : 0;
+        // Juice Médio = juice das apostas (sem ajustes pós-limitação) dividido pelo nº de operações
+        const juiceMedio = totalOperacoes > 0 ? juiceBets / totalOperacoes : 0;
+        return { totalBonusCreditado, totalJuice, totalPerdasCancelamento, total, performancePercent, bonusPorMoeda, totalOperacoes, juiceMedio };
+    }, [bonuses, bonusBetsWithPernas, ajustesPostLimitacao, perdasCancelamento, convertToConsolidationTrabalho, dateRange, currencyLoading]);
+    // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
+    if ((loading && !loadedOnceRef.current) || (currencyLoading && !isEffectiveRateLoaded)) {
+        return (<div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (<Skeleton key={i} className="h-24"/>))}
+        </div>
+        <Skeleton className="h-96"/>
+      </div>);
+    }
+    return (<div className="space-y-6">
+
+      {/* Contamination Alert */}
+      {!contaminationLoading && isContaminated && (<BonusContaminationAlert contaminatedBookmakers={contaminatedBookmakers} totalNonBonusBets={totalNonBonusBets}/>)}
+
+      {/* KPIs - Faixa compacta */}
+      <TooltipProvider>
+      <KpiSummaryBar actions={actionsSlot} leading={<><SaldoOperavelCard projetoId={projetoId} variant="compact"/><FinancialSummaryCompact projetoId={projetoId} dateRange={dateRange}/></>} items={[
+            {
+                label: "Histórico de Casas",
+                value: (<div className="flex flex-col items-center w-full">
+                <span>{analyticsSummary.total_bookmakers}</span>
+              </div>),
+                tooltip: (<div className="space-y-1.5">
+                <p className="font-semibold text-foreground">Histórico de Casas</p>
+                <p className="text-muted-foreground text-xs">Bookmakers com bônus operados neste projeto.</p>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"/> Ativas</span>
+                    <span className="font-semibold text-foreground">{analyticsSummary.status_breakdown.ativas}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500"/> Concluídas</span>
+                    <span className="font-semibold text-foreground">{analyticsSummary.status_breakdown.concluidas}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500"/> Limitadas</span>
+                    <span className="font-semibold text-foreground">{analyticsSummary.status_breakdown.limitadas}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500"/> Bloqueadas</span>
+                    <span className="font-semibold text-foreground">{analyticsSummary.status_breakdown.bloqueadas}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground"/> Encerradas</span>
+                    <span className="font-semibold text-foreground">{analyticsSummary.status_breakdown.encerradas}</span>
+                  </div>
+                </div>
+                <div className="border-t border-border/50 pt-1 space-y-0.5">
+                  <p className="font-semibold text-foreground text-xs">Bônus</p>
+                  <div className="flex justify-between gap-4">
+                    <span>Total recebidos</span>
+                    <span className="font-semibold text-foreground">{analyticsSummary.total_bonus_count}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span>Em andamento</span>
+                    <span className="font-semibold text-foreground">{summary.count_credited}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span>Finalizados</span>
+                    <span className="font-semibold text-foreground">{summary.count_finalized}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span>Pendentes</span>
+                    <span className="font-semibold text-foreground">{summary.count_pending}</span>
+                  </div>
+                </div>
+              </div>),
+                subtitle: <span className="text-muted-foreground">{analyticsSummary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}</span>,
+            },
+            (() => {
+                const volume = analyticsSummary.total_volume_consolidated;
+                const juice = bonusPerformance.totalJuice;
+                const roiOp = volume > 0 ? (juice / volume) * 100 : 0;
+                const roiColor = roiOp >= 0 ? "text-emerald-500" : "text-red-500";
+                return {
+                    label: "Volume Operado",
+                    value: (<CurrencyBreakdownTooltip breakdown={analyticsSummary.volume_breakdown} moedaConsolidacao={analyticsSummary.moeda_consolidacao}>
+                  <span className="truncate">
+                    {formatCurrency(volume)}
+                  </span>
+                </CurrencyBreakdownTooltip>),
+                    tooltip: (() => {
+                        // Calcular custo a cada R$ 100k para mensagem didática
+                        const custoPor100k = volume > 0 ? (Math.abs(juice) / volume) * 100000 : 0;
+                        const isJuiceNeg = juice < 0;
+                        return (<div className="space-y-2 max-w-[280px]">
+                    <p className="font-semibold text-foreground">Volume Operado & Custo Operacional</p>
+                    
+                    {/* Dados numéricos */}
+                    <div className="space-y-0.5">
+                      <div className="flex justify-between gap-4">
+                        <span>Volume Girado</span>
+                        <span className="font-semibold text-foreground">{formatCurrency(volume)}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span>Resultado das Apostas</span>
+                        <span className={`font-semibold ${juice >= 0 ? "text-emerald-500" : "text-red-500"}`}>{formatCurrency(juice)}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground text-xs">ROI Operacional</span>
+                        <span className={`font-semibold text-xs ${roiColor}`}>{roiOp.toFixed(2)}%</span>
+                      </div>
+                    </div>
+                    
+                    {/* Mensagem didática */}
+                    <div className="border-t border-border/50 pt-2">
+                      {volume > 0 ? (<p className="text-xs leading-relaxed text-muted-foreground">
+                          {isJuiceNeg ? (<>
+                              📊 <span className="text-foreground font-medium">Na prática:</span> A cada <span className="text-foreground font-semibold">R$ 100.000</span> girados em apostas de bônus, o custo operacional é de <span className="text-red-500 font-semibold">{formatCurrency(custoPor100k)}</span>. Esse é o "preço" pago em juice para extrair os bônus.
+                            </>) : (<>
+                              📊 <span className="text-foreground font-medium">Na prática:</span> A cada <span className="text-foreground font-semibold">R$ 100.000</span> girados, houve um retorno positivo de <span className="text-emerald-500 font-semibold">{formatCurrency(custoPor100k)}</span> nas apostas — um resultado acima do esperado para extração de bônus.
+                            </>)}
+                        </p>) : (<p className="text-xs text-muted-foreground">Nenhum volume registrado ainda.</p>)}
+                    </div>
+                    
+                    {/* Dica de uso */}
+                    {volume > 0 && (<div className="border-t border-border/50 pt-2">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          💡 <span className="text-foreground font-medium">Use para:</span> Comparar eficiência entre operadores, estimar o custo antes de aceitar um bônus com rollover alto, ou detectar anomalias operacionais.
+                        </p>
+                      </div>)}
+                  </div>);
+                    })(),
+                    subtitle: <span className={`text-xs ${roiColor}`}>ROI {roiOp.toFixed(2)}%</span>,
+                    minWidth: "min-w-[100px]",
+                };
+            })(),
+            {
+                label: "Performance de Bônus",
+                tooltip: (<div className="space-y-1.5">
+                <p className="font-semibold text-foreground">Performance de Bônus</p>
+                <p className="text-muted-foreground text-xs">Bônus creditado + juice + ajustes - perdas por cancelamento.</p>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"/> Bônus Creditado</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(bonusPerformance.totalBonusCreditado)}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500"/> Juice</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(bonusPerformance.totalJuice)}</span>
+                  </div>
+                  {bonusPerformance.totalPerdasCancelamento !== 0 && (<div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-orange-500"/> Perdas (Cancelamento)</span>
+                      <span className="font-semibold text-red-500">{formatCurrency(bonusPerformance.totalPerdasCancelamento)}</span>
+                    </div>)}
+                </div>
+                <div className="border-t border-border/50 pt-1 space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-500"/> Juice Médio / op.</span>
+                    <span className="font-semibold text-foreground">
+                      {formatCurrency(bonusPerformance.juiceMedio)}
+                      <span className="text-muted-foreground font-normal ml-1">({bonusPerformance.totalOperacoes} op.)</span>
+                    </span>
+                  </div>
+                </div>
+                <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
+                  <span className="font-semibold">Extração</span>
+                  <span className="font-semibold text-foreground">{bonusPerformance.performancePercent.toFixed(1)}%</span>
+                </div>
+              </div>),
+                value: (<div className="flex items-baseline gap-2">
+                <span className={bonusPerformance.total >= 0 ? "text-emerald-500" : "text-red-500"}>
+                  {formatCurrency(bonusPerformance.total)}
+                </span>
+                <Badge variant="outline" className={`text-[10px] font-semibold ${bonusPerformance.performancePercent >= 70
+                        ? "border-emerald-500/50 text-emerald-500 bg-emerald-500/10"
+                        : bonusPerformance.performancePercent >= 60
+                            ? "border-warning/50 text-warning bg-warning/10"
+                            : "border-destructive/50 text-destructive bg-destructive/10"}`}>
+                  {bonusPerformance.performancePercent.toFixed(1)}%
+                </Badge>
+              </div>),
+                minWidth: "min-w-[120px]",
+            },
+            (() => {
+                const totalBonuses = bonuses.length;
+                const rolloverCompleted = bonuses.filter(b => b.status === 'finalized' && b.finalize_reason === 'rollover_completed').length;
+                const cycleCompleted = bonuses.filter(b => b.status === 'finalized' && ['cycle_completed', 'early_withdrawal', 'extracted_early'].includes(b.finalize_reason || '')).length;
+                const expired = bonuses.filter(b => b.status === 'expired' || (b.status === 'finalized' && b.finalize_reason === 'expired')).length;
+                const cancelledReversed = bonuses.filter(b => b.status === 'reversed' || b.status === 'failed' || (b.status === 'finalized' && ['cancelled_reversed', 'bonus_consumed'].includes(b.finalize_reason || ''))).length;
+                const rolloverRate = totalBonuses > 0 ? (rolloverCompleted / totalBonuses) * 100 : 0;
+                return {
+                    label: "Rollover Concluído",
+                    value: (<span className={rolloverRate >= 30 ? "text-emerald-500" : rolloverRate >= 15 ? "text-amber-500" : "text-muted-foreground"}>
+                  {rolloverRate.toFixed(0)}%
+                </span>),
+                    tooltip: (<div className="space-y-1.5">
+                  <p className="font-semibold text-foreground">Taxa de Rollover Concluído</p>
+                  <p className="text-muted-foreground text-xs">De {totalBonuses} bônus, {rolloverCompleted} cumpriram o rollover completo.</p>
+                  <div className="space-y-0.5">
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"/> Rollover concluído (saque liberado)</span>
+                      <span className="font-semibold text-foreground">{rolloverCompleted}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500"/> Encerrado antes do rollover</span>
+                      <span className="font-semibold text-foreground">{cycleCompleted}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500"/> Expirou sem concluir</span>
+                      <span className="font-semibold text-foreground">{expired}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500"/> Cancelado / Revertido</span>
+                      <span className="font-semibold text-foreground">{cancelledReversed}</span>
+                    </div>
+                  </div>
+                  <div className="border-t border-border/50 pt-1 space-y-0.5">
+                    <div className="flex justify-between gap-4">
+                      <span>Em andamento</span>
+                      <span className="font-semibold text-foreground">{summary.count_credited}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span>Pendentes</span>
+                      <span className="font-semibold text-foreground">{summary.count_pending}</span>
+                    </div>
+                  </div>
+                  <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
+                    <span className="font-semibold">Total de bônus</span>
+                    <span className="font-semibold text-foreground">{totalBonuses}</span>
+                  </div>
+                </div>),
+                    subtitle: <span className="text-muted-foreground">{rolloverCompleted} de {totalBonuses}</span>,
+                    minWidth: "min-w-[110px]",
+                };
+            })(),
+            (() => {
+                // Média de depósito de bônus por dia - FILTRADA por dateRange
+                let eligibleForAvg = bonuses.filter(b => (b.status === "credited" || b.status === "finalized") && b.credited_at);
+                // Filtrar por período selecionado (dateRange / ciclo)
+                if (dateRange?.start || dateRange?.end) {
+                    eligibleForAvg = eligibleForAvg.filter(b => {
+                        const creditDateStr = extractCivilDateKey(b.credited_at);
+                        if (dateRange.start) {
+                            const startStr = format(dateRange.start, 'yyyy-MM-dd');
+                            if (creditDateStr < startStr)
+                                return false;
+                        }
+                        if (dateRange.end) {
+                            const endStr = format(dateRange.end, 'yyyy-MM-dd');
+                            if (creditDateStr > endStr)
+                                return false;
+                        }
+                        return true;
+                    });
+                }
+                const totalCredited = eligibleForAvg.reduce((acc, b) => {
+                    if (b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0) {
+                        return acc + b.valor_consolidado_snapshot;
+                    }
+                    return acc + convertToConsolidation(b.bonus_amount || 0, b.currency);
+                }, 0);
+                // Dias corridos: baseado no primeiro bônus do período (não no início do filtro)
+                // FIX: Usar a data do primeiro bônus como referência, não o início do filtro de período
+                let calendarDays = 1;
+                if (eligibleForAvg.length > 0) {
+                    const dates = eligibleForAvg.map(b => new Date(b.credited_at));
+                    const earliest = new Date(Math.min(...dates.map(d => d.getTime())));
+                    const today = new Date();
+                    const effectiveEnd = dateRange?.end && dateRange.end < today ? dateRange.end : today;
+                    calendarDays = Math.max(1, differenceInDays(effectiveEnd, earliest) + 1);
+                }
+                // Dias com depósito (distintos) - já filtrados pelo período
+                const depositDays = new Set(eligibleForAvg.map(b => b.credited_at.split('T')[0])).size;
+                const avgPerDay = calendarDays > 0 ? totalCredited / calendarDays : 0;
+                const avgPerDepositDay = depositDays > 0 ? totalCredited / depositDays : 0;
+                return {
+                    label: "Média Bônus/Dia",
+                    value: (<span>{formatCurrency(avgPerDay)}</span>),
+                    tooltip: (<div className="space-y-1.5">
+                  <p className="font-semibold text-foreground">Média de Bônus por Dia</p>
+                  <p className="text-muted-foreground text-xs">Total creditado dividido pelo período em dias corridos.</p>
+                  <div className="space-y-0.5">
+                    <div className="flex justify-between gap-4">
+                      <span>Total creditado</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(totalCredited)}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span>Período (dias corridos)</span>
+                      <span className="font-semibold text-foreground">{calendarDays}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span>Média por dia corrido</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(avgPerDay)}</span>
+                    </div>
+                  </div>
+                  <div className="border-t border-border/50 pt-1 space-y-0.5">
+                    <p className="text-muted-foreground text-xs">Nos dias que depositou:</p>
+                    <div className="flex justify-between gap-4">
+                      <span>Dias com depósito</span>
+                      <span className="font-semibold text-foreground">{depositDays}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span>Média por dia depositado</span>
+                      <span className="font-semibold text-emerald-500">{formatCurrency(avgPerDepositDay)}</span>
+                    </div>
+                   </div>
+                  {/* Seção de comparação com Meta do Ciclo */}
+                  {(() => {
+                            if (!cicloAtivo?.meta_volume || !cicloAtivo.data_inicio || !cicloAtivo.data_fim_prevista)
+                                return null;
+                            const inicio = parseLocalDate(cicloAtivo.data_inicio);
+                            const fim = parseLocalDate(cicloAtivo.data_fim_prevista);
+                            const diasCiclo = Math.max(1, Math.round((fim.getTime() - inicio.getTime()) / (24 * 60 * 60 * 1000)) + 1);
+                            const metaDiaria = cicloAtivo.meta_volume / diasCiclo;
+                            const performanceDiaria = calendarDays > 0 ? bonusPerformance.total / calendarDays : 0;
+                            const diff = performanceDiaria - metaDiaria;
+                            const isAbove = diff >= 0;
+                            return (<div className="border-t border-border/50 pt-1 space-y-0.5">
+                        <p className="text-muted-foreground text-xs">Meta do Ciclo #{cicloAtivo.numero_ciclo}:</p>
+                        <div className="flex justify-between gap-4">
+                          <span>Meta total</span>
+                          <span className="font-semibold text-foreground">{formatCurrency(cicloAtivo.meta_volume)}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span>Duração do ciclo</span>
+                          <span className="font-semibold text-foreground">{diasCiclo} dias</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span>Meta diária necessária</span>
+                          <span className="font-semibold text-foreground">{formatCurrency(metaDiaria)}/dia</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span>Performance/dia</span>
+                          <span className={`font-semibold ${performanceDiaria >= 0 ? "text-emerald-500" : "text-red-500"}`}>{formatCurrency(performanceDiaria)}/dia</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span>Diferença</span>
+                          <span className={`font-semibold ${isAbove ? "text-emerald-500" : "text-red-500"}`}>
+                            {isAbove ? "+" : ""}{formatCurrency(diff)}/dia
+                          </span>
+                        </div>
+                      </div>);
+                        })()}
+                </div>),
+                    subtitle: <span className="text-muted-foreground">{calendarDays} {calendarDays === 1 ? "dia" : "dias"} corridos</span>,
+                    minWidth: "min-w-[100px]",
+                };
+            })(),
+            ...(expiring7Days.length > 0 ? [{
+                    label: "Expirando",
+                    value: (<div className="flex flex-col items-center w-full">
+                <span className="text-amber-500">{expiring7Days.length}</span>
+              </div>),
+                    tooltip: (<div className="space-y-1.5">
+                <p className="font-semibold text-foreground">Bônus Expirando em 7 dias</p>
+                <p className="text-muted-foreground text-xs">Contagem regressiva dos bônus próximos do vencimento.</p>
+                <div className="space-y-1">
+                  {expiring7Days
+                            .sort((a, b) => {
+                            const parseCivil = (s) => { const [y, m, d] = s.slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d); };
+                            const t = new Date();
+                            t.setHours(0, 0, 0, 0);
+                            const dA = a.expires_at ? differenceInDays(parseCivil(a.expires_at), t) : 999;
+                            const dB = b.expires_at ? differenceInDays(parseCivil(b.expires_at), t) : 999;
+                            return dA - dB;
+                        })
+                            .map(bonus => {
+                            const parseCivil = (s) => { const [y, m, d] = s.slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d); };
+                            const t = new Date();
+                            t.setHours(0, 0, 0, 0);
+                            const daysLeft = bonus.expires_at ? differenceInDays(parseCivil(bonus.expires_at), t) : 0;
+                            // Show only first and last name
+                            const shortName = bonus.parceiro_nome ? (() => {
+                                const parts = bonus.parceiro_nome.trim().split(/\s+/);
+                                return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1]}` : parts[0];
+                            })() : null;
+                            return (<div key={bonus.id} className="flex justify-between gap-4 items-center">
+                          <span className="flex items-center gap-1.5 truncate text-xs">
+                            <span className={`inline-block w-1.5 h-1.5 rounded-full ${daysLeft <= 1 ? 'bg-red-500' : daysLeft <= 3 ? 'bg-amber-500' : 'bg-yellow-500'}`}/>
+                            {bonus.bookmaker_nome}
+                            {shortName && <span className="text-[10px] text-muted-foreground font-normal">({shortName})</span>}
+                          </span>
+                          <span className={`font-semibold whitespace-nowrap ${daysLeft <= 1 ? 'text-red-500' : 'text-amber-500'}`}>
+                            {daysLeft === 0 ? 'HOJE' : daysLeft === 1 ? '1 dia' : `${daysLeft} dias`}
+                          </span>
+                        </div>);
+                        })}
+                </div>
+              </div>),
+                    subtitle: <span className="text-muted-foreground">bônus em risco</span>,
+                    minWidth: "min-w-[80px]",
+                    valueClassName: "text-amber-500",
+                }] : []),
+        ]}/>
+      </TooltipProvider>
+
+      {/* Filtro de período - abaixo dos KPIs */}
+      {periodFilter}
+
+      {/* Gráfico de Resultado Líquido de Bônus (substituindo "Evolução do Lucro") */}
+      <BonusResultadoLiquidoChart bonuses={bonuses} bonusBets={bonusBetsWithPernas.bets} pernasMap={bonusBetsWithPernas.pernasMap} ajustesPostLimitacao={ajustesPostLimitacao} perdasCancelamento={perdasCancelamento} formatCurrency={formatCurrency} convertToConsolidation={convertToConsolidation} moedaConsolidacao={analyticsSummary.moeda_consolidacao} isSingleDayPeriod={isSingleDayPeriod} dateRange={dateRange} potencialBruto={bonusPerformance.totalBonusCreditado}/>
+
+      {/* Central de Análise de Bônus - Card Analítico Unificado */}
+      <BonusAnalyticsCard bonuses={bonuses} dateRange={dateRange}/>
+    </div>);
+}
