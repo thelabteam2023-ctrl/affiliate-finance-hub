@@ -732,7 +732,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                       <ScrollArea className="h-32">
                         <div className="space-y-2">
                           {activeBonuses.map(bonus => {
-                            const rolloverPercent = getRolloverPercentage(bonus);
+                            const rolloverPercent = getRolloverPercentage(bonus.id);
                             const hasRollover = bonus.rollover_target_amount && bonus.rollover_target_amount > 0;
                             
                             return (
