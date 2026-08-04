@@ -227,7 +227,6 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
             />
           </div>
         </div>
-      </div>
 
         <Select value={reasonFilter} onValueChange={setReasonFilter}>
           <SelectTrigger className="w-[220px]">
