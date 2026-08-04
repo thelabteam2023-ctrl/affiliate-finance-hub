@@ -454,7 +454,7 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
 
   const getMetricaLabel = (metrica: string) => {
     if (metrica === "LUCRO") {
-      return metricaLucroCiclo === "realizado" ? "Lucro Realizado (Saques − Depósitos)" : "Lucro Operacional";
+      return metricaLucroCiclo === "realizado" ? "Lucro Realizado (Fluxo de Caixa)" : "Lucro Operacional";
     }
     return "Volume Apostado";
   };
