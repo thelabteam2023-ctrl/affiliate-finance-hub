@@ -576,10 +576,10 @@ export function ProjetoDashboardTab({ projetoId, refreshTrigger = 0 }: ProjetoDa
                   lucroGirosGratis: 0,
                   lucroCashback: 0,
                   operationalLossesConfirmed: 0,
-                  operationalLossesPending: 0,
-                  operationalLossesReverted: 0,
+                  saquesPendentes: 0,
+                  depositosPendentes: 0,
                   ajustesConciliacao: 0,
-                  temAjustesConciliacao: false,
+
                   saldoBookmakers: 0,
                   saldoIrrecuperavel: 0,
                   totalDepositos: 0,
