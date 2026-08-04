@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTabFilters } from "@/hooks/useTabFilters";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -33,13 +34,18 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
   
   // Estados gerais
   const [activeTab, setActiveTab] = useState("lancamentos");
-  const [period, setPeriod] = useState<StandardPeriodFilter>("ano");
-  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
+  
+  // Filtros LOCAIS da aba Cashback
+  const tabFilters = useTabFilters({
+    tabId: "cashback",
+    projetoId,
+    defaultPeriod: "ano",
+    persist: true,
+  });
 
-  // Calcular datas baseado no período
-  const dateRange = useMemo(() => {
-    return getDateRangeFromPeriod(period, customDateRange);
-  }, [period, customDateRange]);
+  const period = tabFilters.period;
+  const customDateRange = tabFilters.customDateRange;
+  const dateRange = tabFilters.dateRange;
 
   // Hook para cashback manual (agora com moeda de consolidação)
   const {
@@ -172,10 +178,10 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
 
       {/* Filtro de tempo */}
       <StandardTimeFilter
-        period={period}
-        onPeriodChange={setPeriod}
-        customDateRange={customDateRange}
-        onCustomDateRangeChange={setCustomDateRange}
+        period={tabFilters.period}
+        onPeriodChange={tabFilters.setPeriod}
+        customDateRange={tabFilters.customDateRange}
+        onCustomDateRangeChange={tabFilters.setCustomDateRange}
       />
 
       {/* KPIs */}
