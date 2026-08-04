@@ -31,7 +31,7 @@ import {
   ReferenceLine,
   Cell,
 } from "recharts";
-import { format, addDays, startOfDay } from "date-fns";
+import { format, addDays, startOfDay, startOfYear, endOfDay } from "date-fns";
 import { extractLocalDateKey, extractCivilDateKey, parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { ProjectBonus } from "@/hooks/useProjectBonuses";
@@ -161,6 +161,12 @@ export function BonusResultadoLiquidoChart({
 
   // Calcula dados do gráfico: Resultado Líquido = Bônus creditados + Juice
   const chartData = useMemo(() => {
+    // Se não houver dateRange definido via props, usamos o padrão "Ano" para este gráfico específico
+    const effectiveDateRange = dateRange || {
+      start: startOfYear(new Date()),
+      end: endOfDay(new Date())
+    };
+
     // Agrupa bônus creditados por data (usando timezone operacional)
     const bonusByDate: Record<string, number> = {};
     // CRÍTICO: Excluir FREEBET — o lucro SNR já está no P&L da aposta (evita dupla contagem)
@@ -171,9 +177,9 @@ export function BonusResultadoLiquidoChart({
         const date = extractCivilDateKey(b.credited_at!);
         
         // Filtra por dateRange se especificado
-        if (dateRange) {
+        if (effectiveDateRange) {
           const bonusDate = new Date(date + "T12:00:00");
-          if (bonusDate < startOfDay(dateRange.start) || bonusDate > dateRange.end) return;
+          if (bonusDate < startOfDay(effectiveDateRange.start) || bonusDate > effectiveDateRange.end) return;
         }
         
         const rawAmount = b.bonus_amount || 0;
@@ -192,9 +198,9 @@ export function BonusResultadoLiquidoChart({
       const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
       if (!isBonusBet) return;
 
-      if (dateRange) {
+      if (effectiveDateRange) {
         const betDate = new Date(extractLocalDateKey(bet.data_aposta) + "T12:00:00");
-        if (betDate < startOfDay(dateRange.start) || betDate > dateRange.end) return;
+        if (betDate < startOfDay(effectiveDateRange.start) || betDate > effectiveDateRange.end) return;
       }
       
       // Se filtro por bookmaker ativo, filtrar juice também
@@ -225,9 +231,9 @@ export function BonusResultadoLiquidoChart({
       const date = extractCivilDateKey(ajuste.data_operacional);
 
       // Filtro por dateRange
-      if (dateRange) {
+      if (effectiveDateRange) {
         const ajusteDate = new Date(date + "T12:00:00");
-        if (ajusteDate < startOfDay(dateRange.start) || ajusteDate > dateRange.end) return;
+        if (ajusteDate < startOfDay(effectiveDateRange.start) || ajusteDate > effectiveDateRange.end) return;
       }
 
       const valor = convertToConsolidation
@@ -244,9 +250,9 @@ export function BonusResultadoLiquidoChart({
     perdasCancelamento.forEach(perda => {
       if (selectedBookmaker && perda.bookmaker_id !== selectedBookmaker) return;
       const date = extractCivilDateKey(perda.data_operacional);
-      if (dateRange) {
+      if (effectiveDateRange) {
         const perdaDate = new Date(date + "T12:00:00");
-        if (perdaDate < startOfDay(dateRange.start) || perdaDate > dateRange.end) return;
+        if (perdaDate < startOfDay(effectiveDateRange.start) || perdaDate > effectiveDateRange.end) return;
       }
       const valor = convertToConsolidation
         ? convertToConsolidation(perda.valor, perda.moeda)
