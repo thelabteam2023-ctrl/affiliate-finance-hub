@@ -322,27 +322,24 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Time Filter Padronizado */}
-      <div className="flex justify-end">
-        <StandardTimeFilter
-          period={tabFilters.period}
-          onPeriodChange={tabFilters.setPeriod}
-          customDateRange={tabFilters.customDateRange}
-          onCustomDateRangeChange={tabFilters.setCustomDateRange}
-          projetoId={projetoId}
-        />
-      </div>
-
       {/* Search and View Toggle */}
       <div className="flex items-center justify-between gap-4">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, login ou parceiro..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+        <div className="flex items-center gap-4 flex-1">
+          <StandardTimeFilter
+            period={tabFilters.period}
+            onPeriodChange={tabFilters.setPeriod}
+            customRange={tabFilters.customRange}
+            onCustomRangeChange={tabFilters.setCustomRange}
           />
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, login ou parceiro..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
         <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as "cards" | "list")}>
           <ToggleGroupItem value="list" aria-label="Visualização em lista">
