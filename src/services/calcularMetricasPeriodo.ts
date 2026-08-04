@@ -235,8 +235,13 @@ export async function calcularMetricasPeriodo({
   }, 0);
 
   const totalDepositos = (depositosResult.data || []).reduce((acc, d: any) => {
+    // REGRA SSOT: Depósitos efetivos excluem BASELINE (não é capital real).
+    const isBaseline = d.tipo_transacao === 'DEPOSITO_VIRTUAL' && 
+                       (d.origem_tipo === 'BASELINE' || d.origem_tipo == null);
+    if (isBaseline) return acc;
     return acc + convert(Number(d.valor ?? 0), normalizeMoeda(d.moeda || 'BRL'));
   }, 0);
+
 
   const lucroRealizado = totalSaques - totalDepositos;
 
