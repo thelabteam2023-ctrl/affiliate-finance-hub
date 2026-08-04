@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, Fragment } from "react";
+import { useState, useEffect, useMemo, useCallback, Fragment, useRef } from "react";
 import { getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
@@ -66,6 +66,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const { summary: analyticsSummary, stats: analyticsStats } = useProjectBonusAnalytics(projetoId, convertToConsolidation);
   const [bookmakersWithBonus, setBookmakersWithBonus] = useState<BookmakerWithBonus[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadedOnceRef = useRef(false);
 
   const summary = getSummary();
 
@@ -222,7 +223,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     }
 
     try {
-      setLoading(true);
+      if (!loadedOnceRef.current) setLoading(true);
       const { data, error } = await supabase
         .from("bookmakers")
         .select(`
@@ -274,6 +275,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       console.error("Error fetching bookmakers:", error);
     } finally {
       setLoading(false);
+      loadedOnceRef.current = true;
     }
   };
 
