@@ -89,6 +89,14 @@ interface BookmakerInBonusMode {
 }
 
 export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
+  // Filtros padronizados para a aba Por Casa (Bônus)
+  const tabFilters = useTabFilters({
+    tabId: "bonus-por-casa",
+    projetoId,
+    defaultPeriod: "ano",
+    persist: true,
+  });
+
   const { 
     bonuses, 
     finalizeBonus, 
@@ -96,21 +104,9 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
     getBookmakersWithActiveBonus, 
     getBookmakersWithAnyBonus, 
     getRolloverPercentage,
-    bonuses: rawBonuses
   } = useProjectBonuses({ 
     projectId: projetoId,
     dateRange: tabFilters.dateRange
-  });
-
-  // Filtrar bônus pelo range de datas para métricas consistentes
-  const bonuses = rawBonuses;
-
-  // Filtros padronizados para a aba Por Casa (Bônus)
-  const tabFilters = useTabFilters({
-    tabId: "bonus-por-casa",
-    projetoId,
-    defaultPeriod: "ano",
-    persist: true,
   });
 
   const [searchTerm, setSearchTerm] = useState("");
