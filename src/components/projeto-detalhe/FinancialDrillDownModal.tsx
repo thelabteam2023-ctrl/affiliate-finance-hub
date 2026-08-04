@@ -462,8 +462,10 @@ export function FinancialDrillDownModal({
       const mul = sortDir === "asc" ? 1 : -1;
       if (sortField === "data") {
         try {
-          const dateA = new Date(a.data).getTime();
-          const dateB = new Date(b.data).getTime();
+          const dateA = a.data ? new Date(a.data).getTime() : 0;
+          const dateB = b.data ? new Date(b.data).getTime() : 0;
+          
+          if (isNaN(dateA) || isNaN(dateB)) return 0;
           return mul * (dateA - dateB);
         } catch (e) {
           return 0;

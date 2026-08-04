@@ -199,12 +199,13 @@ export function ProjetoKanbanCard({
               <Calendar className="h-3 w-3 flex-shrink-0 text-muted-foreground/60" />
               <span>
                 Início: {(() => {
+                  if (!projeto.data_inicio) return "—";
                   try {
                     const date = new Date(projeto.data_inicio);
                     if (isNaN(date.getTime())) return projeto.data_inicio;
                     return format(date, "dd/MM/yyyy", { locale: ptBR });
                   } catch (e) {
-                    return projeto.data_inicio;
+                    return projeto.data_inicio || "—";
                   }
                 })()}
               </span>
