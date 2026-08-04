@@ -70,9 +70,10 @@ const TIPOS_GATILHO = [
 ];
 
 const METRICAS = [
-  { value: "LUCRO", label: "Lucro Realizado" },
+  { value: "LUCRO", label: "Lucro Realizado (Fluxo de Caixa)" },
   { value: "VOLUME_APOSTADO", label: "Volume Apostado" },
 ];
+
 
 export function CicloDialog({
   open,
