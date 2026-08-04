@@ -154,7 +154,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
     deleteBonus,
   } = useProjectBonuses({ 
     projectId: projetoId,
-    dateRange: tabFilters.dateRange 
+    dateRange: undefined // We'll move the filter logic below declaration
   });
 
   // === FILTROS LOCAIS DA ABA BÔNUS ===
@@ -163,6 +163,12 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
     projetoId,
     defaultPeriod: "ano",
     persist: true,
+  });
+
+  // Now we can use tabFilters safely after its declaration
+  const { bonuses: filteredBonusesList, loading: loadingFiltered } = useProjectBonuses({
+    projectId: projetoId,
+    dateRange: tabFilters.dateRange
   });
 
   const dateRange = tabFilters.dateRange;
@@ -280,7 +286,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
 
   const summary = getSummary();
 
-  const filteredBonuses = bonuses.filter((b) => {
+  const filteredBonuses = (filteredBonusesList || bonuses).filter((b) => {
     // Search filter
     const matchSearch =
       b.bookmaker_nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -319,7 +325,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
     .sort((a, b) => b.total - a.total)
     .slice(0, 5);
 
-  if (loading || loadingBookmakers) {
+  if (loading || loadingBookmakers || loadingFiltered) {
     return (
       <div className="space-y-4">
         <div className="grid gap-4 md:grid-cols-4">
@@ -429,6 +435,15 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
           onPeriodChange={tabFilters.setPeriod}
           onCustomDateRangeChange={tabFilters.setCustomDateRange}
           onClear={tabFilters.clearFilters}
+        />
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <StandardTimeFilter
+          period={tabFilters.period}
+          onPeriodChange={tabFilters.setPeriod}
+          customDateRange={tabFilters.customDateRange}
+          onCustomDateRangeChange={tabFilters.setCustomDateRange}
         />
       </div>
 
