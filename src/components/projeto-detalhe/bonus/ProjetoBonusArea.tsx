@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "../StandardTimeFilter";
+import { useTabFilters } from "@/hooks/useTabFilters";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { bonusDebug } from "@/lib/debug/bonusTabDebugger";
 
@@ -91,23 +92,25 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger, actionsSlot, onDat
     }
   };
   
-  // Standard time filter state
-  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("mes_atual");
-  const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
+  // Standard time filter state - Unificado para o módulo de bônus
+  const tabFilters = useTabFilters({
+    tabId: "bonus-area",
+    projetoId,
+    defaultPeriod: "ano",
+    persist: true,
+  });
 
-  const dateRange = useMemo(() => {
-    return getDateRangeFromPeriod(internalPeriod, internalDateRange);
-  }, [internalPeriod, internalDateRange]);
+  const dateRange = tabFilters.dateRange;
 
-  const isSingleDayPeriod = internalPeriod === "1dia";
+  const isSingleDayPeriod = tabFilters.period === "1dia";
 
   // Period filter component (with cycle selector via projetoId)
   const periodFilterComponent = (
     <StandardTimeFilter
-      period={internalPeriod}
-      onPeriodChange={setInternalPeriod}
-      customDateRange={internalDateRange}
-      onCustomDateRangeChange={setInternalDateRange}
+      period={tabFilters.period}
+      onPeriodChange={tabFilters.setPeriod}
+      customDateRange={tabFilters.customDateRange}
+      onCustomDateRangeChange={tabFilters.setCustomDateRange}
       projetoId={projetoId}
     />
   );
