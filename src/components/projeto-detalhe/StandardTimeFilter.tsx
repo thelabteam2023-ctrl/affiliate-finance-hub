@@ -66,6 +66,7 @@ const PERIOD_OPTIONS: { value: StandardPeriodFilter; label: string }[] = [
   { value: "1dia", label: "1 dia" },
   { value: "7dias", label: "7 dias" },
   { value: "mes_atual", label: "Mês atual" },
+  { value: "mes_anterior", label: "Mês anterior" },
   { value: "ano", label: "Ano" },
 ];
 
@@ -276,7 +277,7 @@ export function StandardTimeFilter({
         type="single"
         value={period === "custom" || activeCycleId !== "none" ? undefined : period}
         onValueChange={handlePeriodChange}
-        className="grid w-full grid-cols-4 bg-muted/50 p-0.5 rounded-lg sm:flex sm:w-auto"
+        className="grid w-full grid-cols-5 bg-muted/50 p-0.5 rounded-lg sm:flex sm:w-auto"
       >
         {PERIOD_OPTIONS.map((option) => (
           <ToggleGroupItem
