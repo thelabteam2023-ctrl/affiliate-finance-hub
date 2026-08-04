@@ -921,7 +921,10 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
     });
   }
 
-  const apostasHistorico = apostasHistoricoBase.filter(item => {
+  const apostasHistorico = (dateRange ? apostasUnificadasRaw.filter(item => {
+    const itemDate = parseLocalDateTime(item.data_aposta);
+    return itemDate >= dateRange.start && itemDate <= dateRange.end;
+  }) : apostasUnificadasRaw).filter(item => {
     if (item.tipo === "simples") {
       const a = item.data as Aposta;
       return a.status !== "PENDENTE" && a.resultado;
