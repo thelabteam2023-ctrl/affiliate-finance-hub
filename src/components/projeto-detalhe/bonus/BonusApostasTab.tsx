@@ -190,7 +190,7 @@ type ApostaUnificada = {
   data_aposta: string;
 };
 
-export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApostasTabProps) {
+export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProps) {
   const queryClient = useQueryClient();
   const { getBookmakersWithActiveBonus, bonuses } = useProjectBonuses({ projectId: projetoId });
    const { convertToConsolidation, moedaConsolidacao, formatCurrency } = useProjetoCurrency(projetoId);
@@ -243,8 +243,16 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   const [reasonFilter, setReasonFilter] = useState<string>("all");
   const [suspiciousActive, setSuspiciousActive] = useState(false);
   
-  // Filtros dimensionais independentes para o histórico
+  // Filtros LOCAIS da aba Bônus/Apostas
+  const tabFilters = useTabFilters({
+    tabId: "bonus-apostas",
+    projetoId,
+    defaultPeriod: "ano",
+    persist: true,
+  });
+
   const { dimensionalFilter, setDimensionalFilter } = useHistoryDimensionalFilter();
+  const dateRange = tabFilters.dateRange;
 
   // Debug trace ID por instância da aba (recriado por projetoId/subTab)
   const traceIdRef = useRef<string>(bonusDebug.newTraceId());
@@ -252,10 +260,6 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     traceIdRef.current = bonusDebug.newTraceId();
     bonusDebug.stage("TAB.mount", traceIdRef.current, projetoId, {
       projetoId,
-      hasDateRange: !!dateRange,
-      dateRange: dateRange
-        ? { start: dateRange.start.toISOString(), end: dateRange.end.toISOString() }
-        : null,
     });
   }, [projetoId]);
   useEffect(() => {
