@@ -386,9 +386,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     
     if (dateRange?.start || dateRange?.end) {
       eligibleBonuses = eligibleBonuses.filter(b => {
-        if (!b.credited_at) return true; // Sem data, incluir por segurança
-        // CORREÇÃO: Usar extractCivilDateKey para credited_at (data civil 03:00 UTC = meia-noite BRT)
-        // e format() local para dateRange (evita vazamento UTC→BRT na fronteira de mês)
+        if (!b.credited_at) return true;
         const creditDateStr = extractCivilDateKey(b.credited_at);
         if (dateRange.start) {
           const startStr = format(dateRange.start, 'yyyy-MM-dd');
@@ -400,6 +398,9 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         }
         return true;
       });
+    } else {
+      // Se não houver dateRange (Mês Atual ou Ano não carregados ainda), não filtrar por segurança
+      // mas como defaultPeriod é "ano", isso raramente ocorrerá.
     }
     
     // SNAPSHOT-FIRST: Usar valor_consolidado_snapshot congelado no momento da inserção
