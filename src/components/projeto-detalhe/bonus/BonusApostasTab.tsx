@@ -945,10 +945,8 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
       inputCount: apostasUnificadasRaw.length,
       outputCount: apostasHistorico.length,
       rule: "status !== 'PENDENTE' && !!resultado",
-      droppedSamples: apostasUnificadasRaw.filter(it => !apostasHistorico.includes(it))
-          const d = it.data as any;
-          return d.status === "PENDENTE" || !d.resultado;
-        })
+      droppedSamples: apostasUnificadasRaw
+        .filter(it => !apostasHistorico.includes(it))
         .slice(0, 5)
         .map((it) => ({
           tipo: it.tipo,
