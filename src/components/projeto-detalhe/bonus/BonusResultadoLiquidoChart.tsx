@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -117,6 +117,21 @@ export function BonusResultadoLiquidoChart({
   const [selectedBookmaker, setSelectedBookmaker] = useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [showBenchmark, setShowBenchmark] = useState(false);
+  const [internalDateRange, setInternalDateRange] = useState<{ start: Date; end: Date } | null>(null);
+
+  // Sincronizar dateRange externo com estado interno
+  useEffect(() => {
+    if (dateRange) {
+      setInternalDateRange(dateRange);
+    } else {
+      // Fallback para "Ano" se nenhum range for provido (ex: durante transição de carregamento)
+      const now = new Date();
+      setInternalDateRange({
+        start: startOfYear(now),
+        end: endOfDay(now)
+      });
+    }
+  }, [dateRange]);
 
   // Calcula estatísticas por bookmaker (para filtro e breakdown)
   const bookmakerStats = useMemo(() => {
@@ -126,10 +141,10 @@ export function BonusResultadoLiquidoChart({
       .filter(b => (b.status === "credited" || b.status === "finalized") && b.credited_at)
       .forEach(b => {
         // Filtra por dateRange se especificado
-        if (dateRange) {
+        if (internalDateRange) {
           const dateKey = extractCivilDateKey(b.credited_at!);
           const bonusDate = new Date(dateKey + "T12:00:00");
-          if (bonusDate < startOfDay(dateRange.start) || bonusDate > dateRange.end) return;
+          if (bonusDate < startOfDay(internalDateRange.start) || bonusDate > internalDateRange.end) return;
         }
         
         const id = b.bookmaker_id;
@@ -151,7 +166,7 @@ export function BonusResultadoLiquidoChart({
       });
     
     return Object.values(statsMap).sort((a, b) => b.total_bonus - a.total_bonus);
-  }, [bonuses, dateRange, convertToConsolidation]);
+  }, [bonuses, internalDateRange, convertToConsolidation]);
 
   // Filtra bônus pelo bookmaker selecionado
   const filteredBonuses = useMemo(() => {
@@ -159,13 +174,8 @@ export function BonusResultadoLiquidoChart({
     return bonuses.filter(b => b.bookmaker_id === selectedBookmaker);
   }, [bonuses, selectedBookmaker]);
 
-  // Calcula dados do gráfico: Resultado Líquido = Bônus creditados + Juice
   const chartData = useMemo(() => {
-    // Se não houver dateRange definido via props, usamos o padrão "Ano" para este gráfico específico
-    const effectiveDateRange = dateRange || {
-      start: startOfYear(new Date()),
-      end: endOfDay(new Date())
-    };
+    const effectiveDateRange = internalDateRange;
 
     // Agrupa bônus creditados por data (usando timezone operacional)
     const bonusByDate: Record<string, number> = {};
@@ -295,7 +305,7 @@ export function BonusResultadoLiquidoChart({
     });
 
     return data;
-  }, [filteredBonuses, bonusBets, bonuses, ajustesPostLimitacao, perdasCancelamento, dateRange, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
+  }, [filteredBonuses, bonusBets, bonuses, ajustesPostLimitacao, perdasCancelamento, internalDateRange, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
 
   const kpis = useMemo(() => {
     const totalBonus = chartData.reduce((acc, d) => acc + d.bonus_creditado, 0);
@@ -411,8 +421,8 @@ export function BonusResultadoLiquidoChart({
 
   // Mês inicial do calendário: mês corrente quando o período o contém
   const calendarInitialMonth = useMemo(
-    () => resolveCalendarInitialMonth(dateRange?.start, dateRange?.end),
-    [dateRange?.start, dateRange?.end],
+    () => resolveCalendarInitialMonth(internalDateRange?.start, internalDateRange?.end),
+    [internalDateRange?.start, internalDateRange?.end],
   );
 
   // MOVIDO para nível do componente (evitar violação de hooks dentro de renderChart)
