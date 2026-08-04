@@ -1,5 +1,7 @@
 import { openSurebetWindow } from "@/lib/windowHelper";
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
+import { useTabFilters } from "@/hooks/useTabFilters";
+import { StandardTimeFilter } from "../StandardTimeFilter";
 import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
