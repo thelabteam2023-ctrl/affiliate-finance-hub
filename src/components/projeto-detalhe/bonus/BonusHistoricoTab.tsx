@@ -1,11 +1,13 @@
- import { useState, useMemo } from "react";
- import { formatCurrency as formatCurrencyValue } from "@/components/bookmakers/BookmakerSelectOption";
+import { useState, useMemo } from "react";
+import { formatCurrency as formatCurrencyValue } from "@/components/bookmakers/BookmakerSelectOption";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { Building2, Search, History, CheckCircle2, XCircle, AlertTriangle, RotateCcw, ArrowDownUp, Pencil, ArrowRightLeft } from "lucide-react";
+import { useTabFilters } from "@/hooks/useTabFilters";
+import { StandardTimeFilter } from "../StandardTimeFilter";
 import { EditFinalizeReasonDialog } from "./EditFinalizeReasonDialog";
 import { ReclassificarBonusDialog } from "./ReclassificarBonusDialog";
 import { format, parseISO } from "date-fns";

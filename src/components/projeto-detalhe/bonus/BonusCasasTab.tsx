@@ -1,4 +1,6 @@
- import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useTabFilters } from "@/hooks/useTabFilters";
+import { StandardTimeFilter } from "../StandardTimeFilter";
  import { formatCurrency } from "@/components/bookmakers/BookmakerSelectOption";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -87,6 +89,15 @@ interface BookmakerInBonusMode {
 }
 
 export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
+  const { 
+    bonuses, 
+    finalizeBonus, 
+    saving, 
+    getBookmakersWithActiveBonus, 
+    getBookmakersWithAnyBonus, 
+    getRolloverPercentage 
+  } = useProjectBonuses({ projectId: projetoId });
+
   // Filtros padronizados para a aba Por Casa (Bônus)
   const tabFilters = useTabFilters({
     tabId: "bonus-por-casa",
