@@ -1549,7 +1549,7 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
               onSubTabChange={setSubTab}
               openCount={apostasAbertas.length}
               totalOpenCount={totalAbertasCount}
-              historyCount={apostasHistorico.length}
+              historyCount={apostasHistoricoFiltered.length}
               totalHistoryCount={totalHistoricoCount}
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
