@@ -156,7 +156,11 @@ export function useTabFilters({
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.period) setPeriodState(parsed.period);
+        // Se o período salvo for o antigo padrão "mes_atual", forçamos o novo padrão "ano"
+        if (parsed.period) {
+          const loadedPeriod = parsed.period === "mes_atual" ? "ano" : parsed.period;
+          setPeriodState(loadedPeriod);
+        }
         if (parsed.bookmakerIds) setBookmakerIdsState(parsed.bookmakerIds);
         if (parsed.parceiroIds) setParceiroIdsState(parsed.parceiroIds);
         if (parsed.sortOrder) setSortOrderState(parsed.sortOrder);
