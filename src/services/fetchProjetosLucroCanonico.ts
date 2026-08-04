@@ -151,32 +151,37 @@ async function fetchProjetoConfigs(projetoIds: string[]): Promise<Map<string, Pr
  * Busca os dados brutos do dashboard de um projeto via RPC
  */
 async function fetchDashboardData(projetoId: string): Promise<ProjetoDashboardRawData | null> {
-  const { data, error } = await supabase.rpc("get_projeto_dashboard_data", { p_projeto_id: projetoId });
-  if (error) {
-    console.error(`[fetchProjetosLucroCanonico] erro no projeto ${projetoId}:`, error);
+  try {
+    const { data, error } = await supabase.rpc("get_projeto_dashboard_data", { p_projeto_id: projetoId });
+    if (error) {
+      console.error(`[fetchProjetosLucroCanonico] erro RPC get_projeto_dashboard_data no projeto ${projetoId}:`, error);
+      return null;
+    }
+    const raw = data as any;
+    if (!raw) return null;
+
+    return {
+      moeda_consolidacao: raw.moeda_consolidacao || "BRL",
+      cotacao_trabalho: raw.cotacao_trabalho,
+      fonte_cotacao: raw.fonte_cotacao,
+      apostas: raw.apostas || [],
+      apostas_pernas: raw.apostas_pernas || [],
+      giros_gratis: raw.giros_gratis || [],
+      cashback: raw.cashback || [],
+      perdas: raw.perdas || [],
+      ocorrencias_perdas: raw.ocorrencias_perdas || [],
+      conciliacoes: raw.conciliacoes || [],
+      bonus: raw.bonus || [],
+      bookmakers: raw.bookmakers || [],
+      depositos: raw.depositos || [],
+      saques: raw.saques || [],
+      ledger_extras: raw.ledger_extras || [],
+      ajustes_pos_limitacao: raw.ajustes_pos_limitacao || [],
+    };
+  } catch (err) {
+    console.error(`[fetchProjetosLucroCanonico] exceção ao buscar dashboard do projeto ${projetoId}:`, err);
     return null;
   }
-  const raw = data as any;
-  if (!raw) return null;
-
-  return {
-    moeda_consolidacao: raw.moeda_consolidacao || "BRL",
-    cotacao_trabalho: raw.cotacao_trabalho,
-    fonte_cotacao: raw.fonte_cotacao,
-    apostas: raw.apostas || [],
-    apostas_pernas: raw.apostas_pernas || [],
-    giros_gratis: raw.giros_gratis || [],
-    cashback: raw.cashback || [],
-    perdas: raw.perdas || [],
-    ocorrencias_perdas: raw.ocorrencias_perdas || [],
-    conciliacoes: raw.conciliacoes || [],
-    bonus: raw.bonus || [],
-    bookmakers: raw.bookmakers || [],
-    depositos: raw.depositos || [],
-    saques: raw.saques || [],
-    ledger_extras: raw.ledger_extras || [],
-    ajustes_pos_limitacao: raw.ajustes_pos_limitacao || [],
-  };
 }
 
 /**
