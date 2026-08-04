@@ -59,15 +59,9 @@ interface BonusResultEntry {
 }
 
 export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false, periodFilter, actionsSlot }: BonusVisaoGeralTabProps) {
-  const tabFilters = useTabFilters({
-    tabId: "bonus-visao-geral",
-    projetoId,
-    defaultPeriod: "ano",
-    persist: true,
-  });
+  // REMOVIDO useTabFilters local: a aba agora consome o dateRange injetado pelo pai (ProjetoBonusArea)
+  // garantindo paridade institucional com o padrão "Ano" sem fragmentação de state.
 
-  // Usamos o dateRange vindo dos props (que agora é controlado pelo useTabFilters no pai ou injetado via StandardTimeFilter)
-  // mas garantimos que a aba em si inicialize com o padrão correto.
   const queryClient = useQueryClient();
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
   const { formatCurrency, convertToConsolidation: convertToConsolidationTrabalho, convertToConsolidationOficial, isLoading: currencyLoading, moedaConsolidacao, cotacaoOficialUSD, isEffectiveRateLoaded } = useProjetoCurrency(projetoId);
