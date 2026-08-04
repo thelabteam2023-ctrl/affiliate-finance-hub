@@ -437,8 +437,9 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         // CORREÇÃO: data_aposta é timestamp REAL (com hora) — usar extractLocalDateKey
         // (BRT) para paridade com BonusResultadoLiquidoChart. extractCivilDateKey
         // agrupava por dia UTC, deslocando apostas de madrugada (BRT) para outro dia.
-        const betDate = new Date(extractLocalDateKey(bet.data_aposta) + "T12:00:00");
-        if (betDate < startOfDay(dateRange.start) || betDate > dateRange.end) return acc;
+        const betDateStr = extractLocalDateKey(bet.data_aposta);
+        const betDate = new Date(betDateStr + "T12:00:00");
+        if (betDate < startOfDay(dateRange.start) || betDate > endOfDay(dateRange.end)) return acc;
       }
       
       totalOperacoes += 1;
@@ -462,7 +463,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       filteredAjustes = ajustesPostLimitacao.filter(a => {
         const ajusteDate = new Date(a.data_operacional);
         if (dateRange.start && ajusteDate < startOfDay(dateRange.start)) return false;
-        if (dateRange.end && ajusteDate > dateRange.end) return false;
+        if (dateRange.end && ajusteDate > endOfDay(dateRange.end)) return false;
         return true;
       });
     }
@@ -479,7 +480,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       filteredPerdas = perdasCancelamento.filter(p => {
         const perdaDate = new Date(p.data_operacional);
         if (dateRange.start && perdaDate < startOfDay(dateRange.start)) return false;
-        if (dateRange.end && perdaDate > dateRange.end) return false;
+        if (dateRange.end && perdaDate > endOfDay(dateRange.end)) return false;
         return true;
       });
     }
