@@ -1,5 +1,5 @@
- import { useState, useMemo } from "react";
- import { formatCurrency } from "@/components/bookmakers/BookmakerSelectOption";
+import { useState, useMemo } from "react";
+import { formatCurrency } from "@/components/bookmakers/BookmakerSelectOption";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +45,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { differenceInDays, parseISO, format } from "date-fns";
+import { useTabFilters } from "@/hooks/useTabFilters";
+import { StandardTimeFilter } from "../StandardTimeFilter";
 
 const parseCivilDate = (dateStr: string): Date => {
   const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
@@ -87,7 +89,26 @@ interface BookmakerInBonusMode {
 }
 
 export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
-  const { bonuses, finalizeBonus, saving, getBookmakersWithActiveBonus, getBookmakersWithAnyBonus, getRolloverPercentage } = useProjectBonuses({ projectId: projetoId });
+  // Filtros padronizados para a aba Por Casa (Bônus)
+  const tabFilters = useTabFilters({
+    tabId: "bonus-por-casa",
+    projetoId,
+    defaultPeriod: "ano",
+    persist: true,
+  });
+
+  const { 
+    bonuses, 
+    finalizeBonus, 
+    saving, 
+    getBookmakersWithActiveBonus, 
+    getBookmakersWithAnyBonus, 
+    getRolloverPercentage,
+  } = useProjectBonuses({ 
+    projectId: projetoId,
+    dateRange: tabFilters.dateRange
+  });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   
@@ -106,7 +127,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
 
   // Query para buscar dados de apostas por bookmaker
   const { data: apostasStats = {} } = useQuery({
-    queryKey: ["bonus-casas-apostas-stats", projetoId],
+    queryKey: ["bonus-casas-apostas-stats", projetoId, tabFilters.dateRange],
     queryFn: async () => {
       // Busca todas as apostas do projeto agrupadas por bookmaker
       const data = await fetchAllPaginated(() =>
@@ -115,6 +136,8 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           .select("bookmaker_id, stake, lucro_prejuizo, status")
           .eq("projeto_id", projetoId)
           .neq("status", "CANCELADA")
+          .gte("data_aposta", tabFilters.dateRange.start?.toISOString())
+          .lte("data_aposta", tabFilters.dateRange.end?.toISOString())
       );
 
       // Agrupa por bookmaker_id
@@ -306,14 +329,22 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
     <div className="space-y-4">
       {/* Search and View Toggle */}
       <div className="flex items-center justify-between gap-4">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, login ou parceiro..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+        <div className="flex items-center gap-4 flex-1">
+          <StandardTimeFilter
+            period={tabFilters.period}
+            onPeriodChange={tabFilters.setPeriod}
+            customDateRange={tabFilters.customDateRange}
+            onCustomDateRangeChange={tabFilters.setCustomDateRange}
           />
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, login ou parceiro..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
         <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as "cards" | "list")}>
           <ToggleGroupItem value="list" aria-label="Visualização em lista">

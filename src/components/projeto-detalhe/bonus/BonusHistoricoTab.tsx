@@ -1,11 +1,13 @@
- import { useState, useMemo } from "react";
- import { formatCurrency as formatCurrencyValue } from "@/components/bookmakers/BookmakerSelectOption";
+import { useState, useMemo } from "react";
+import { formatCurrency as formatCurrencyValue } from "@/components/bookmakers/BookmakerSelectOption";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { Building2, Search, History, CheckCircle2, XCircle, AlertTriangle, RotateCcw, ArrowDownUp, Pencil, ArrowRightLeft } from "lucide-react";
+import { useTabFilters } from "@/hooks/useTabFilters";
+import { StandardTimeFilter } from "../StandardTimeFilter";
 import { EditFinalizeReasonDialog } from "./EditFinalizeReasonDialog";
 import { ReclassificarBonusDialog } from "./ReclassificarBonusDialog";
 import { format, parseISO } from "date-fns";
@@ -49,7 +51,18 @@ type HistoricoEntry =
   | { type: "ajuste"; data: AjustePostLimitacaoEntry; sortDate: string };
 
 export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
-  const { bonuses, updateFinalizeReason } = useProjectBonuses({ projectId: projetoId });
+  // Filtros padronizados para a aba Histórico (Bônus)
+  const tabFilters = useTabFilters({
+    tabId: "bonus-historico",
+    projetoId,
+    defaultPeriod: "ano",
+    persist: true,
+  });
+
+  const { bonuses, updateFinalizeReason } = useProjectBonuses({ 
+    projectId: projetoId,
+    dateRange: tabFilters.dateRange 
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [reasonFilter, setReasonFilter] = useState<string>("all");
   const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
@@ -57,7 +70,7 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
 
   // Fetch ajustes pós-limitação
   const { data: ajustesData = [] } = useQuery({
-    queryKey: ["bonus-historico-ajustes", projetoId],
+    queryKey: ["bonus-historico-ajustes", projetoId, tabFilters.dateRange],
     queryFn: async () => {
       const { data: bookmakers } = await supabase
         .from("bookmakers")
@@ -78,7 +91,9 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
         .select("id, valor, bookmaker_id, moeda, metadata, created_at")
         .in("bookmaker_id", bookmakerIds)
         .eq("tipo_evento", "AJUSTE")
-        .not("metadata", "is", null);
+        .not("metadata", "is", null)
+        .gte("created_at", tabFilters.dateRange.start?.toISOString())
+        .lte("created_at", tabFilters.dateRange.end?.toISOString());
 
       if (error) throw error;
 
@@ -198,17 +213,26 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por casa, título ou parceiro..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+      {/* Search and Filters */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-4 flex-1">
+          <StandardTimeFilter
+            period={tabFilters.period}
+            onPeriodChange={tabFilters.setPeriod}
+            customDateRange={tabFilters.customDateRange}
+            onCustomDateRangeChange={tabFilters.setCustomDateRange}
           />
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por casa, bônus ou parceiro..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
+
         <Select value={reasonFilter} onValueChange={setReasonFilter}>
           <SelectTrigger className="w-[220px]">
             <SelectValue placeholder="Motivo" />

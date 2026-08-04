@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "../StandardTimeFilter";
 import { useTabFilters } from "@/hooks/useTabFilters";
+import { BonusHistoricoTab } from "./BonusHistoricoTab";
+import { BonusCasasTab } from "./BonusCasasTab";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { bonusDebug } from "@/lib/debug/bonusTabDebugger";
 
@@ -22,7 +24,7 @@ interface ProjetoBonusAreaProps {
 }
 
 type NavigationMode = "tabs" | "sidebar";
-type TabValue = "visao-geral" | "bookmakers" | "apostas";
+type TabValue = "visao-geral" | "bookmakers" | "apostas" | "historico";
 
 const STORAGE_KEY = "bonus-area-nav-mode";
 
@@ -56,6 +58,7 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger, actionsSlot, onDat
     { value: "visao-geral" as TabValue, label: "Visão Geral", icon: LayoutDashboard },
     { value: "apostas" as TabValue, label: "Operações", icon: Target, showBadge: true, count: openOperationsCount },
     { value: "bookmakers" as TabValue, label: "Por Casa", icon: Building2, showCount: true, count: bookmakersInBonusMode.length },
+    { value: "historico" as TabValue, label: "Histórico", icon: History as any },
   ], [openOperationsCount, bookmakersInBonusMode.length]);
   
   useEffect(() => {
@@ -124,9 +127,9 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger, actionsSlot, onDat
     return (
       <div className={cn("min-h-[400px]", contentClass)}>
         {activeTab === "visao-geral" && <BonusVisaoGeralTab projetoId={projetoId} dateRange={dateRange} isSingleDayPeriod={isSingleDayPeriod} periodFilter={periodFilterComponent} actionsSlot={actionsSlot} />}
-        {activeTab === "bookmakers" && <div className="mb-4">{periodFilterComponent}</div>}
-        {activeTab === "bookmakers" && <BonusBookmakersTab projetoId={projetoId} />}
+        {activeTab === "bookmakers" && <BonusCasasTab projetoId={projetoId} />}
         {activeTab === "apostas" && <BonusApostasTab projetoId={projetoId} dateRange={dateRange} onDataChange={onDataChange} />}
+        {activeTab === "historico" && <BonusHistoricoTab projetoId={projetoId} />}
       </div>
     );
   };

@@ -161,6 +161,11 @@ export function useTabFilters({
         if (parsed.period) {
           const loadedPeriod = (parsed.period === "mes_atual") ? "ano" : parsed.period;
           setPeriodState(loadedPeriod);
+        } else {
+          // Se não houver período salvo (ex: primeira carga de uma aba nova), 
+          // o defaultPeriod passado via props já estará no state inicial, 
+          // mas forçamos aqui para garantir consistência.
+          setPeriodState(defaultPeriod);
         }
         if (parsed.bookmakerIds) setBookmakerIdsState(parsed.bookmakerIds);
         if (parsed.parceiroIds) setParceiroIdsState(parsed.parceiroIds);
