@@ -942,11 +942,10 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
 
   if (bonusDebug.enabled) {
     bonusDebug.filter("FILTER.subTab", traceIdRef.current, projetoId, {
-      inputCount: apostasHistoricoBase.length,
+      inputCount: apostasUnificadasRaw.length,
       outputCount: apostasHistorico.length,
       rule: "status !== 'PENDENTE' && !!resultado",
-      droppedSamples: apostasHistoricoBase
-        .filter((it) => {
+      droppedSamples: apostasUnificadasRaw.filter(it => !apostasHistorico.includes(it))
           const d = it.data as any;
           return d.status === "PENDENTE" || !d.resultado;
         })
