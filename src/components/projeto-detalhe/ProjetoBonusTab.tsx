@@ -431,16 +431,6 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
       <div className="flex flex-col gap-4">
         <StandardTimeFilter
           period={tabFilters.period}
-          customDateRange={tabFilters.customDateRange}
-          onPeriodChange={tabFilters.setPeriod}
-          onCustomDateRangeChange={tabFilters.setCustomDateRange}
-          onClear={tabFilters.clearFilters}
-        />
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <StandardTimeFilter
-          period={tabFilters.period}
           onPeriodChange={tabFilters.setPeriod}
           customDateRange={tabFilters.customDateRange}
           onCustomDateRangeChange={tabFilters.setCustomDateRange}
