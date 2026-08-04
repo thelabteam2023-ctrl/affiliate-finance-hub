@@ -124,7 +124,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
 
   // Query para buscar dados de apostas por bookmaker
   const { data: apostasStats = {} } = useQuery({
-    queryKey: ["bonus-casas-apostas-stats", projetoId],
+    queryKey: ["bonus-casas-apostas-stats", projetoId, tabFilters.dateRange],
     queryFn: async () => {
       // Busca todas as apostas do projeto agrupadas por bookmaker
       const data = await fetchAllPaginated(() =>
@@ -133,6 +133,8 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           .select("bookmaker_id, stake, lucro_prejuizo, status")
           .eq("projeto_id", projetoId)
           .neq("status", "CANCELADA")
+          .gte("data_aposta", tabFilters.dateRange.start?.toISOString())
+          .lte("data_aposta", tabFilters.dateRange.end?.toISOString())
       );
 
       // Agrupa por bookmaker_id
