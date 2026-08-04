@@ -715,13 +715,13 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
     </Tooltip>
   );
 
-  // Period filter component using StandardTimeFilter
+  // Period filter component using tabFilters
   const periodFilterComponent = (
     <StandardTimeFilter
-      period={internalPeriod}
-      onPeriodChange={setInternalPeriod}
-      customDateRange={internalDateRange}
-      onCustomDateRangeChange={setInternalDateRange}
+      period={tabFilters.period}
+      onPeriodChange={tabFilters.setPeriod}
+      customDateRange={tabFilters.customDateRange}
+      onCustomDateRangeChange={tabFilters.setCustomDateRange}
       projetoId={projetoId}
     />
   );
