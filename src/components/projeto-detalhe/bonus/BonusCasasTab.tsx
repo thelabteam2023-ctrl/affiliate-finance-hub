@@ -328,8 +328,8 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           <StandardTimeFilter
             period={tabFilters.period}
             onPeriodChange={tabFilters.setPeriod}
-            customRange={tabFilters.customRange}
-            onCustomRangeChange={tabFilters.setCustomRange}
+            customDateRange={tabFilters.customDateRange}
+            onCustomDateRangeChange={tabFilters.setCustomDateRange}
           />
           <div className="relative max-w-sm flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
