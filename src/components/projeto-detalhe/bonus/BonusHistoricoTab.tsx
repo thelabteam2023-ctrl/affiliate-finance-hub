@@ -208,15 +208,25 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Time Filter Padronizado */}
-      <div className="flex justify-end">
-        <StandardTimeFilter
-          period={tabFilters.period}
-          onPeriodChange={tabFilters.setPeriod}
-          customDateRange={tabFilters.customDateRange}
-          onCustomDateRangeChange={tabFilters.setCustomDateRange}
-          projetoId={projetoId}
-        />
+      {/* Search and Filters */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-4 flex-1">
+          <StandardTimeFilter
+            period={tabFilters.period}
+            onPeriodChange={tabFilters.setPeriod}
+            customDateRange={tabFilters.customDateRange}
+            onCustomDateRangeChange={tabFilters.setCustomDateRange}
+          />
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por casa, bônus ou parceiro..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
