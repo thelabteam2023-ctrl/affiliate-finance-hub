@@ -87,7 +87,14 @@ interface BookmakerInBonusMode {
 }
 
 export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
-  const { bonuses, finalizeBonus, saving, getBookmakersWithActiveBonus, getBookmakersWithAnyBonus, getRolloverPercentage } = useProjectBonuses({ projectId: projetoId });
+  // Filtros padronizados para a aba Por Casa (Bônus)
+  const tabFilters = useTabFilters({
+    tabId: "bonus-por-casa",
+    projetoId,
+    defaultPeriod: "ano",
+    persist: true,
+  });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   
@@ -304,6 +311,17 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
 
   return (
     <div className="space-y-4">
+      {/* Time Filter Padronizado */}
+      <div className="flex justify-end">
+        <StandardTimeFilter
+          period={tabFilters.period}
+          onPeriodChange={tabFilters.setPeriod}
+          customDateRange={tabFilters.customDateRange}
+          onCustomDateRangeChange={tabFilters.setCustomDateRange}
+          projetoId={projetoId}
+        />
+      </div>
+
       {/* Search and View Toggle */}
       <div className="flex items-center justify-between gap-4">
         <div className="relative max-w-sm flex-1">

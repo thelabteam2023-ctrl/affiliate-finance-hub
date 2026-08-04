@@ -49,6 +49,14 @@ type HistoricoEntry =
   | { type: "ajuste"; data: AjustePostLimitacaoEntry; sortDate: string };
 
 export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
+  // Filtros padronizados para a aba Histórico (Bônus)
+  const tabFilters = useTabFilters({
+    tabId: "bonus-historico",
+    projetoId,
+    defaultPeriod: "ano",
+    persist: true,
+  });
+
   const { bonuses, updateFinalizeReason } = useProjectBonuses({ projectId: projetoId });
   const [searchTerm, setSearchTerm] = useState("");
   const [reasonFilter, setReasonFilter] = useState<string>("all");
@@ -198,6 +206,17 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
 
   return (
     <div className="space-y-4">
+      {/* Time Filter Padronizado */}
+      <div className="flex justify-end">
+        <StandardTimeFilter
+          period={tabFilters.period}
+          onPeriodChange={tabFilters.setPeriod}
+          customDateRange={tabFilters.customDateRange}
+          onCustomDateRangeChange={tabFilters.setCustomDateRange}
+          projetoId={projetoId}
+        />
+      </div>
+
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4">
         <div className="relative flex-1 max-w-sm">
