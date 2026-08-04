@@ -134,7 +134,7 @@ export function getDateRangeFromPeriod(
 export function useTabFilters({
   tabId,
   projetoId,
-  defaultPeriod = "mes_atual",
+  defaultPeriod = "ano",
   persist = true,
 }: UseTabFiltersOptions) {
   const storageKey = `tab-filters-${projetoId}-${tabId}`;
