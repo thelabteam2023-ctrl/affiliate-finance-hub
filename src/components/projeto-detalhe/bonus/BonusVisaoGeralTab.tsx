@@ -14,7 +14,7 @@ import { useProjectBonusAnalytics } from "@/hooks/useProjectBonusAnalytics";
 import { Building2, Coins, TrendingUp, TrendingDown, AlertTriangle, Timer, Receipt, BarChart3, Gift } from "lucide-react";
 import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { FinancialSummaryCompact } from "../FinancialSummaryCompact";
-import { differenceInDays, parseISO, format, subDays, isWithinInterval, startOfDay } from "date-fns";
+import { differenceInDays, parseISO, format, subDays, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
 import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
