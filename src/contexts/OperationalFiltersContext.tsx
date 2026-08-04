@@ -123,7 +123,10 @@ export function OperationalFiltersProvider({ children, projetoId }: OperationalF
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.period) setPeriodState(parsed.period);
+        if (parsed.period) {
+          const loadedPeriod = parsed.period === "mes_atual" ? "ano" : parsed.period;
+          setPeriodState(loadedPeriod);
+        }
         if (parsed.bookmakerIds) setBookmakerIdsState(parsed.bookmakerIds);
         if (parsed.parceiroIds) setParceiroIdsState(parsed.parceiroIds);
         // Não restaurar customDateRange e estrategias para evitar estados inválidos
