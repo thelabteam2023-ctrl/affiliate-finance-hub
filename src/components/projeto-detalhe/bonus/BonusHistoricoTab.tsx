@@ -88,7 +88,9 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
         .select("id, valor, bookmaker_id, moeda, metadata, created_at")
         .in("bookmaker_id", bookmakerIds)
         .eq("tipo_evento", "AJUSTE")
-        .not("metadata", "is", null);
+        .not("metadata", "is", null)
+        .gte("created_at", tabFilters.dateRange.start?.toISOString())
+        .lte("created_at", tabFilters.dateRange.end?.toISOString());
 
       if (error) throw error;
 
