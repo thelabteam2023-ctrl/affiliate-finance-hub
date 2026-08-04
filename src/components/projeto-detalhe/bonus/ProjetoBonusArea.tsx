@@ -91,13 +91,15 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger, actionsSlot, onDat
     }
   };
   
-  // Standard time filter state
-  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("ano");
-  const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
+  // Standard time filter state - Unificado para o módulo de bônus
+  const tabFilters = useTabFilters({
+    tabId: "bonus-area",
+    projetoId,
+    defaultPeriod: "ano",
+    persist: true,
+  });
 
-  const dateRange = useMemo(() => {
-    return getDateRangeFromPeriod(internalPeriod, internalDateRange);
-  }, [internalPeriod, internalDateRange]);
+  const dateRange = tabFilters.dateRange;
 
   const isSingleDayPeriod = internalPeriod === "1dia";
 
