@@ -38,7 +38,7 @@ export type { DateRange };
  * REGRA-MÃE: Seleção de período ≠ seleção de data única
  * O calendário só aplica filtro quando o período estiver COMPLETO.
  */
-export type StandardPeriodFilter = "1dia" | "7dias" | "mes_atual" | "mes_anterior" | "ano" | "custom";
+export type StandardPeriodFilter = "1dia" | "7dias" | "semana_atual" | "mes_atual" | "mes_anterior" | "ano" | "total" | "custom";
 export type NavigationMode = "compact" | "gestao";
 
 interface DateRangeResult {
@@ -82,9 +82,16 @@ export function getDateRangeFromPeriod(
       return { start: today, end: endOfDay(now) };
     
     case "7dias":
-      // 7 dias incluindo hoje
       return { start: subDays(today, 6), end: endOfDay(now) };
     
+    case "semana_atual":
+      // Início da semana (segunda-feira no ptBR ou domingo conforme locale) até hoje
+      const startOfWeek = new Date(now);
+      const day = startOfWeek.getDay();
+      const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Ajuste para Segunda-feira
+      startOfWeek.setDate(diff);
+      return { start: startOfDay(startOfWeek), end: endOfDay(now) };
+
     case "mes_atual":
       return { start: startOfMonth(now), end: endOfDay(now) };
     
@@ -97,6 +104,9 @@ export function getDateRangeFromPeriod(
     
     case "ano":
       return { start: startOfYear(now), end: endOfDay(now) };
+
+    case "total":
+      return null; // A RPC trata nulo como "todo o período"
     
     case "custom":
       if (customRange?.from) {

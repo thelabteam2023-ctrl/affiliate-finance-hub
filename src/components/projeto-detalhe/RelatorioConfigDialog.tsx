@@ -192,14 +192,8 @@ export function RelatorioConfigDialog({
                       <SelectValue placeholder="Selecione o período" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="hoje">Hoje</SelectItem>
-                      <SelectItem value="ontem">Ontem</SelectItem>
-                      <SelectItem value="7dias">Últimos 7 dias</SelectItem>
-                      <SelectItem value="30dias">Últimos 30 dias</SelectItem>
+                      <SelectItem value="semana_atual">Semana Atual</SelectItem>
                       <SelectItem value="mes_atual">Mês Atual</SelectItem>
-                      <SelectItem value="mes_anterior">Mês Anterior</SelectItem>
-                      <SelectItem value="trimestre">Trimestre</SelectItem>
-                      <SelectItem value="ano">Este Ano</SelectItem>
                       <SelectItem value="total">Todo o Período</SelectItem>
                       <SelectItem value="custom">Personalizado</SelectItem>
                     </SelectContent>
