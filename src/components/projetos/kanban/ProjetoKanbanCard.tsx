@@ -197,7 +197,17 @@ export function ProjetoKanbanCard({
           {projeto.data_inicio && (
             <div className="flex items-center gap-1.5">
               <Calendar className="h-3 w-3 flex-shrink-0 text-muted-foreground/60" />
-              <span>Início: {format(new Date(projeto.data_inicio), "dd/MM/yyyy", { locale: ptBR })}</span>
+              <span>
+                Início: {(() => {
+                  try {
+                    const date = new Date(projeto.data_inicio);
+                    if (isNaN(date.getTime())) return projeto.data_inicio;
+                    return format(date, "dd/MM/yyyy", { locale: ptBR });
+                  } catch (e) {
+                    return projeto.data_inicio;
+                  }
+                })()}
+              </span>
             </div>
           )}
           <div className="flex items-center gap-1.5">

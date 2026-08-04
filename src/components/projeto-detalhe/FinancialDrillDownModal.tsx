@@ -461,7 +461,13 @@ export function FinancialDrillDownModal({
     rows.sort((a, b) => {
       const mul = sortDir === "asc" ? 1 : -1;
       if (sortField === "data") {
-        return mul * (new Date(a.data).getTime() - new Date(b.data).getTime());
+        try {
+          const dateA = new Date(a.data).getTime();
+          const dateB = new Date(b.data).getTime();
+          return mul * (dateA - dateB);
+        } catch (e) {
+          return 0;
+        }
       }
       return mul * (Math.abs(a.valorConsolidado) - Math.abs(b.valorConsolidado));
     });
