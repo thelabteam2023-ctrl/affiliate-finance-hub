@@ -566,10 +566,15 @@ function deriveVolumeTemporalStats(
   const diasComOperacao = datasSet.size;
   
   // diasAtivos = (última - primeira) + 1
-  const start = new Date(minDate + 'T00:00:00');
-  const end = new Date(maxDate + 'T00:00:00');
-  const diffMs = end.getTime() - start.getTime();
-  const diasAtivos = Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)) + 1);
+  let diasAtivos = 1;
+  try {
+    const start = new Date(minDate + 'T00:00:00');
+    const end = new Date(maxDate + 'T00:00:00');
+    const diffMs = end.getTime() - start.getTime();
+    diasAtivos = Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)) + 1);
+  } catch (e) {
+    console.warn("[useKpiBreakdowns] Error calculating diasAtivos:", e);
+  }
 
   const volumeMedioDiario = diasAtivos > 0 ? volumeTotal / diasAtivos : 0;
   const mediaApostasPorDia = diasAtivos > 0 ? apostas.length / diasAtivos : 0;

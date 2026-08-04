@@ -54,10 +54,15 @@ const COLORS = {
  * Formata um valor como moeda brasileira
  */
 function formatAsCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value);
+  try {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  } catch (error) {
+    console.error("[financial-display] Error in formatAsCurrency:", error);
+    return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
 }
 
 /**
