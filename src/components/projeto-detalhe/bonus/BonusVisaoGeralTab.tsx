@@ -499,6 +499,19 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
 
   // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
 
+  if ((loading && !loadedOnceRef.current) || currencyLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
 
