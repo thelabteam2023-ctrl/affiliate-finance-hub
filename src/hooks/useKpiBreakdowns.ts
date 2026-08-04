@@ -568,10 +568,13 @@ function deriveVolumeTemporalStats(
   // diasAtivos = (última - primeira) + 1
   let diasAtivos = 1;
   try {
-    const start = new Date(minDate + 'T00:00:00');
-    const end = new Date(maxDate + 'T00:00:00');
-    const diffMs = end.getTime() - start.getTime();
-    diasAtivos = Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)) + 1);
+    const startDate = minDate ? new Date(minDate + 'T00:00:00') : null;
+    const endDate = maxDate ? new Date(maxDate + 'T00:00:00') : null;
+    
+    if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+      const diffMs = endDate.getTime() - startDate.getTime();
+      diasAtivos = Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)) + 1);
+    }
   } catch (e) {
     console.warn("[useKpiBreakdowns] Error calculating diasAtivos:", e);
   }
