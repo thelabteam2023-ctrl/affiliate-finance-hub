@@ -188,7 +188,7 @@ export function ProjetoDashboardTab({ projetoId, refreshTrigger = 0 }: ProjetoDa
   const [selectedEsporte, setSelectedEsporte] = useState<string>("");
   
   // Filtros de período
-  const [period, setPeriod] = useState<StandardPeriodFilter>("mes_atual");
+  const [period, setPeriod] = useState<StandardPeriodFilter>("ano");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   
   // Hook de formatação de moeda do projeto

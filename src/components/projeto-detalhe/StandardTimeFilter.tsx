@@ -66,7 +66,6 @@ const PERIOD_OPTIONS: { value: StandardPeriodFilter; label: string }[] = [
   { value: "1dia", label: "1 dia" },
   { value: "7dias", label: "7 dias" },
   { value: "mes_atual", label: "Mês atual" },
-  { value: "mes_anterior", label: "Mês anterior" },
   { value: "ano", label: "Ano" },
 ];
 
