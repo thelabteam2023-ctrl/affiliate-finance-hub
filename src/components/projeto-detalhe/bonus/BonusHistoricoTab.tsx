@@ -59,7 +59,10 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
     persist: true,
   });
 
-  const { bonuses, updateFinalizeReason } = useProjectBonuses({ projectId: projetoId });
+  const { bonuses, updateFinalizeReason } = useProjectBonuses({ 
+    projectId: projetoId,
+    dateRange: tabFilters.dateRange 
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [reasonFilter, setReasonFilter] = useState<string>("all");
   const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
