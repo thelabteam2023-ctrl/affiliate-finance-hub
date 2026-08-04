@@ -67,7 +67,7 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
 
   // Fetch ajustes pós-limitação
   const { data: ajustesData = [] } = useQuery({
-    queryKey: ["bonus-historico-ajustes", projetoId],
+    queryKey: ["bonus-historico-ajustes", projetoId, tabFilters.dateRange],
     queryFn: async () => {
       const { data: bookmakers } = await supabase
         .from("bookmakers")
