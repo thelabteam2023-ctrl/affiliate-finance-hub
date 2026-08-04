@@ -979,7 +979,14 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
     ...surebets.map(sb => ({ tipo: "surebet" as const, data: sb, data_aposta: sb.data_operacao })),
   ], [apostas, apostasMultiplas, surebets]);
   const totalAbertasCount = useMemo(() => allUnificadas.filter(isItemPendenteFn).length, [allUnificadas]);
-  const totalHistoricoCount = useMemo(() => allUnificadas.filter(i => !isItemPendenteFn(i)).length, [allUnificadas]);
+  const totalHistoricoCount = useMemo(() => {
+    const historicoUnificado = allUnificadas.filter(i => !isItemPendenteFn(i));
+    if (!dateRange) return historicoUnificado.length;
+    return historicoUnificado.filter(item => {
+      const itemDate = parseLocalDateTime(item.data_aposta);
+      return itemDate >= dateRange.start && itemDate <= dateRange.end;
+    }).length;
+  }, [allUnificadas, dateRange]);
 
   // Suspicious date count
   const suspiciousCount = useMemo(() => {
