@@ -1012,7 +1012,7 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
     if (!loading && apostasAbertas.length === 0 && apostasHistorico.length > 0 && subTab === 'abertas') {
       setSubTab('historico');
     }
-  }, [loading, apostasAbertas.length, apostasHistorico.length]);
+  }, [loading, apostasAbertas.length, apostasHistorico.length, subTab]);
 
   const formatCurrencyWithMoeda = (value: number, moeda: string = 'BRL') => {
     const symbols: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£' };
