@@ -255,7 +255,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   const tabFilters = useTabFilters({
     tabId: "duplogreen",
     projetoId,
-    defaultPeriod: "mes_atual",
+    defaultPeriod: "ano",
     persist: true,
   });
   

@@ -108,8 +108,8 @@ interface OperationalFiltersProviderProps {
 }
 
 export function OperationalFiltersProvider({ children, projetoId }: OperationalFiltersProviderProps) {
-  // Estado base - Mês atual é o padrão contábil
-  const [period, setPeriodState] = useState<StandardPeriodFilter>("mes_atual");
+  // Estado base - Ano é o novo padrão do sistema
+  const [period, setPeriodState] = useState<StandardPeriodFilter>("ano");
   const [customDateRange, setCustomDateRangeState] = useState<DateRange | undefined>(undefined);
   const [bookmakerIds, setBookmakerIdsState] = useState<string[]>([]);
   const [parceiroIds, setParceiroIdsState] = useState<string[]>([]);
@@ -202,7 +202,7 @@ export function OperationalFiltersProvider({ children, projetoId }: OperationalF
   }, []);
 
   const clearFilters = useCallback(() => {
-    setPeriodState("mes_atual");
+    setPeriodState("ano");
     setCustomDateRangeState(undefined);
     setBookmakerIdsState([]);
     setParceiroIdsState([]);

@@ -117,7 +117,7 @@ export function getDateRangeFromPeriod(
 }
 
 /**
- * Hook de filtros independentes por aba.
+ * hook de filtros independentes por aba. Padrão inicial do sistema é "ano".
  * 
  * IMPORTANTE: Este hook cria estado LOCAL para cada aba.
  * Filtros de uma aba NÃO afetam outras abas.
@@ -134,7 +134,7 @@ export function getDateRangeFromPeriod(
 export function useTabFilters({
   tabId,
   projetoId,
-  defaultPeriod = "mes_atual",
+  defaultPeriod = "ano",
   persist = true,
 }: UseTabFiltersOptions) {
   const storageKey = `tab-filters-${projetoId}-${tabId}`;
@@ -259,7 +259,7 @@ export function useTabFilters({
   }, []);
 
   const clearFilters = useCallback(() => {
-    setPeriodState(defaultPeriod);
+    setPeriodState("ano");
     setCustomDateRangeState(undefined);
     setBookmakerIdsState([]);
     setParceiroIdsState([]);

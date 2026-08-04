@@ -293,7 +293,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   const tabFilters = useTabFilters({
     tabId: "surebet",
     projetoId,
-    defaultPeriod: "mes_atual",
+    defaultPeriod: "ano",
     persist: true,
   });
 

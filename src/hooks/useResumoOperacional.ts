@@ -17,6 +17,7 @@ export type ResumoPeriodoTipo =
   | "janela_temporal"
   | "mes_atual"
   | "mes_anterior"
+  | "ano"
   | "ano_atual"
   | "todo_historico"
   | "customizado";

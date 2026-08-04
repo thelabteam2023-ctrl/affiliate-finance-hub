@@ -61,6 +61,7 @@ const PERIOD_OPTIONS: { value: StandardPeriodFilter; label: string }[] = [
   { value: "7dias", label: "7 dias" },
   { value: "mes_atual", label: "Mês atual" },
   { value: "mes_anterior", label: "Mês anterior" },
+  { value: "ano", label: "Ano" },
 ];
 
 const ESTRATEGIA_OPTIONS: { value: EstrategiaFilter; label: string }[] = [
@@ -248,7 +249,7 @@ export function OperationalFiltersBar({
                   className="h-7 text-xs"
                   onClick={() => {
                     filters.setCustomDateRange(undefined);
-                    filters.setPeriod("mes_atual");
+                    filters.setPeriod("ano");
                   }}
                 >
                   Limpar

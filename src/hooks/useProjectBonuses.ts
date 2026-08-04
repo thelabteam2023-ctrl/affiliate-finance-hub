@@ -107,6 +107,7 @@ export interface BonusSummary {
 interface UseProjectBonusesProps {
   projectId: string;
   bookmakerId?: string; // Optional: filter by specific bookmaker
+  dateRange?: { start?: Date; end?: Date }; // Optional: filter by credited date range
 }
 
 // Query keys for bonus-related queries
@@ -167,7 +168,7 @@ export function useInvalidateBonusQueries() {
   }, [queryClient]);
 }
 
-async function fetchBonusesFromDb(projectId: string, bookmakerId?: string): Promise<ProjectBonus[]> {
+async function fetchBonusesFromDb(projectId: string, bookmakerId?: string, dateRange?: { start?: Date; end?: Date }): Promise<ProjectBonus[]> {
   let query = supabase
     .from("project_bookmaker_link_bonuses")
     .select(`
@@ -186,6 +187,13 @@ async function fetchBonusesFromDb(projectId: string, bookmakerId?: string): Prom
 
   if (bookmakerId) {
     query = query.eq("bookmaker_id", bookmakerId);
+  }
+
+  if (dateRange?.start) {
+    query = query.gte("credited_at", dateRange.start.toISOString());
+  }
+  if (dateRange?.end) {
+    query = query.lte("credited_at", dateRange.end.toISOString());
   }
 
   const { data, error } = await query;
@@ -246,18 +254,18 @@ async function fetchBonusesFromDb(projectId: string, bookmakerId?: string): Prom
   }));
 }
 
-export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesProps) {
+export function useProjectBonuses({ projectId, bookmakerId, dateRange }: UseProjectBonusesProps) {
   const queryClient = useQueryClient();
   const invalidateBonusQueries = useInvalidateBonusQueries();
   const { workspaceId } = useWorkspace();
 
   const queryKey = bookmakerId 
     ? bonusQueryKeys.bookmaker(projectId, bookmakerId)
-    : bonusQueryKeys.project(projectId);
+    : ["bonus", "project", projectId, dateRange?.start?.toISOString(), dateRange?.end?.toISOString()] as const;
 
   const { data: bonuses = [], isLoading: loading, refetch } = useQuery({
     queryKey,
-    queryFn: () => fetchBonusesFromDb(projectId, bookmakerId),
+    queryFn: () => fetchBonusesFromDb(projectId, bookmakerId, dateRange),
     enabled: !!projectId,
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,

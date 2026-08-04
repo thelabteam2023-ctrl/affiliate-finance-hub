@@ -264,7 +264,7 @@ export function ProjetoValueBetTab({
   const tabFilters = useTabFilters({
     tabId: "valuebet",
     projetoId,
-    defaultPeriod: "mes_atual",
+    defaultPeriod: "ano",
     persist: true,
   });
   

@@ -68,6 +68,7 @@ const formatCivilDate = (dateStr: string): string => {
 import { useProjectBonuses, ProjectBonus, BonusStatus, BonusFormData } from "@/hooks/useProjectBonuses";
 import { BonusDialog } from "./BonusDialog";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
+import { useTabFilters } from "@/hooks/useTabFilters";
 import { useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { FinancialMetricsPopover } from "./FinancialMetricsPopover";
 
@@ -151,7 +152,26 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
     createBonus,
     updateBonus,
     deleteBonus,
-  } = useProjectBonuses({ projectId: projetoId });
+  } = useProjectBonuses({ 
+    projectId: projetoId,
+    dateRange: undefined // We'll move the filter logic below declaration
+  });
+
+  // === FILTROS LOCAIS DA ABA BÔNUS ===
+  const tabFilters = useTabFilters({
+    tabId: "bonus",
+    projetoId,
+    defaultPeriod: "ano",
+    persist: true,
+  });
+
+  // Now we can use tabFilters safely after its declaration
+  const { bonuses: filteredBonusesList, loading: loadingFiltered } = useProjectBonuses({
+    projectId: projetoId,
+    dateRange: tabFilters.dateRange
+  });
+
+  const dateRange = tabFilters.dateRange;
 
   const activeBonusBookmakerIds = useMemo(() => {
     return new Set(
@@ -266,7 +286,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
 
   const summary = getSummary();
 
-  const filteredBonuses = bonuses.filter((b) => {
+  const filteredBonuses = (filteredBonusesList || bonuses).filter((b) => {
     // Search filter
     const matchSearch =
       b.bookmaker_nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -305,7 +325,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
     .sort((a, b) => b.total - a.total)
     .slice(0, 5);
 
-  if (loading || loadingBookmakers) {
+  if (loading || loadingBookmakers || loadingFiltered) {
     return (
       <div className="space-y-4">
         <div className="grid gap-4 md:grid-cols-4">
@@ -406,6 +426,16 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
           },
         ]}
       />
+
+      {/* Barra de Filtros de Tempo */}
+      <div className="flex flex-col gap-4">
+        <StandardTimeFilter
+          period={tabFilters.period}
+          onPeriodChange={tabFilters.setPeriod}
+          customDateRange={tabFilters.customDateRange}
+          onCustomDateRangeChange={tabFilters.setCustomDateRange}
+        />
+      </div>
 
       {/* Top Bookmakers (optional) */}
       {topBookmakersList.length > 0 && (
