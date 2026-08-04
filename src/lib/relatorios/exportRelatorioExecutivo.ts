@@ -154,7 +154,9 @@ export async function exportRelatorioExecutivo({
         ["Total Depositado", formatCurrency(resultado.totalDepositos), "Entrada"],
         ["Total Sacado", formatCurrency(resultado.totalSaques), "Realização"],
         ["Capital Operável (Casas)", formatCurrency(resultado.saldoBookmakers), "Em Giro"],
+        ["Saques Pendentes", formatCurrency(resultado.saquesPendentes), "Em Trânsito"],
         ["Saldo Irrecuperável", formatCurrency(resultado.saldoIrrecuperavel), "Risco"],
+
       ],
       theme: "striped",
       headStyles: { fillColor: colors.primary, textColor: 255 },

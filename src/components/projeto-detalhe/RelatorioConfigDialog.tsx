@@ -383,6 +383,16 @@ export function RelatorioConfigDialog({
                               <span className="text-slate-600">Capital Operável</span>
                               <span className="font-bold">{formatCurrency(resultado?.saldoBookmakers || 0)}</span>
                             </div>
+                            {resultado?.saquesPendentes && resultado.saquesPendentes > 0.01 && (
+                              <div className="flex justify-between items-center text-[9px] border-b border-slate-50 pb-1 mt-1 text-amber-600 font-medium">
+                                <span className="flex items-center gap-1">
+                                  Saques Pendentes (Em Trânsito)
+                                </span>
+                                <span className="font-bold">{formatCurrency(resultado.saquesPendentes)}</span>
+                              </div>
+                            )}
+
+                            </div>
                           </div>
                         ) : (
                           <div className="h-16 w-full bg-slate-50 rounded border border-dashed border-slate-200 flex items-center justify-center text-[8px] text-slate-400 italic">
