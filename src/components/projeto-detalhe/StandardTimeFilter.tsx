@@ -276,7 +276,7 @@ export function StandardTimeFilter({
         type="single"
         value={period === "custom" || activeCycleId !== "none" ? undefined : period}
         onValueChange={handlePeriodChange}
-        className="grid w-full grid-cols-5 bg-muted/50 p-0.5 rounded-lg sm:flex sm:w-auto"
+        className="grid w-full grid-cols-4 bg-muted/50 p-0.5 rounded-lg sm:flex sm:w-auto"
       >
         {PERIOD_OPTIONS.map((option) => (
           <ToggleGroupItem

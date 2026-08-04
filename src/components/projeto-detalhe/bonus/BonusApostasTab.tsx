@@ -1,5 +1,7 @@
 import { openSurebetWindow } from "@/lib/windowHelper";
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
+import { useTabFilters } from "@/hooks/useTabFilters";
+import { StandardTimeFilter } from "../StandardTimeFilter";
 import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -190,7 +192,7 @@ type ApostaUnificada = {
   data_aposta: string;
 };
 
-export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApostasTabProps) {
+export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProps) {
   const queryClient = useQueryClient();
   const { getBookmakersWithActiveBonus, bonuses } = useProjectBonuses({ projectId: projetoId });
    const { convertToConsolidation, moedaConsolidacao, formatCurrency } = useProjetoCurrency(projetoId);
@@ -243,8 +245,16 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   const [reasonFilter, setReasonFilter] = useState<string>("all");
   const [suspiciousActive, setSuspiciousActive] = useState(false);
   
-  // Filtros dimensionais independentes para o histórico
+  // Filtros LOCAIS da aba Bônus/Apostas
+  const tabFilters = useTabFilters({
+    tabId: "bonus-apostas",
+    projetoId,
+    defaultPeriod: "ano",
+    persist: true,
+  });
+
   const { dimensionalFilter, setDimensionalFilter } = useHistoryDimensionalFilter();
+  const dateRange = tabFilters.dateRange;
 
   // Debug trace ID por instância da aba (recriado por projetoId/subTab)
   const traceIdRef = useRef<string>(bonusDebug.newTraceId());
@@ -252,10 +262,6 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     traceIdRef.current = bonusDebug.newTraceId();
     bonusDebug.stage("TAB.mount", traceIdRef.current, projetoId, {
       projetoId,
-      hasDateRange: !!dateRange,
-      dateRange: dateRange
-        ? { start: dateRange.start.toISOString(), end: dateRange.end.toISOString() }
-        : null,
     });
   }, [projetoId]);
   useEffect(() => {
@@ -915,7 +921,10 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     });
   }
 
-  const apostasHistorico = apostasHistoricoBase.filter(item => {
+  const apostasHistorico = (dateRange ? apostasUnificadasRaw.filter(item => {
+    const itemDate = parseLocalDateTime(item.data_aposta);
+    return itemDate >= dateRange.start && itemDate <= dateRange.end;
+  }) : apostasUnificadasRaw).filter(item => {
     if (item.tipo === "simples") {
       const a = item.data as Aposta;
       return a.status !== "PENDENTE" && a.resultado;
@@ -933,14 +942,11 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
 
   if (bonusDebug.enabled) {
     bonusDebug.filter("FILTER.subTab", traceIdRef.current, projetoId, {
-      inputCount: apostasHistoricoBase.length,
+      inputCount: apostasUnificadasRaw.length,
       outputCount: apostasHistorico.length,
       rule: "status !== 'PENDENTE' && !!resultado",
-      droppedSamples: apostasHistoricoBase
-        .filter((it) => {
-          const d = it.data as any;
-          return d.status === "PENDENTE" || !d.resultado;
-        })
+      droppedSamples: apostasUnificadasRaw
+        .filter(it => !apostasHistorico.includes(it))
         .slice(0, 5)
         .map((it) => ({
           tipo: it.tipo,
@@ -973,7 +979,14 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     ...surebets.map(sb => ({ tipo: "surebet" as const, data: sb, data_aposta: sb.data_operacao })),
   ], [apostas, apostasMultiplas, surebets]);
   const totalAbertasCount = useMemo(() => allUnificadas.filter(isItemPendenteFn).length, [allUnificadas]);
-  const totalHistoricoCount = useMemo(() => allUnificadas.filter(i => !isItemPendenteFn(i)).length, [allUnificadas]);
+  const totalHistoricoCount = useMemo(() => {
+    const historicoUnificado = allUnificadas.filter(i => !isItemPendenteFn(i));
+    if (!dateRange) return historicoUnificado.length;
+    return historicoUnificado.filter(item => {
+      const itemDate = parseLocalDateTime(item.data_aposta);
+      return itemDate >= dateRange.start && itemDate <= dateRange.end;
+    }).length;
+  }, [allUnificadas, dateRange]);
 
   // Suspicious date count
   const suspiciousCount = useMemo(() => {
@@ -999,7 +1012,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     if (!loading && apostasAbertas.length === 0 && apostasHistorico.length > 0 && subTab === 'abertas') {
       setSubTab('historico');
     }
-  }, [loading, apostasAbertas.length, apostasHistorico.length]);
+  }, [loading, apostasAbertas.length, apostasHistorico.length, subTab]);
 
   const formatCurrencyWithMoeda = (value: number, moeda: string = 'BRL') => {
     const symbols: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£' };
@@ -1536,7 +1549,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               onSubTabChange={setSubTab}
               openCount={apostasAbertas.length}
               totalOpenCount={totalAbertasCount}
-              historyCount={apostasHistorico.length}
+              historyCount={apostasHistoricoFiltered.length}
               totalHistoryCount={totalHistoricoCount}
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}

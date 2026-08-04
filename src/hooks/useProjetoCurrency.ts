@@ -63,7 +63,8 @@ export interface ProjectCurrencyReturn {
   projeto: any;
   /** Cotação oficial USD (FastForex). Útil como dependency key para queries. */
   cotacaoOficialUSD: number;
-
+  /** Indica se a cotação de trabalho (fonte TRABALHO) já foi resolvida com sucesso */
+  isEffectiveRateLoaded: boolean;
 }
 
 /**
@@ -376,7 +377,7 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
     projeto: projetoConfig,
     /** Cotação oficial USD (FastForex). Útil como dependency key para queries. */
     cotacaoOficialUSD: cotacaoUSD,
-
+    isEffectiveRateLoaded: !loadingConfig && !loadingCotacao && !!cotacaoUSD,
   };
 }
 

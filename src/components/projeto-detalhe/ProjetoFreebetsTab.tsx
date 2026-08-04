@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useTabFilters } from "@/hooks/useTabFilters";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
 import { useNovaEntradaEdit } from "@/components/projeto-detalhe/hooks/useNovaEntradaEdit";
@@ -88,9 +89,16 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   const [searchTerm, setSearchTerm] = useState("");
   const [casaFilter, setCasaFilter] = useState<string>("todas");
   
-  // Internal period filter (local to this tab)
-  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("ano");
-  const [internalDateRange, setInternalDateRange] = useState<DateRange | undefined>();
+  // Filtros LOCAIS da aba Freebets
+  const tabFilters = useTabFilters({
+    tabId: "freebets",
+    projetoId,
+    defaultPeriod: "ano",
+    persist: true,
+  });
+
+  const internalPeriod = tabFilters.period;
+  const internalDateRange = tabFilters.customDateRange;
   
   // Navigation mode (sidebar vs tabs)
   const [navMode, setNavMode] = useState<NavigationMode>(() => {
@@ -707,13 +715,13 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
     </Tooltip>
   );
 
-  // Period filter component using StandardTimeFilter
+  // Period filter component using tabFilters
   const periodFilterComponent = (
     <StandardTimeFilter
-      period={internalPeriod}
-      onPeriodChange={setInternalPeriod}
-      customDateRange={internalDateRange}
-      onCustomDateRangeChange={setInternalDateRange}
+      period={tabFilters.period}
+      onPeriodChange={tabFilters.setPeriod}
+      customDateRange={tabFilters.customDateRange}
+      onCustomDateRangeChange={tabFilters.setCustomDateRange}
       projetoId={projetoId}
     />
   );

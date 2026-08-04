@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback, Fragment } from "react";
+import { useState, useEffect, useMemo, useCallback, Fragment, useRef } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
@@ -13,7 +14,7 @@ import { useProjectBonusAnalytics } from "@/hooks/useProjectBonusAnalytics";
 import { Building2, Coins, TrendingUp, TrendingDown, AlertTriangle, Timer, Receipt, BarChart3, Gift } from "lucide-react";
 import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { FinancialSummaryCompact } from "../FinancialSummaryCompact";
-import { differenceInDays, parseISO, format, subDays, isWithinInterval, startOfDay } from "date-fns";
+import { differenceInDays, parseISO, format, subDays, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
 import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
@@ -59,13 +60,14 @@ interface BonusResultEntry {
 export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false, periodFilter, actionsSlot }: BonusVisaoGeralTabProps) {
   const queryClient = useQueryClient();
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
-  const { formatCurrency, convertToConsolidation: convertToConsolidationTrabalho, convertToConsolidationOficial, isLoading: currencyLoading, moedaConsolidacao, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
+  const { formatCurrency, convertToConsolidation: convertToConsolidationTrabalho, convertToConsolidationOficial, isLoading: currencyLoading, moedaConsolidacao, cotacaoOficialUSD, isEffectiveRateLoaded } = useProjetoCurrency(projetoId);
   // CORREÇÃO: Usar cotação oficial para KPIs e gráficos analíticos (consistência com Visão Geral)
   // SNAPSHOT: Volume usa Cotação de Trabalho (congelada no registro), não PTAX live
   const convertToConsolidation = convertToConsolidationTrabalho;
   const { summary: analyticsSummary, stats: analyticsStats } = useProjectBonusAnalytics(projetoId, convertToConsolidation);
   const [bookmakersWithBonus, setBookmakersWithBonus] = useState<BookmakerWithBonus[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadedOnceRef = useRef(false);
 
   const summary = getSummary();
 
@@ -222,7 +224,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     }
 
     try {
-      setLoading(true);
+      if (!loadedOnceRef.current) setLoading(true);
       const { data, error } = await supabase
         .from("bookmakers")
         .select(`
@@ -274,6 +276,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       console.error("Error fetching bookmakers:", error);
     } finally {
       setLoading(false);
+      loadedOnceRef.current = true;
     }
   };
 
@@ -383,9 +386,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     
     if (dateRange?.start || dateRange?.end) {
       eligibleBonuses = eligibleBonuses.filter(b => {
-        if (!b.credited_at) return true; // Sem data, incluir por segurança
-        // CORREÇÃO: Usar extractCivilDateKey para credited_at (data civil 03:00 UTC = meia-noite BRT)
-        // e format() local para dateRange (evita vazamento UTC→BRT na fronteira de mês)
+        if (!b.credited_at) return true;
         const creditDateStr = extractCivilDateKey(b.credited_at);
         if (dateRange.start) {
           const startStr = format(dateRange.start, 'yyyy-MM-dd');
@@ -397,6 +398,9 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         }
         return true;
       });
+    } else {
+      // Se não houver dateRange (Mês Atual ou Ano não carregados ainda), não filtrar por segurança
+      // mas como defaultPeriod é "ano", isso raramente ocorrerá.
     }
     
     // SNAPSHOT-FIRST: Usar valor_consolidado_snapshot congelado no momento da inserção
@@ -433,8 +437,9 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         // CORREÇÃO: data_aposta é timestamp REAL (com hora) — usar extractLocalDateKey
         // (BRT) para paridade com BonusResultadoLiquidoChart. extractCivilDateKey
         // agrupava por dia UTC, deslocando apostas de madrugada (BRT) para outro dia.
-        const betDate = new Date(extractLocalDateKey(bet.data_aposta) + "T12:00:00");
-        if (betDate < startOfDay(dateRange.start) || betDate > dateRange.end) return acc;
+        const betDateStr = extractLocalDateKey(bet.data_aposta);
+        const betDate = new Date(betDateStr + "T12:00:00");
+        if (betDate < startOfDay(dateRange.start) || betDate > endOfDay(dateRange.end)) return acc;
       }
       
       totalOperacoes += 1;
@@ -458,7 +463,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       filteredAjustes = ajustesPostLimitacao.filter(a => {
         const ajusteDate = new Date(a.data_operacional);
         if (dateRange.start && ajusteDate < startOfDay(dateRange.start)) return false;
-        if (dateRange.end && ajusteDate > dateRange.end) return false;
+        if (dateRange.end && ajusteDate > endOfDay(dateRange.end)) return false;
         return true;
       });
     }
@@ -475,7 +480,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       filteredPerdas = perdasCancelamento.filter(p => {
         const perdaDate = new Date(p.data_operacional);
         if (dateRange.start && perdaDate < startOfDay(dateRange.start)) return false;
-        if (dateRange.end && perdaDate > dateRange.end) return false;
+        if (dateRange.end && perdaDate > endOfDay(dateRange.end)) return false;
         return true;
       });
     }
@@ -496,6 +501,19 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   }, [bonuses, bonusBetsWithPernas, ajustesPostLimitacao, perdasCancelamento, convertToConsolidationTrabalho, dateRange, currencyLoading]);
 
   // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
+
+  if ((loading && !loadedOnceRef.current) || (currencyLoading && !isEffectiveRateLoaded)) {
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
