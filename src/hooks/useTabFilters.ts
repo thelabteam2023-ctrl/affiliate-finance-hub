@@ -14,7 +14,7 @@ import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, sta
  * PADRÃO OFICIAL DE FILTROS:
  * - 1dia: data_operacional = hoje (timezone operacional)
  * - 7dias: hoje - 6 dias até hoje
- * - mes_atual: primeiro dia do mês atual até hoje
+ * - mes_atual: primeiro dia do mês atual até hoje (Ano é o novo padrão do sistema)
  * - mes_anterior: primeiro dia do mês anterior até último dia do mês anterior
  * - custom: data_inicio selecionada até data_fim selecionada
  */
