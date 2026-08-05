@@ -410,13 +410,22 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                     <p className="text-sm font-medium truncate">{bonus.bookmaker_nome}</p>
                     <p className="text-xs text-muted-foreground truncate">{bonus.title}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-yellow-400">
-                      {formatCurrency(bonus.bonus_amount, bonus.currency)}
-                    </p>
-                    <Badge variant="outline" className="text-[10px] border-yellow-500/30 text-yellow-400">
-                      Pendente
-                    </Badge>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-yellow-400">
+                        {formatCurrency(bonus.bonus_amount, bonus.currency)}
+                      </p>
+                      <Badge 
+                        variant="outline" 
+                        className="text-[10px] border-yellow-500/30 text-yellow-400 cursor-pointer hover:bg-yellow-500/10"
+                        onClick={() => {
+                          const bk = bookmakers.find(b => b.id === bonus.bookmaker_id);
+                          if (bk) handleOpenBonusDrawer(bk);
+                        }}
+                      >
+                        Pendente
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               ))}
