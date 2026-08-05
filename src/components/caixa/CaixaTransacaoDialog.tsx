@@ -2948,11 +2948,11 @@ export function CaixaTransacaoDialog({
           transactionData.origem_tipo = "INVESTIDOR";
           transactionData.destino_tipo = "CAIXA_OPERACIONAL";
           // Wire optional company account as physical destination
-          if (caixaContaId && caixaContaId !== "none" && tipoMoeda !== "CRYPTO") {
+          if (caixaContaId && caixaContaId !== "none") {
             transactionData.destino_conta_bancaria_id = caixaContaId;
             transactionData.destino_parceiro_id = caixaParceiroId;
           }
-          if (caixaWalletId && caixaWalletId !== "none" && tipoMoeda === "CRYPTO") {
+          if (caixaWalletId && caixaWalletId !== "none") {
             transactionData.destino_wallet_id = caixaWalletId;
             transactionData.destino_parceiro_id = caixaParceiroId;
           }
@@ -2961,11 +2961,11 @@ export function CaixaTransacaoDialog({
           transactionData.origem_tipo = "CAIXA_OPERACIONAL";
           transactionData.destino_tipo = "INVESTIDOR";
           // Wire optional company account as physical origin
-          if (caixaContaId && caixaContaId !== "none" && tipoMoeda !== "CRYPTO") {
+          if (caixaContaId && caixaContaId !== "none") {
             transactionData.origem_conta_bancaria_id = caixaContaId;
             transactionData.origem_parceiro_id = caixaParceiroId;
           }
-          if (caixaWalletId && caixaWalletId !== "none" && tipoMoeda === "CRYPTO") {
+          if (caixaWalletId && caixaWalletId !== "none") {
             transactionData.origem_wallet_id = caixaWalletId;
             transactionData.origem_parceiro_id = caixaParceiroId;
           }
@@ -2984,12 +2984,11 @@ export function CaixaTransacaoDialog({
             transactionData.origem_bookmaker_id = origemBookmakerId;
           } else if (origemTipo === "CAIXA_OPERACIONAL") {
             // Wire optional company account for CAIXA origin
-            // Meio ÚNICO: CRYPTO usa wallet, FIAT usa conta bancária.
-            if (caixaContaId && caixaContaId !== "none" && tipoMoeda !== "CRYPTO") {
+            if (caixaContaId && caixaContaId !== "none") {
               transactionData.origem_conta_bancaria_id = caixaContaId;
               transactionData.origem_parceiro_id = caixaParceiroId;
             }
-            if (caixaWalletId && caixaWalletId !== "none" && tipoMoeda === "CRYPTO") {
+            if (caixaWalletId && caixaWalletId !== "none") {
               transactionData.origem_wallet_id = caixaWalletId;
               transactionData.origem_parceiro_id = caixaParceiroId;
             }
@@ -3009,11 +3008,11 @@ export function CaixaTransacaoDialog({
             transactionData.destino_bookmaker_id = destinoBookmakerId;
           } else if (destinoTipo === "CAIXA_OPERACIONAL") {
             // Wire optional company account for CAIXA destination
-            if (caixaContaId && caixaContaId !== "none" && tipoMoeda !== "CRYPTO") {
+            if (caixaContaId && caixaContaId !== "none") {
               transactionData.destino_conta_bancaria_id = caixaContaId;
               transactionData.destino_parceiro_id = caixaParceiroId;
             }
-            if (caixaWalletId && caixaWalletId !== "none" && tipoMoeda === "CRYPTO") {
+            if (caixaWalletId && caixaWalletId !== "none") {
               transactionData.destino_wallet_id = caixaWalletId;
               transactionData.destino_parceiro_id = caixaParceiroId;
             }
