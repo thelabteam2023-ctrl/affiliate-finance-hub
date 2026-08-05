@@ -295,8 +295,6 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
   const bookmakersNeedingAction = useMemo(() => {
     return bookmakers.filter(bk => {
       const activeBonuses = bk.bonuses.filter(b => b.status === 'credited');
-      // Has credited bonus but zero or negative real balance = needs finalization
-      return activeBonuses.length > 0 && bk.saldo_real <= 0;
     });
   }, [bookmakers]);
 
