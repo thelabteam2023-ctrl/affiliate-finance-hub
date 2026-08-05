@@ -92,7 +92,7 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger, actionsSlot, onDat
   };
   
   // Standard time filter state
-  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("mes_atual");
+  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("ano");
   const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
 
   const dateRange = useMemo(() => {
