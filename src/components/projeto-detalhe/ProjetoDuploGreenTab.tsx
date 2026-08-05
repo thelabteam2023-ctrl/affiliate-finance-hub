@@ -51,7 +51,7 @@ import {
   LayoutList,
   Users,
   Clock,
-  History,
+  History as LucideHistory,
   ArrowUpDown,
   Sparkles
 } from "lucide-react";

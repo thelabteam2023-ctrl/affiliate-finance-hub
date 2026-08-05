@@ -31,7 +31,7 @@ import {
   CheckCircle2,
   BarChart3,
   Clock,
-  History
+  History as LucideHistory
 } from "lucide-react";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";

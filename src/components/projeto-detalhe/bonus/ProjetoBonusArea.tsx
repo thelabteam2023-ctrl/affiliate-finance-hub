@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Building2, Target, PanelLeft, LayoutList } from "lucide-react";
+import { LayoutDashboard, Building2, Target, PanelLeft, LayoutList, History } from "lucide-react";
 import { BonusVisaoGeralTab } from "./BonusVisaoGeralTab";
 import { BonusBookmakersTab } from "./BonusBookmakersTab";
 import { BonusApostasTab } from "./BonusApostasTab";

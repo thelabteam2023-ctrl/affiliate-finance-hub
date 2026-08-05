@@ -40,7 +40,7 @@ import {
   PanelLeft,
   LayoutList,
   Clock,
-  History,
+  History as LucideHistory,
   ArrowUpDown,
   Users
 } from "lucide-react";
