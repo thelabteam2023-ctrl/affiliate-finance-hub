@@ -19,7 +19,6 @@ import {
   Building2, 
   Coins, 
   Wallet, 
-  TrendingUp, 
   Search, 
   Gift, 
   Clock, 
@@ -45,8 +44,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { differenceInDays, parseISO, format } from "date-fns";
-import { useTabFilters } from "@/hooks/useTabFilters";
-import { StandardTimeFilter } from "../StandardTimeFilter";
 
 const parseCivilDate = (dateStr: string): Date => {
   const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
@@ -89,14 +86,6 @@ interface BookmakerInBonusMode {
 }
 
 export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
-  // Filtros padronizados para a aba Por Casa (Bônus)
-  const tabFilters = useTabFilters({
-    tabId: "bonus-por-casa",
-    projetoId,
-    defaultPeriod: "ano",
-    persist: true,
-  });
-
   const { 
     bonuses, 
     finalizeBonus, 
@@ -105,8 +94,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
     getBookmakersWithAnyBonus, 
     getRolloverPercentage,
   } = useProjectBonuses({ 
-    projectId: projetoId,
-    dateRange: tabFilters.dateRange
+    projectId: projetoId
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -127,7 +115,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
 
   // Query para buscar dados de apostas por bookmaker
   const { data: apostasStats = {} } = useQuery({
-    queryKey: ["bonus-casas-apostas-stats", projetoId, tabFilters.dateRange],
+    queryKey: ["bonus-casas-apostas-stats", projetoId],
     queryFn: async () => {
       // Busca todas as apostas do projeto agrupadas por bookmaker
       const data = await fetchAllPaginated(() =>
@@ -136,8 +124,6 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           .select("bookmaker_id, stake, lucro_prejuizo, status")
           .eq("projeto_id", projetoId)
           .neq("status", "CANCELADA")
-          .gte("data_aposta", tabFilters.dateRange.start?.toISOString())
-          .lte("data_aposta", tabFilters.dateRange.end?.toISOString())
       );
 
       // Agrupa por bookmaker_id
@@ -309,8 +295,6 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
   const bookmakersNeedingAction = useMemo(() => {
     return bookmakers.filter(bk => {
       const activeBonuses = bk.bonuses.filter(b => b.status === 'credited');
-      // Has credited bonus but zero or negative real balance = needs finalization
-      return activeBonuses.length > 0 && bk.saldo_real <= 0;
     });
   }, [bookmakers]);
 
@@ -329,22 +313,14 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
     <div className="space-y-4">
       {/* Search and View Toggle */}
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 flex-1">
-          <StandardTimeFilter
-            period={tabFilters.period}
-            onPeriodChange={tabFilters.setPeriod}
-            customDateRange={tabFilters.customDateRange}
-            onCustomDateRangeChange={tabFilters.setCustomDateRange}
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, login ou parceiro..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
           />
-          <div className="relative max-w-sm flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome, login ou parceiro..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
         </div>
         <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as "cards" | "list")}>
           <ToggleGroupItem value="list" aria-label="Visualização em lista">
@@ -355,60 +331,6 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
-
-      {/* ACTION REQUIRED ALERT - Bookmakers with zero balance needing finalization */}
-      {bookmakersNeedingAction.length > 0 && (
-        <Card className="border-red-500/50 bg-red-500/10 animate-pulse-subtle">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-red-400">
-              <AlertTriangle className="h-4 w-4" />
-              Ação Necessária ({bookmakersNeedingAction.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground mb-3">
-              Estas casas têm bônus ativo, mas saldo zerado. Finalize o bônus para registrar o resultado.
-            </p>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {bookmakersNeedingAction.map((bk) => {
-                const activeBonuses = bk.bonuses.filter(b => b.status === 'credited');
-                return activeBonuses.map((bonus) => (
-                  <div 
-                    key={bonus.id} 
-                    className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-red-500/30"
-                  >
-                    {bk.logo_url ? (
-                      <img
-                        src={bk.logo_url}
-                        alt={bk.nome}
-                        className="h-8 w-8 rounded-lg object-contain logo-blend p-0.5"
-                      />
-                    ) : (
-                      <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center">
-                        <AlertTriangle className="h-4 w-4 text-red-400" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{bk.nome}</p>
-                      <p className="text-xs text-muted-foreground truncate">{bonus.title}</p>
-                      <p className="text-xs text-red-400">Saldo: {formatCurrency(bk.saldo_real, bk.moeda)}</p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-red-500/30 hover:bg-red-500/20 text-red-400"
-                      onClick={() => handleFinalizeClick(bonus)}
-                    >
-                      <XCircle className="h-4 w-4 mr-1" />
-                      Finalizar
-                    </Button>
-                  </div>
-                ));
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Pending Bonuses Section */}
       {pendingBonuses.length > 0 && (
@@ -480,10 +402,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
               <TableRow>
                 <TableHead>Bookmaker</TableHead>
                 <TableHead>Parceiro</TableHead>
-                <TableHead className="text-center">Apostas</TableHead>
-                <TableHead className="text-right">Volume</TableHead>
-                <TableHead className="text-right">P&L</TableHead>
-                <TableHead className="text-right">Saldo Unificado</TableHead>
+                <TableHead className="text-right">Saldo Real</TableHead>
                 <TableHead className="text-right">Bônus Ativo</TableHead>
                 <TableHead className="min-w-[180px]">Rollover</TableHead>
                 <TableHead className="text-center">Expiração</TableHead>
@@ -527,20 +446,6 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{bk.parceiro_nome || "—"}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className="font-mono">
-                        {bk.total_apostas}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {formatCurrency(bk.volume_apostado, bk.moeda)}
-                    </TableCell>
-                    <TableCell className={cn(
-                      "text-right font-semibold",
-                      bk.lucro_prejuizo > 0 ? "text-emerald-400" : bk.lucro_prejuizo < 0 ? "text-red-400" : "text-muted-foreground"
-                    )}>
-                      {bk.lucro_prejuizo > 0 ? "+" : ""}{formatCurrency(bk.lucro_prejuizo, bk.moeda)}
-                    </TableCell>
                     <TableCell className="text-right font-semibold text-primary">
                       {formatCurrency(bk.saldo_real, bk.moeda)}
                     </TableCell>
@@ -650,55 +555,10 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                       <span className="text-muted-foreground">{bk.parceiro_nome || "Sem parceiro"}</span>
                     </div>
 
-                    {/* Métricas Operacionais de Apostas */}
-                    <div className="pt-2 border-t">
-                      <p className="text-xs text-muted-foreground mb-2 font-medium">Métricas Operacionais</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="text-center p-2 rounded bg-muted/50">
-                          <p className="text-lg font-bold">{bk.total_apostas}</p>
-                          <p className="text-[10px] text-muted-foreground">Apostas</p>
-                        </div>
-                        <div className="text-center p-2 rounded bg-muted/50">
-                          <p className="text-sm font-bold">{formatCurrency(bk.volume_apostado, bk.moeda)}</p>
-                          <p className="text-[10px] text-muted-foreground">Volume</p>
-                        </div>
-                        <div className={cn(
-                          "text-center p-2 rounded",
-                          bk.lucro_prejuizo > 0 ? "bg-emerald-500/10" : bk.lucro_prejuizo < 0 ? "bg-red-500/10" : "bg-muted/50"
-                        )}>
-                          <p className={cn(
-                            "text-sm font-bold",
-                            bk.lucro_prejuizo > 0 ? "text-emerald-400" : bk.lucro_prejuizo < 0 ? "text-red-400" : ""
-                          )}>
-                            {bk.lucro_prejuizo > 0 ? "+" : ""}{formatCurrency(bk.lucro_prejuizo, bk.moeda)}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">P&L</p>
-                        </div>
-                      </div>
-                    </div>
 
                     {/* Balances */}
-                    <div className="pt-2 border-t space-y-2 mt-2">
+                    <div className="pt-2 border-t space-y-2">
                       <p className="text-xs text-muted-foreground mb-2 font-medium">Saldos & Bônus</p>
-                      {/* Operational Balance - Highlight */}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center justify-between p-2 rounded bg-primary/10 border border-primary/20">
-                              <span className="text-xs font-medium text-primary flex items-center gap-1">
-                                <TrendingUp className="h-3 w-3" />
-                                Saldo Unificado
-                              </span>
-                              <span className="text-sm font-bold text-primary">
-                                {formatCurrency(bk.saldo_real, bk.moeda)}
-                              </span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Saldo total da conta (real + bônus misturados)</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
 
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
