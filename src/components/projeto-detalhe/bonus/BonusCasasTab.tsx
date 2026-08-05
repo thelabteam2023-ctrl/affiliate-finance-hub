@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { formatCurrency } from "@/components/bookmakers/BookmakerSelectOption";
+ import { useState, useMemo } from "react";
+ import { formatCurrency } from "@/components/bookmakers/BookmakerSelectOption";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -93,7 +93,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
   
   // Drawer state
   const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
-  const [selectedBookmaker, setSelectedBookmaker] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmaker_catalogo_id?: string | null; moeda?: string; initialBonusToEdit?: ProjectBonus | null } | null>(null);
+  const [selectedBookmaker, setSelectedBookmaker] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmaker_catalogo_id?: string | null; moeda?: string } | null>(null);
   
   // Finalize dialog state
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
@@ -228,7 +228,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
     gcTime: PERIOD_GC_TIME,
   });
 
-  const handleOpenBonusDrawer = (bk: BookmakerInBonusMode, bonusToEdit?: ProjectBonus) => {
+  const handleOpenBonusDrawer = (bk: BookmakerInBonusMode) => {
     setSelectedBookmaker({
       id: bk.id,
       nome: bk.nome,
@@ -237,7 +237,6 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
       logo: bk.logo_url,
       bookmaker_catalogo_id: bk.bookmaker_catalogo_id,
       moeda: bk.moeda,
-      initialBonusToEdit: bonusToEdit || null,
     });
     setBonusDrawerOpen(true);
   };
@@ -411,22 +410,13 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                     <p className="text-sm font-medium truncate">{bonus.bookmaker_nome}</p>
                     <p className="text-xs text-muted-foreground truncate">{bonus.title}</p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-yellow-400">
-                        {formatCurrency(bonus.bonus_amount, bonus.currency)}
-                      </p>
-                      <Badge 
-                        variant="outline" 
-                        className="text-[10px] border-yellow-500/30 text-yellow-400 cursor-pointer hover:bg-yellow-500/10"
-                        onClick={() => {
-                          const bk = bookmakers.find(b => b.id === bonus.bookmaker_id);
-                          if (bk) handleOpenBonusDrawer(bk, bonus);
-                        }}
-                      >
-                        Pendente
-                      </Badge>
-                    </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-yellow-400">
+                      {formatCurrency(bonus.bonus_amount, bonus.currency)}
+                    </p>
+                    <Badge variant="outline" className="text-[10px] border-yellow-500/30 text-yellow-400">
+                      Pendente
+                    </Badge>
                   </div>
                 </div>
               ))}
@@ -812,9 +802,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           bookmakerLogo={selectedBookmaker.logo}
           bookmakerCatalogoId={selectedBookmaker.bookmaker_catalogo_id}
           currency={selectedBookmaker.moeda}
-          initialBonusToEdit={selectedBookmaker.initialBonusToEdit}
           onBonusChange={() => {}} // React Query handles automatic refresh
-
         />
       )}
 
