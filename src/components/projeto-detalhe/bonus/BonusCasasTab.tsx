@@ -93,7 +93,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
   
   // Drawer state
   const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
-  const [selectedBookmaker, setSelectedBookmaker] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmaker_catalogo_id?: string | null; moeda?: string } | null>(null);
+  const [selectedBookmaker, setSelectedBookmaker] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmaker_catalogo_id?: string | null; moeda?: string; initialBonusToEdit?: ProjectBonus | null } | null>(null);
   
   // Finalize dialog state
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
@@ -228,7 +228,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
     gcTime: PERIOD_GC_TIME,
   });
 
-  const handleOpenBonusDrawer = (bk: BookmakerInBonusMode) => {
+  const handleOpenBonusDrawer = (bk: BookmakerInBonusMode, bonusToEdit?: ProjectBonus) => {
     setSelectedBookmaker({
       id: bk.id,
       nome: bk.nome,
@@ -237,6 +237,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
       logo: bk.logo_url,
       bookmaker_catalogo_id: bk.bookmaker_catalogo_id,
       moeda: bk.moeda,
+      initialBonusToEdit: bonusToEdit || null,
     });
     setBonusDrawerOpen(true);
   };
@@ -420,7 +421,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                         className="text-[10px] border-yellow-500/30 text-yellow-400 cursor-pointer hover:bg-yellow-500/10"
                         onClick={() => {
                           const bk = bookmakers.find(b => b.id === bonus.bookmaker_id);
-                          if (bk) handleOpenBonusDrawer(bk);
+                          if (bk) handleOpenBonusDrawer(bk, bonus);
                         }}
                       >
                         Pendente
@@ -811,7 +812,9 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           bookmakerLogo={selectedBookmaker.logo}
           bookmakerCatalogoId={selectedBookmaker.bookmaker_catalogo_id}
           currency={selectedBookmaker.moeda}
+          initialBonusToEdit={selectedBookmaker.initialBonusToEdit}
           onBonusChange={() => {}} // React Query handles automatic refresh
+
         />
       )}
 
