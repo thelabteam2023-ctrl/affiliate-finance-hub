@@ -31,7 +31,7 @@ import {
   CheckCircle2,
   BarChart3,
   Clock,
-  History
+  History as LucideHistory
 } from "lucide-react";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
@@ -83,10 +83,14 @@ interface ProjetoApostasTabProps {
 
 // Fallback para formatação de moeda
 const defaultFormatCurrency = (value: number): string => {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
+  try {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  } catch {
+    return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
 };
 
 interface Aposta {
@@ -1657,7 +1661,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           
           {/* Título do Card */}
           <CardTitle className="text-base font-medium flex items-center gap-2">
-            <History className="h-4 w-4" />
+            <LucideHistory className="h-4 w-4" />
             {apostasSubTab === "abertas" ? "Operações Abertas" : "Histórico de Operações"}
           </CardTitle>
         </CardHeader>

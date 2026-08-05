@@ -31,31 +31,50 @@ export function initWorkspaceRequestScope() {
   const originalFetch = window.fetch.bind(window);
 
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === "string" ? input : input instanceof Request ? input.url : input.toString();
+    // Determine the URL string safely
+    let urlString = "";
+    if (typeof input === "string") {
+      urlString = input;
+    } else if (input instanceof URL) {
+      urlString = input.toString();
+    } else if (input && typeof input === "object" && "url" in input) {
+      urlString = (input as Request).url;
+    }
 
-    if (!shouldPatchUrl(url)) {
-      return originalFetch(input as any, init);
+    if (!shouldPatchUrl(urlString)) {
+      return originalFetch(input, init);
     }
 
     const workspaceId = getTabWorkspaceId();
     if (!workspaceId) {
-      return originalFetch(input as any, init);
+      return originalFetch(input, init);
     }
 
-    const baseHeaders =
-      init?.headers ?? (input instanceof Request ? input.headers : undefined);
-
-    const headers = new Headers(baseHeaders);
-    if (!headers.has("x-workspace-id")) {
-      headers.set("x-workspace-id", workspaceId);
+    // Safety: only use native constructors if they are available
+    if (typeof Headers !== "function" || typeof Request !== "function") {
+      console.warn("[WorkspaceRequestScope] Headers/Request constructor missing, skipping patch");
+      return originalFetch(input, init);
     }
 
-    // If input is a Request, clone it with merged headers to preserve method/body.
-    if (input instanceof Request) {
-      const req = new Request(input, { ...init, headers });
-      return originalFetch(req);
-    }
+    try {
+      const baseHeaders =
+        init?.headers ?? (input instanceof Request ? input.headers : undefined);
 
-    return originalFetch(input as any, { ...init, headers });
+      const headers = new Headers(baseHeaders);
+      if (!headers.has("x-workspace-id")) {
+        headers.set("x-workspace-id", workspaceId);
+      }
+
+      if (input instanceof Request) {
+        // Clone request with new headers
+        const req = new Request(input, { ...init, headers });
+        return originalFetch(req);
+      }
+
+      return originalFetch(input, { ...init, headers });
+    } catch (err) {
+      console.error("[WorkspaceRequestScope] Failed to apply workspace headers:", err);
+      return originalFetch(input, init);
+    }
   };
 }

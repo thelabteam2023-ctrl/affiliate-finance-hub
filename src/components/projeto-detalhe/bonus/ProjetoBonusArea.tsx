@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Building2, Target, PanelLeft, LayoutList } from "lucide-react";
+import { LayoutDashboard, Building2, Target, PanelLeft, LayoutList, History as LucideHistory } from "lucide-react";
 import { BonusVisaoGeralTab } from "./BonusVisaoGeralTab";
 import { BonusBookmakersTab } from "./BonusBookmakersTab";
 import { BonusApostasTab } from "./BonusApostasTab";
@@ -58,7 +58,7 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger, actionsSlot, onDat
     { value: "visao-geral" as TabValue, label: "Visão Geral", icon: LayoutDashboard },
     { value: "apostas" as TabValue, label: "Operações", icon: Target, showBadge: true, count: openOperationsCount },
     { value: "bookmakers" as TabValue, label: "Por Casa", icon: Building2, showCount: true, count: bookmakersInBonusMode.length },
-    { value: "historico" as TabValue, label: "Histórico", icon: History as any },
+    { value: "historico" as TabValue, label: "Histórico", icon: LucideHistory as any },
   ], [openOperationsCount, bookmakersInBonusMode.length]);
   
   useEffect(() => {

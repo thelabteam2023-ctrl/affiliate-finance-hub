@@ -38,15 +38,27 @@ export function useWorkspaceCacheClear() {
     console.log(`[WorkspaceCacheClear] React Query cache limpo`);
     
     // 2. Disparar evento para componentes com cache local
-    const event = new CustomEvent<WorkspaceChangedDetail>(WORKSPACE_CHANGED_EVENT, {
-      detail: {
+    if (typeof CustomEvent === "function") {
+      const event = new CustomEvent<WorkspaceChangedDetail>(WORKSPACE_CHANGED_EVENT, {
+        detail: {
+          previousWorkspaceId: previousId,
+          newWorkspaceId: newId,
+          timestamp: Date.now()
+        }
+      });
+      window.dispatchEvent(event);
+      console.log(`[WorkspaceCacheClear] Evento de troca disparado`);
+    } else {
+      console.warn(`[WorkspaceCacheClear] CustomEvent não disponível para notificação`);
+      // Fallback simples para componentes que ouvem eventos globais básicos
+      const event = document.createEvent('CustomEvent');
+      event.initCustomEvent(WORKSPACE_CHANGED_EVENT, false, false, {
         previousWorkspaceId: previousId,
         newWorkspaceId: newId,
         timestamp: Date.now()
-      }
-    });
-    window.dispatchEvent(event);
-    console.log(`[WorkspaceCacheClear] Evento de troca disparado`);
+      });
+      window.dispatchEvent(event);
+    }
     
     // 3. Forçar garbage collection de referências stale
     // (React Query já faz isso, mas reforçamos)
