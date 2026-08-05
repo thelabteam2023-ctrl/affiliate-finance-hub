@@ -812,7 +812,9 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           bookmakerLogo={selectedBookmaker.logo}
           bookmakerCatalogoId={selectedBookmaker.bookmaker_catalogo_id}
           currency={selectedBookmaker.moeda}
+          initialBonusToEdit={selectedBookmaker.initialBonusToEdit}
           onBonusChange={() => {}} // React Query handles automatic refresh
+
         />
       )}
 
