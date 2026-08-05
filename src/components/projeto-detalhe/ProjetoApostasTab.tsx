@@ -1657,7 +1657,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           
           {/* Título do Card */}
           <CardTitle className="text-base font-medium flex items-center gap-2">
-            <History className="h-4 w-4" />
+            <LucideHistory className="h-4 w-4" />
             {apostasSubTab === "abertas" ? "Operações Abertas" : "Histórico de Operações"}
           </CardTitle>
         </CardHeader>
