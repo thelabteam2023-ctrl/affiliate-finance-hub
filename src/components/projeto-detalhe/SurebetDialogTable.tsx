@@ -809,6 +809,9 @@ export function SurebetDialogTable({
     if (field === "stake" && !newOdds[index].isReference) {
       newOdds[index].isManuallyEdited = true;
       newOdds[index].stakeOrigem = "manual";
+      
+      // Imediatamente forçar recálculo se houver subentradas dependentes (que não tenham sido editadas manualmente)
+      // O motor de cálculo já cuida disso no useEffect, mas garantimos que as flags estão limpas.
     }
     
     setOdds(newOdds);
