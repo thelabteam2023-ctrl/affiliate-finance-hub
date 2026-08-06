@@ -133,8 +133,9 @@ export function calcularStakesMultiCurrency(
     return { stakes: legs.map(l => l.stakeAtual), isValid: false, lucroConsolidado: 0, ratesUsed };
   }
 
-  const allOddsValid = legs.every(l => l.oddMedia > 1);
-  if (!allOddsValid) {
+  // REGRA DE OURO: Só falhamos se a perna de referência não tiver odd.
+  // Pernas sem odd simplesmente não terão stake calculada (retornam stakeAtual).
+  if (legs[refIndex].oddMedia <= 1) {
     return { stakes: legs.map(l => l.stakeAtual), isValid: false, lucroConsolidado: 0, ratesUsed };
   }
 
