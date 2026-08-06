@@ -900,7 +900,14 @@ export function SurebetDialogTable({
       legs,
       getEffectiveRate as GetEffectiveRateFn,
       arredondarStake,
-      consolidation
+      consolidation,
+      odds.map(o => ({
+        additionalEntries: o.additionalEntries?.map(ae => ({
+          moeda: ae.moeda,
+          odd: parseFloat(ae.odd) || 0,
+          stake: parseFloat(ae.stake) || 0
+        }))
+      }))
     );
     
     if (!result.isValid) return;
@@ -1119,16 +1126,12 @@ export function SurebetDialogTable({
     
     // Calcular lucro por cenário
     const scenarios = parsedOdds.map((odd, i) => {
-      // 1. Calcular o retorno total da perna na moeda consolidada do projeto
-      // Devemos somar o retorno da entrada principal + retornos de entradas adicionais,
-      // convertendo cada um individualmente para a moeda de consolidação.
-      
       const pernaData = odds[i];
       const moedaPerna = moedasSelecionadas[i] || "BRL";
       
       // Retorno da entrada principal na moeda original e consolidada
       const mainOdd = parseFloat(pernaData.odd) || 0;
-      const mainStake = parseFloat(pernaData.stake) || 0;
+      const mainStake = actualStakes[i]; // Agora usamos a stake calculada ou manual (total da perna ajustado para a principal)
       const mainReturnOriginal = mainStake * mainOdd;
       const mainReturnConverted = convertCurrency(
         mainReturnOriginal,
@@ -1206,12 +1209,58 @@ export function SurebetDialogTable({
     }).length;
   }, [odds]);
 
-  // Detectar operação parcial: tem 2+ pernas completas mas não cobre todos os desfechos
   const isOperacaoParcial = useMemo(() => {
+    // Se temos pernas preenchidas, mas a stake total consolidada é zero ou negativa, não é válida.
+    // Também deve ter pelo menos 2 pernas para ser arbitragem.
     return pernasCompletasCount >= 2 && pernasCompletasCount < numPernas;
   }, [pernasCompletasCount, numPernas]);
 
-  // Pernas válidas para potencial conversão
+  // Mapear todas as entradas válidas (principal + adicionais)
+  const allValidEntries = useMemo(() => {
+    const entries: Array<{
+      bookmaker_id: string;
+      odd: string;
+      stake: string;
+      selecao: string;
+      selecaoLivre: string;
+      moeda: SupportedCurrency;
+    }> = [];
+
+    odds.forEach(perna => {
+      // Entrada principal
+      const mainOdd = parseFloat(perna.odd);
+      const mainStake = parseFloat(perna.stake);
+      if (perna.bookmaker_id && mainOdd > 1 && mainStake > 0) {
+        entries.push({
+          bookmaker_id: perna.bookmaker_id,
+          odd: perna.odd,
+          stake: perna.stake,
+          selecao: perna.selecao,
+          selecaoLivre: perna.selecaoLivre,
+          moeda: perna.moeda as SupportedCurrency
+        });
+      }
+
+      // Entradas adicionais
+      (perna.additionalEntries || []).forEach(ae => {
+        const aeOdd = parseFloat(ae.odd);
+        const aeStake = parseFloat(ae.stake);
+        if (ae.bookmaker_id && aeOdd > 1 && aeStake > 0) {
+          entries.push({
+            bookmaker_id: ae.bookmaker_id,
+            odd: ae.odd,
+            stake: ae.stake,
+            selecao: perna.selecao,
+            selecaoLivre: ae.selecaoLivre,
+            moeda: ae.moeda as SupportedCurrency
+          });
+        }
+      });
+    });
+    return entries;
+  }, [odds]);
+
+  // Pernas válidas para potencial conversão (mantido para compatibilidade se necessário, mas allValidEntries é preferido)
   const pernasValidas = useMemo(() => {
     return odds.filter(entry => {
       const odd = parseFloat(entry.odd);
@@ -1265,9 +1314,42 @@ export function SurebetDialogTable({
         const effectiveRate = getEffectiveRate(mainMoeda);
         const mainSnapshotFields = getSnapshotFields(mainStake, mainMoeda, effectiveRate.rate);
         
+        // Mapear entradas adicionais para salvamento (se houver)
+        const additionalEntriesToSave = (entry.additionalEntries || []).map(ae => {
+          const aeMoeda = ae.moeda as SupportedCurrency;
+          const aeRate = getEffectiveRate(aeMoeda);
+          const aeSnapshot = getSnapshotFields(parseFloat(ae.stake) || 0, aeMoeda, aeRate.rate);
+          
+          return {
+            bookmaker_id: ae.bookmaker_id,
+            bookmaker_nome: getBookmakerNome(ae.bookmaker_id),
+            moeda: aeMoeda,
+            odd: parseFloat(ae.odd) || 0,
+            stake: parseFloat(ae.stake) || 0,
+            stake_brl_referencia: aeSnapshot.valor_brl_referencia,
+            cotacao_snapshot: aeSnapshot.cotacao_snapshot,
+            cotacao_snapshot_at: aeSnapshot.cotacao_snapshot_at,
+            selecao_livre: ae.selecaoLivre || ""
+          };
+        });
+        
         return {
           selecao: entry.selecao,
           selecao_livre: entry.selecaoLivre || "",
+          entries: additionalEntriesToSave.length > 0 ? [
+            {
+              bookmaker_id: entry.bookmaker_id,
+              bookmaker_nome: getBookmakerNome(entry.bookmaker_id),
+              moeda: mainMoeda,
+              odd: parseFloat(entry.odd),
+              stake: mainStake,
+              stake_brl_referencia: mainSnapshotFields.valor_brl_referencia,
+              cotacao_snapshot: mainSnapshotFields.cotacao_snapshot,
+              cotacao_snapshot_at: mainSnapshotFields.cotacao_snapshot_at,
+              selecao_livre: entry.selecaoLivre || ""
+            },
+            ...additionalEntriesToSave
+          ] : undefined,
           bookmaker_id: entry.bookmaker_id,
           bookmaker_nome: getBookmakerNome(entry.bookmaker_id),
           moeda: mainMoeda,
@@ -1290,17 +1372,33 @@ export function SurebetDialogTable({
       const modeloString = modeloTipo === "2" ? "1-2" : modeloTipo === "3" ? "1-X-2" : `${numPernasCustom}-way`;
 
       // Criar via RPC atômica: garante STAKE no ledger para cada perna.
-      const pernasParaRPC = pernasToSave.map((perna) => ({
-        bookmaker_id: perna.bookmaker_id,
-        stake: perna.stake,
-        odd: perna.odd,
-        moeda: perna.moeda,
-        selecao: perna.selecao,
-        selecao_livre: perna.selecao_livre || null,
-        cotacao_snapshot: perna.cotacao_snapshot,
-        stake_brl_referencia: perna.stake_brl_referencia,
-        fonte_saldo: 'REAL',
-      }));
+      const pernasParaRPC = pernasToSave.flatMap((perna) => {
+        if (perna.entries && perna.entries.length > 0) {
+          return perna.entries.map(e => ({
+            bookmaker_id: e.bookmaker_id,
+            stake: e.stake,
+            odd: e.odd,
+            moeda: e.moeda,
+            selecao: perna.selecao,
+            selecao_livre: e.selecao_livre || null,
+            cotacao_snapshot: e.cotacao_snapshot,
+            stake_brl_referencia: e.stake_brl_referencia,
+            fonte_saldo: 'REAL',
+          }));
+        }
+        
+        return [{
+          bookmaker_id: perna.bookmaker_id,
+          stake: perna.stake,
+          odd: perna.odd,
+          moeda: perna.moeda,
+          selecao: perna.selecao,
+          selecao_livre: perna.selecao_livre || null,
+          cotacao_snapshot: perna.cotacao_snapshot,
+          stake_brl_referencia: perna.stake_brl_referencia,
+          fonte_saldo: 'REAL',
+        }];
+      });
 
       const { data: rpcResult, error: rpcError } = await supabase.rpc('criar_surebet_atomica', {
         p_workspace_id: workspaceId,
@@ -1342,8 +1440,9 @@ export function SurebetDialogTable({
       toast.error("Informe o evento");
       return;
     }
-    if (pernasValidas.length < 2) {
-      toast.error("Mínimo de 2 pernas válidas para conversão");
+    
+    if (allValidEntries.length < 2) {
+      toast.error("Mínimo de 2 entradas válidas para conversão");
       return;
     }
 
@@ -1352,17 +1451,12 @@ export function SurebetDialogTable({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const getBookmakerMoeda = (bookmakerId: string): SupportedCurrency => {
-        const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
-        return (bk?.moeda as SupportedCurrency) || "BRL";
-      };
-
       // Gerar operation_group_id para agrupar as apostas
       const operationGroupId = crypto.randomUUID();
       
-      const apostasSimples = pernasValidas.map((entry) => {
+      const apostasSimples = allValidEntries.map((entry) => {
         const stake = parseFloat(entry.stake) || 0;
-        const moeda = getBookmakerMoeda(entry.bookmaker_id);
+        const moeda = entry.moeda;
         const effectiveRate = getEffectiveRate(moeda);
         const snapshotFields = getSnapshotFields(stake, moeda, effectiveRate.rate);
         
@@ -1398,11 +1492,6 @@ export function SurebetDialogTable({
         .insert(apostasSimples);
 
       if (insertError) throw insertError;
-
-      // Se houver rascunho, deletar
-      if (rascunho?.id) {
-        // O rascunho será deletado pelo componente pai via onSuccess
-      }
 
       toast.success(`${apostasSimples.length} apostas simples registradas!`);
       setShowConversionDialog(false);
@@ -2144,11 +2233,11 @@ export function SurebetDialogTable({
                 o que não configura uma arbitragem válida.
               </p>
               <p>
-                Deseja registrar as <strong>{pernasValidas.length} pernas válidas</strong> como apostas simples independentes?
+                Deseja registrar as <strong>{allValidEntries.length} entradas válidas</strong> como apostas simples independentes?
               </p>
               <div className="mt-3 p-3 bg-muted/50 rounded-lg text-xs">
                 <div className="font-medium mb-1">Pernas que serão registradas:</div>
-                {pernasValidas.map((p, i) => (
+                {allValidEntries.map((p, i) => (
                   <div key={i} className="flex items-center gap-2 py-0.5">
                     <ArrowRight className="h-3 w-3 text-primary" />
                     <span>{p.selecao} • {getBookmakerNome(p.bookmaker_id)} • Odd {p.odd} • Stake {p.stake}</span>
