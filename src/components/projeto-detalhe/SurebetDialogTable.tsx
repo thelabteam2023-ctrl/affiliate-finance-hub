@@ -911,7 +911,7 @@ export function SurebetDialogTable({
     if (isEditing) return;
     if (profitDirectionActive) return;
     
-    // Usar moeda diretamente do OddEntry (já atualizada quando bookmaker muda)
+    // Determinar pernas com odds válidas para o cálculo
     const legs = odds.map((perna) => ({
       oddMedia: getOddMediaPerna(perna),
       moeda: perna.moeda as string,
@@ -923,10 +923,19 @@ export function SurebetDialogTable({
     
     const refIndex = legs.findIndex(l => l.isReference);
     if (refIndex === -1) return;
+
+    // REGRA: Se a perna de referência não tem stake (>0) ou odd (>1), não há base para cálculo.
     if (legs[refIndex].stakeAtual <= 0 || legs[refIndex].oddMedia <= 1) return;
     
+    // REGRA: Para o motor calcular algo, precisamos que pelo menos uma perna derivável (não-referência) 
+    // tenha odd válida. Não bloqueamos o cálculo de TODA a arbitragem se uma sub-perna está incompleta,
+    // mas o motor central `calcularStakesMultiCurrency` exige que todas as pernas passem no check `oddMedia > 1`.
+    // No entanto, para o cenário do usuário (Perna 3 vazia de odd), o motor falharia.
+    // Solução: Filtramos pernas com odd <= 1 antes de passar para o motor, ou o motor deve ser tolerante.
+    // O motor atual (convertCurrency.ts) faz: `const allOddsValid = legs.every(l => l.oddMedia > 1); if (!allOddsValid) return ...`
+    // Vamos garantir que só disparamos se o motor tiver chance de sucesso.
     const validOddsCount = legs.filter(l => l.oddMedia > 1).length;
-    if (validOddsCount < odds.length) return;
+    if (validOddsCount < 2) return; // Mínimo 2 pernas com odd para arbitrar.
     
     // Usar o utilitário centralizado de conversão multi-moeda
     const consolidation = (moedaConsolidacao as string) || "BRL";
@@ -984,8 +993,7 @@ export function SurebetDialogTable({
       }
     }
   }, [
-    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}-${o.moeda}-${o.stakeOrigem}-${(o.additionalEntries || []).map(e => `${e.odd}:${e.stake}:${e.moeda}`).join('|')}`).join(','),
-    odds.map(o => o.isReference).join(','),
+    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}-${o.moeda}-${o.stakeOrigem}-${o.isReference}-${(o.additionalEntries || []).map(e => `${e.odd}:${e.stake}:${e.moeda}`).join('|')}`).join(','),
     arredondarAtivado,
     arredondarValor,
     isEditing,
