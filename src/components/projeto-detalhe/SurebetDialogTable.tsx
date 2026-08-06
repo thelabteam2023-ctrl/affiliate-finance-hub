@@ -873,16 +873,16 @@ export function SurebetDialogTable({
       if (newOdds[pernaIndex].isReference) {
         newOdds.forEach((o, i) => {
           if (i !== pernaIndex && o.stakeOrigem !== "print") {
+            // Se for referência, limpa as outras pernas para que elas recalculem (derivadas)
             o.isManuallyEdited = false;
             o.stakeOrigem = undefined;
           }
         });
       } else {
-        // Se mudou algo na subentrada de uma perna dependente, a stake principal dela deve recalcular
-        if (newOdds[pernaIndex].stakeOrigem !== "print") {
-          newOdds[pernaIndex].isManuallyEdited = false;
-          newOdds[pernaIndex].stakeOrigem = undefined;
-        }
+        // Se mudou algo na subentrada de uma perna dependente, ela se torna "manual"
+        // O motor agora deve respeitar essa stake e ajustar as outras subentradas ou a principal conforme a nova regra
+        // Porém, o requisito diz: subentrada é SEMPRE derivada. 
+        // Se o usuário edita a subentrada manualmente, o motor deve tentar equilibrar o lucro.
       }
     }
     
