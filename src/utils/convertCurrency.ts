@@ -190,8 +190,6 @@ export function calcularStakesMultiCurrency(
   });
 
   // PASSO 3: Ajustar subentradas para pernas dependentes (não referência)
-  // Se uma perna tem múltiplas entradas e a entrada principal foi fixada/ajustada,
-  // recalcular a ÚLTIMA subentrada para atingir o retorno-alvo.
   const adjustedAdditionalEntries = legsWithEntries?.map((legData, i) => {
     if (i === refIndex) return legData.additionalEntries;
     
@@ -208,23 +206,46 @@ export function calcularStakesMultiCurrency(
       getEffectiveRate
     );
 
-    // Retorno da entrada principal (que o motor central agora trata como fixa se for manual)
     const currentMainStake = calculatedStakes[i];
+    
+    const entries = [...legData.additionalEntries];
+    const lastIdx = entries.length - 1;
+    const lastEntry = entries[lastIdx];
+    const lastOdd = parseFloat(lastEntry.odd as any) || 0;
+
+    // NOVO REQUISITO: Se a perna não tem odd, distribuímos a stake baseada apenas no saldo restante (stake real, não payout)
+    if (leg.oddMedia <= 1) {
+      // Stake total da referência convertida para a moeda desta perna
+      // Como não há odd, o "targetReturn" não faz sentido financeiro, mas o usuário quer 
+      // preencher o saldo de STAKE.
+      // Usamos a stake da referência convertida como alvo de stake.
+      const targetStakeInLegCurrency = convertCurrency(ref.stakeAtual, ref.moeda, leg.moeda, getEffectiveRate);
+      
+      let otherEntriesStake = 0;
+      for (let j = 0; j < entries.length - 1; j++) {
+        const e = entries[j];
+        otherEntriesStake += convertCurrency(parseFloat(e.stake as any) || 0, e.moeda, leg.moeda, getEffectiveRate);
+      }
+
+      const neededStake = Math.max(0, targetStakeInLegCurrency - currentMainStake - otherEntriesStake);
+      const neededStakeInEntryCurrency = convertCurrency(neededStake, leg.moeda, lastEntry.moeda, getEffectiveRate);
+      
+      entries[lastIdx] = {
+        ...lastEntry,
+        stake: roundFn(neededStakeInEntryCurrency)
+      };
+      return entries;
+    }
+
+    // Lógica normal para quando há odd (equilibrar retorno)
     const mainReturn = currentMainStake * leg.oddMedia;
     
-    // Retorno de todas as subentradas EXCETO a última
     let otherEntriesReturn = 0;
-    const entries = [...legData.additionalEntries];
     for (let j = 0; j < entries.length - 1; j++) {
       const e = entries[j];
       const eReturn = (parseFloat(e.stake as any) || 0) * (parseFloat(e.odd as any) || 0);
       otherEntriesReturn += convertCurrency(eReturn, e.moeda, leg.moeda, getEffectiveRate);
     }
-
-    // Calcular stake necessária para a última subentrada
-    const lastIdx = entries.length - 1;
-    const lastEntry = entries[lastIdx];
-    const lastOdd = parseFloat(lastEntry.odd as any) || 0;
 
     if (lastOdd > 1) {
       const neededReturn = Math.max(0, targetReturnInLegCurrency - mainReturn - otherEntriesReturn);

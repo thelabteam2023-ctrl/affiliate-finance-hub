@@ -931,11 +931,9 @@ export function SurebetDialogTable({
     // tenha odd válida. Não bloqueamos o cálculo de TODA a arbitragem se uma sub-perna está incompleta,
     // mas o motor central `calcularStakesMultiCurrency` exige que todas as pernas passem no check `oddMedia > 1`.
     // No entanto, para o cenário do usuário (Perna 3 vazia de odd), o motor falharia.
-    // Solução: Filtramos pernas com odd <= 1 antes de passar para o motor, ou o motor deve ser tolerante.
-    // O motor atual (convertCurrency.ts) faz: `const allOddsValid = legs.every(l => l.oddMedia > 1); if (!allOddsValid) return ...`
-    // Vamos garantir que só disparamos se o motor tiver chance de sucesso.
-    const validOddsCount = legs.filter(l => l.oddMedia > 1).length;
-    if (validOddsCount < 2) return; // Mínimo 2 pernas com odd para arbitrar.
+    // REGRA DE OURO: Para que o motor de preenchimento automático funcione antes da odd,
+    // o motor calcularStakesMultiCurrency em convertCurrency.ts precisa ser chamado.
+    // Ele agora aceita pernas sem odd e as trata apenas por distribuição de stake.
     
     // Usar o utilitário centralizado de conversão multi-moeda
     const consolidation = (moedaConsolidacao as string) || "BRL";
