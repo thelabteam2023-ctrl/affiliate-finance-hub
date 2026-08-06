@@ -828,10 +828,22 @@ export function SurebetDialogTable({
     const newOdds = [...odds];
     const currentEntries = newOdds[pernaIndex].additionalEntries || [];
     const mainSelecaoLivre = newOdds[pernaIndex].selecaoLivre || "";
+    
+    // Ao adicionar subentrada, se a perna de referência for esta e tiver odd,
+    // as outras pernas devem ser recalculadas
     newOdds[pernaIndex].additionalEntries = [
       ...currentEntries,
       { bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecaoLivre: mainSelecaoLivre }
     ];
+    
+    // Resetar flags de edição manual para forçar o motor de cálculo a preencher a nova stake se houver odd
+    newOdds.forEach((o, i) => {
+      if (i !== pernaIndex && !o.isReference && o.stakeOrigem !== "print") {
+        o.isManuallyEdited = false;
+        o.stakeOrigem = undefined;
+      }
+    });
+    
     setOdds(newOdds);
   };
 
@@ -850,6 +862,25 @@ export function SurebetDialogTable({
     if (field === "bookmaker_id") {
       const selectedBk = bookmakerSaldos.find(b => b.id === value);
       currentEntries[entryIndex].moeda = (selectedBk?.moeda as SupportedCurrency) || "BRL";
+    }
+    
+    // Se mudou stake ou odd de uma subentrada, resetamos as flags das outras pernas (se esta for a referência)
+    // ou resetamos a flag desta perna (se não for referência) para o motor preencher a stake principal
+    if (field === "stake" || field === "odd") {
+      if (newOdds[pernaIndex].isReference) {
+        newOdds.forEach((o, i) => {
+          if (i !== pernaIndex && o.stakeOrigem !== "print") {
+            o.isManuallyEdited = false;
+            o.stakeOrigem = undefined;
+          }
+        });
+      } else {
+        // Se mudou algo na subentrada de uma perna dependente, a stake principal dela deve recalcular
+        if (newOdds[pernaIndex].stakeOrigem !== "print") {
+          newOdds[pernaIndex].isManuallyEdited = false;
+          newOdds[pernaIndex].stakeOrigem = undefined;
+        }
+      }
     }
     
     newOdds[pernaIndex].additionalEntries = currentEntries;
