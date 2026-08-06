@@ -1695,22 +1695,44 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     // Calcular cenários de retorno/lucro para CADA resultado possível
     // Multi-moeda: converter retorno para moeda de consolidação antes de subtrair stakeTotal
     const consolidation = (moedaConsolidacao as string) || "BRL";
-    const scenarios = parsedOdds.map((odd, i) => {
-      const stakeNesseLado = actualStakes[i];
-      const retornoNaMoedaDaPerna = odd > 1 ? stakeNesseLado * odd : 0;
-      // Converter retorno para moeda de consolidação
-      const retornoConsolidado = convertCurrency(
-        retornoNaMoedaDaPerna, 
-        odds[i].moeda as string, 
-        consolidation, 
+    const scenarios = consolidatedPerPerna.map((c, i) => {
+      // 1. Calcular o retorno total da perna na moeda consolidada do projeto
+      // Devemos somar o retorno da entrada principal + retornos de entradas adicionais,
+      // convertendo cada um individualmente para a moeda de consolidação.
+      
+      const pernaData = odds[i];
+      
+      // Retorno da entrada principal convertido individualmente
+      const mainOdd = parseFloat(pernaData.odd) || 0;
+      const mainStake = parseFloat(pernaData.stake) || 0;
+      const mainReturnConverted = convertCurrency(
+        mainStake * mainOdd,
+        pernaData.moeda as string,
+        consolidation,
         getEffectiveRate as GetEffectiveRateFn
       );
+      
+      // Retornos das entradas adicionais convertidos individualmente
+      let additionalReturnsConverted = 0;
+      (pernaData.additionalEntries || []).forEach(ae => {
+        const aeOdd = parseFloat(ae.odd) || 0;
+        const aeStake = parseFloat(ae.stake) || 0;
+        additionalReturnsConverted += convertCurrency(
+          aeStake * aeOdd,
+          ae.moeda as string,
+          consolidation,
+          getEffectiveRate as GetEffectiveRateFn
+        );
+      });
+      
+      const retornoConsolidado = mainReturnConverted + additionalReturnsReturnsConverted;
       const lucro = retornoConsolidado - stakeTotal;
       const roi = stakeTotal > 0 ? (lucro / stakeTotal) * 100 : 0;
+      
       return {
-        selecao: odds[i].selecao,
-        stake: stakeNesseLado,
-        oddMedia: odd,
+        selecao: pernaData.selecao,
+        stake: c.stakeTotal,
+        oddMedia: c.oddMedia,
         retorno: retornoConsolidado,
         lucro,
         roi,
