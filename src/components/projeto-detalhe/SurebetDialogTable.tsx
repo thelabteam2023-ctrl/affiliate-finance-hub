@@ -1209,8 +1209,9 @@ export function SurebetDialogTable({
     }).length;
   }, [odds]);
 
-  // Detectar operação parcial: tem 2+ pernas completas mas não cobre todos os desfechos
   const isOperacaoParcial = useMemo(() => {
+    // Se temos pernas preenchidas, mas a stake total consolidada é zero ou negativa, não é válida.
+    // Também deve ter pelo menos 2 pernas para ser arbitragem.
     return pernasCompletasCount >= 2 && pernasCompletasCount < numPernas;
   }, [pernasCompletasCount, numPernas]);
 
@@ -1394,8 +1395,51 @@ export function SurebetDialogTable({
       toast.error("Informe o evento");
       return;
     }
-    if (pernasValidas.length < 2) {
-      toast.error("Mínimo de 2 pernas válidas para conversão");
+    
+    // Expandir entradas (principal + adicionais) para apostas simples
+    const allValidEntries: Array<{
+      bookmaker_id: string;
+      odd: string;
+      stake: string;
+      selecao: string;
+      selecaoLivre: string;
+      moeda: SupportedCurrency;
+    }> = [];
+
+    odds.forEach(perna => {
+      // Entrada principal
+      const mainOdd = parseFloat(perna.odd);
+      const mainStake = parseFloat(perna.stake);
+      if (perna.bookmaker_id && mainOdd > 1 && mainStake > 0) {
+        allValidEntries.push({
+          bookmaker_id: perna.bookmaker_id,
+          odd: perna.odd,
+          stake: perna.stake,
+          selecao: perna.selecao,
+          selecaoLivre: perna.selecaoLivre,
+          moeda: perna.moeda as SupportedCurrency
+        });
+      }
+
+      // Entradas adicionais
+      (perna.additionalEntries || []).forEach(ae => {
+        const aeOdd = parseFloat(ae.odd);
+        const aeStake = parseFloat(ae.stake);
+        if (ae.bookmaker_id && aeOdd > 1 && aeStake > 0) {
+          allValidEntries.push({
+            bookmaker_id: ae.bookmaker_id,
+            odd: ae.odd,
+            stake: ae.stake,
+            selecao: perna.selecao,
+            selecaoLivre: ae.selecaoLivre,
+            moeda: ae.moeda as SupportedCurrency
+          });
+        }
+      });
+    });
+
+    if (allValidEntries.length < 2) {
+      toast.error("Mínimo de 2 entradas válidas para conversão");
       return;
     }
 
@@ -1412,9 +1456,9 @@ export function SurebetDialogTable({
       // Gerar operation_group_id para agrupar as apostas
       const operationGroupId = crypto.randomUUID();
       
-      const apostasSimples = pernasValidas.map((entry) => {
+      const apostasSimples = allValidEntries.map((entry) => {
         const stake = parseFloat(entry.stake) || 0;
-        const moeda = getBookmakerMoeda(entry.bookmaker_id);
+        const moeda = entry.moeda;
         const effectiveRate = getEffectiveRate(moeda);
         const snapshotFields = getSnapshotFields(stake, moeda, effectiveRate.rate);
         
@@ -2196,11 +2240,11 @@ export function SurebetDialogTable({
                 o que não configura uma arbitragem válida.
               </p>
               <p>
-                Deseja registrar as <strong>{pernasValidas.length} pernas válidas</strong> como apostas simples independentes?
+                Deseja registrar as <strong>{allValidEntries.length} entradas válidas</strong> como apostas simples independentes?
               </p>
               <div className="mt-3 p-3 bg-muted/50 rounded-lg text-xs">
                 <div className="font-medium mb-1">Pernas que serão registradas:</div>
-                {pernasValidas.map((p, i) => (
+                {allValidEntries.map((p, i) => (
                   <div key={i} className="flex items-center gap-2 py-0.5">
                     <ArrowRight className="h-3 w-3 text-primary" />
                     <span>{p.selecao} • {getBookmakerNome(p.bookmaker_id)} • Odd {p.odd} • Stake {p.stake}</span>
