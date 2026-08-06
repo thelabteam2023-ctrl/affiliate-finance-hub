@@ -1215,7 +1215,52 @@ export function SurebetDialogTable({
     return pernasCompletasCount >= 2 && pernasCompletasCount < numPernas;
   }, [pernasCompletasCount, numPernas]);
 
-  // Pernas válidas para potencial conversão
+  // Mapear todas as entradas válidas (principal + adicionais)
+  const allValidEntries = useMemo(() => {
+    const entries: Array<{
+      bookmaker_id: string;
+      odd: string;
+      stake: string;
+      selecao: string;
+      selecaoLivre: string;
+      moeda: SupportedCurrency;
+    }> = [];
+
+    odds.forEach(perna => {
+      // Entrada principal
+      const mainOdd = parseFloat(perna.odd);
+      const mainStake = parseFloat(perna.stake);
+      if (perna.bookmaker_id && mainOdd > 1 && mainStake > 0) {
+        entries.push({
+          bookmaker_id: perna.bookmaker_id,
+          odd: perna.odd,
+          stake: perna.stake,
+          selecao: perna.selecao,
+          selecaoLivre: perna.selecaoLivre,
+          moeda: perna.moeda as SupportedCurrency
+        });
+      }
+
+      // Entradas adicionais
+      (perna.additionalEntries || []).forEach(ae => {
+        const aeOdd = parseFloat(ae.odd);
+        const aeStake = parseFloat(ae.stake);
+        if (ae.bookmaker_id && aeOdd > 1 && aeStake > 0) {
+          entries.push({
+            bookmaker_id: ae.bookmaker_id,
+            odd: ae.odd,
+            stake: ae.stake,
+            selecao: perna.selecao,
+            selecaoLivre: ae.selecaoLivre,
+            moeda: ae.moeda as SupportedCurrency
+          });
+        }
+      });
+    });
+    return entries;
+  }, [odds]);
+
+  // Pernas válidas para potencial conversão (mantido para compatibilidade se necessário, mas allValidEntries é preferido)
   const pernasValidas = useMemo(() => {
     return odds.filter(entry => {
       const odd = parseFloat(entry.odd);
