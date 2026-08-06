@@ -1441,48 +1441,6 @@ export function SurebetDialogTable({
       return;
     }
     
-    // Expandir entradas (principal + adicionais) para apostas simples
-    const allValidEntries: Array<{
-      bookmaker_id: string;
-      odd: string;
-      stake: string;
-      selecao: string;
-      selecaoLivre: string;
-      moeda: SupportedCurrency;
-    }> = [];
-
-    odds.forEach(perna => {
-      // Entrada principal
-      const mainOdd = parseFloat(perna.odd);
-      const mainStake = parseFloat(perna.stake);
-      if (perna.bookmaker_id && mainOdd > 1 && mainStake > 0) {
-        allValidEntries.push({
-          bookmaker_id: perna.bookmaker_id,
-          odd: perna.odd,
-          stake: perna.stake,
-          selecao: perna.selecao,
-          selecaoLivre: perna.selecaoLivre,
-          moeda: perna.moeda as SupportedCurrency
-        });
-      }
-
-      // Entradas adicionais
-      (perna.additionalEntries || []).forEach(ae => {
-        const aeOdd = parseFloat(ae.odd);
-        const aeStake = parseFloat(ae.stake);
-        if (ae.bookmaker_id && aeOdd > 1 && aeStake > 0) {
-          allValidEntries.push({
-            bookmaker_id: ae.bookmaker_id,
-            odd: ae.odd,
-            stake: ae.stake,
-            selecao: perna.selecao,
-            selecaoLivre: ae.selecaoLivre,
-            moeda: ae.moeda as SupportedCurrency
-          });
-        }
-      });
-    });
-
     if (allValidEntries.length < 2) {
       toast.error("Mínimo de 2 entradas válidas para conversão");
       return;
@@ -1492,11 +1450,6 @@ export function SurebetDialogTable({
       setConversionInProgress(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
-
-      const getBookmakerMoeda = (bookmakerId: string): SupportedCurrency => {
-        const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
-        return (bk?.moeda as SupportedCurrency) || "BRL";
-      };
 
       // Gerar operation_group_id para agrupar as apostas
       const operationGroupId = crypto.randomUUID();
@@ -1539,11 +1492,6 @@ export function SurebetDialogTable({
         .insert(apostasSimples);
 
       if (insertError) throw insertError;
-
-      // Se houver rascunho, deletar
-      if (rascunho?.id) {
-        // O rascunho será deletado pelo componente pai via onSuccess
-      }
 
       toast.success(`${apostasSimples.length} apostas simples registradas!`);
       setShowConversionDialog(false);
