@@ -933,6 +933,7 @@ export function SurebetDialogTable({
     // No entanto, para o cenário do usuário (Perna 3 vazia de odd), o motor falharia.
     // REGRA DE OURO: Para que o motor de preenchimento automático funcione antes da odd,
     // o motor calcularStakesMultiCurrency em convertCurrency.ts precisa ser chamado.
+    // Ele agora aceita pernas sem odd e as trata apenas por distribuição de stake.
     
     // Usar o utilitário centralizado de conversão multi-moeda
     const consolidation = (moedaConsolidacao as string) || "BRL";
