@@ -124,7 +124,6 @@ export function calcularStakesMultiCurrency(
   isValid: boolean;
   lucroConsolidado: number;
   ratesUsed: Record<string, { rate: number; source: string }>;
-  adjustedAdditionalEntries?: any[][];
 } {
   const n = legs.length;
   const ratesUsed: Record<string, { rate: number; source: string }> = {};
@@ -133,14 +132,13 @@ export function calcularStakesMultiCurrency(
     return { stakes: legs.map(l => l.stakeAtual), isValid: false, lucroConsolidado: 0, ratesUsed };
   }
 
-  const refIndex = legs.findIndex(l => l.isReference);
-  if (refIndex === -1) {
+  const allOddsValid = legs.every(l => l.oddMedia > 1);
+  if (!allOddsValid) {
     return { stakes: legs.map(l => l.stakeAtual), isValid: false, lucroConsolidado: 0, ratesUsed };
   }
 
-  // REGRA DE OURO: Só falhamos se a perna de referência não tiver odd.
-  // Pernas sem odd simplesmente não terão stake calculada (retornam stakeAtual).
-  if (legs[refIndex].oddMedia <= 1) {
+  const refIndex = legs.findIndex(l => l.isReference);
+  if (refIndex === -1) {
     return { stakes: legs.map(l => l.stakeAtual), isValid: false, lucroConsolidado: 0, ratesUsed };
   }
 
@@ -169,7 +167,7 @@ export function calcularStakesMultiCurrency(
     targetReturnInRefCurrency = ref.stakeAtual * ref.oddMedia;
   }
 
-  // PASSO 2: Para cada perna, calcular stake nas entradas (seguindo a prioridade: Entrada Principal fixa -> Subentradas calculadas)
+  // PASSO 2: Para cada perna, calcular stake na sua própria moeda
   const calculatedStakes = legs.map((leg, i) => {
     if (i === refIndex) return leg.stakeAtual;
     if (leg.isManuallyEdited || leg.isFromPrint) return leg.stakeAtual;
@@ -182,96 +180,43 @@ export function calcularStakesMultiCurrency(
       getEffectiveRate
     );
 
-    // CRÍTICO: A entrada principal nesta perna é considerada fixa pelo usuário (ou o valor padrão da calculadora).
-    // O sistema agora deve recalcular as SUBENTRADAS para preencher o déficit, mas o motor central
-    // de calcularStakesMultiCurrency retorna a stake da entrada principal.
-    // Para manter a entrada principal fixa quando editada, o recálculo deve fluir para a última subentrada.
-    return leg.oddMedia > 1 ? roundFn(targetReturnInLegCurrency / leg.oddMedia) : leg.stakeAtual;
-  });
+    // Se a perna destino tem múltiplas entradas já preenchidas com stakes fixas,
+    // a stake da entrada principal deve ser o que falta para atingir o retorno-alvo.
+    const legPernaData = legsWithEntries?.[i];
+    let alreadyCoveredReturnInLegCurrency = 0;
 
-  // PASSO 3: Ajustar subentradas para pernas dependentes (não referência)
-  const adjustedAdditionalEntries = legsWithEntries?.map((legData, i) => {
-    if (i === refIndex) return legData.additionalEntries;
-    
-    // Apenas se a perna for dependente e tiver subentradas
-    if (!legData.additionalEntries || legData.additionalEntries.length === 0) {
-      return legData.additionalEntries;
-    }
-
-    const leg = legs[i];
-    const targetReturnInLegCurrency = convertCurrency(
-      targetReturnInRefCurrency,
-      ref.moeda,
-      leg.moeda,
-      getEffectiveRate
-    );
-
-    const currentMainStake = calculatedStakes[i];
-    
-    const entries = [...legData.additionalEntries];
-    const lastIdx = entries.length - 1;
-    const lastEntry = entries[lastIdx];
-    const lastOdd = parseFloat(lastEntry.odd as any) || 0;
-
-    // NOVO REQUISITO: Se a perna não tem odd, distribuímos a stake baseada apenas no saldo restante (stake real, não payout)
-    if (leg.oddMedia <= 1) {
-      // Stake total da referência convertida para a moeda desta perna
-      // Como não há odd, o "targetReturn" não faz sentido financeiro, mas o usuário quer 
-      // preencher o saldo de STAKE.
-      // Usamos a stake da referência convertida como alvo de stake.
-      const targetStakeInLegCurrency = convertCurrency(ref.stakeAtual, ref.moeda, leg.moeda, getEffectiveRate);
-      
-      let otherEntriesStake = 0;
-      for (let j = 0; j < entries.length - 1; j++) {
-        const e = entries[j];
-        otherEntriesStake += convertCurrency(parseFloat(e.stake as any) || 0, e.moeda, leg.moeda, getEffectiveRate);
-      }
-
-      const neededStake = Math.max(0, targetStakeInLegCurrency - currentMainStake - otherEntriesStake);
-      const neededStakeInEntryCurrency = convertCurrency(neededStake, leg.moeda, lastEntry.moeda, getEffectiveRate);
-      
-      entries[lastIdx] = {
-        ...lastEntry,
-        stake: roundFn(neededStakeInEntryCurrency)
-      };
-      return entries;
-    }
-
-    // Lógica normal para quando há odd (equilibrar retorno)
-    const mainReturn = currentMainStake * leg.oddMedia;
-    
-    let otherEntriesReturn = 0;
-    for (let j = 0; j < entries.length - 1; j++) {
-      const e = entries[j];
-      const eReturn = (parseFloat(e.stake as any) || 0) * (parseFloat(e.odd as any) || 0);
-      otherEntriesReturn += convertCurrency(eReturn, e.moeda, leg.moeda, getEffectiveRate);
-    }
-
-    if (lastOdd > 1) {
-      const neededReturn = Math.max(0, targetReturnInLegCurrency - mainReturn - otherEntriesReturn);
-      const neededReturnInEntryCurrency = convertCurrency(neededReturn, leg.moeda, lastEntry.moeda, getEffectiveRate);
-      entries[lastIdx] = {
-        ...lastEntry,
-        stake: roundFn(neededReturnInEntryCurrency / lastOdd)
-      };
-    }
-
-    return entries;
-  });
-
-  // PASSO 4: Calcular lucro consolidado na moeda de consolidação
-  const stakeConsolidadoTotal = legs.reduce((sum, leg, i) => {
-    const mainConverted = convertCurrency(calculatedStakes[i], leg.moeda, consolidationCurrency, getEffectiveRate);
-    
-    let additionalConverted = 0;
-    const entries = adjustedAdditionalEntries?.[i];
-    if (entries) {
-      entries.forEach(ae => {
-        additionalConverted += convertCurrency(parseFloat(ae.stake as any) || 0, ae.moeda, consolidationCurrency, getEffectiveRate);
+    if (legPernaData && legPernaData.additionalEntries && legPernaData.additionalEntries.length > 0) {
+      legPernaData.additionalEntries.forEach(ae => {
+        const aeReturn = ae.stake * ae.odd;
+        alreadyCoveredReturnInLegCurrency += convertCurrency(aeReturn, ae.moeda, leg.moeda, getEffectiveRate);
       });
     }
 
-    [leg.moeda, ...(entries?.map(ae => ae.moeda) || [])].forEach(m => {
+    const remainingReturnNeeded = Math.max(0, targetReturnInLegCurrency - alreadyCoveredReturnInLegCurrency);
+
+    // Stake da entrada principal = retorno restante / odd da entrada principal
+    return roundFn(remainingReturnNeeded / leg.oddMedia);
+  });
+
+
+  // PASSO 3: Calcular lucro consolidado na moeda de consolidação
+  // Para cada cenário (perna que ganha), o lucro deve ser igual.
+  // IMPORTANTE: O lucro consolidado deve considerar a soma de TODAS as entradas (convertidas individualmente).
+  const stakeConsolidadoTotal = legs.reduce((sum, leg, i) => {
+    // Stake da entrada principal convertida individualmente
+    const mainConverted = convertCurrency(calculatedStakes[i], leg.moeda, consolidationCurrency, getEffectiveRate);
+    
+    // Somar stakes das entradas adicionais convertidas individualmente
+    const legPernaData = legsWithEntries?.[i];
+    let additionalConverted = 0;
+    if (legPernaData && legPernaData.additionalEntries) {
+      legPernaData.additionalEntries.forEach(ae => {
+        additionalConverted += convertCurrency(ae.stake, ae.moeda, consolidationCurrency, getEffectiveRate);
+      });
+    }
+
+    // Registrar taxas usadas para auditoria
+    [leg.moeda, ...(legPernaData?.additionalEntries?.map(ae => ae.moeda) || [])].forEach(m => {
       if (m !== "BRL" && !ratesUsed[m]) {
         const info = getEffectiveRate(m);
         ratesUsed[m] = { rate: info.rate, source: info.source };
@@ -296,6 +241,5 @@ export function calcularStakesMultiCurrency(
     isValid: true,
     lucroConsolidado,
     ratesUsed,
-    adjustedAdditionalEntries,
   };
 }
