@@ -561,6 +561,8 @@ const getSelecoesPorMercado = (mercado: string, modelo: "1-X-2" | "1-2"): string
 export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSuccess, activeTab = 'surebet', embedded = false, rascunho = null }: SurebetDialogProps) {
   const isEditing = !!surebet;
   const { workspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
+  const invalidateFinancialState = useInvalidateFinancialState();
   
   // ========== HOOK DE MULTI-MOEDA ==========
   const { getSnapshotFields, isForeignCurrency, formatCurrency: formatCurrencySnapshot } = useCurrencySnapshot();
