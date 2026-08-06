@@ -1115,7 +1115,7 @@ export function ApostaMultiplaDialog({
         // CASO 1: LIQUIDADA → PENDENTE (reverter)
         if (resultadoMudou && eraLiquidada && !seraLiquidada) {
           await supabase.rpc('reverter_liquidacao_v4', { p_aposta_id: aposta.id });
-          await invalidateCanonicalCaches(queryClient, projetoId);
+          if (queryClient) await invalidateCanonicalCaches(queryClient, projetoId);
           await supabase.from("apostas_unificada").update({
             ...apostaData,
             resultado: "PENDENTE",
@@ -1149,7 +1149,7 @@ export function ApostaMultiplaDialog({
         }
         // CASO 3: LIQUIDADA → LIQUIDADA (reliquidação) ou mudança de stake/odd
         else if (eraLiquidada && houveMudancaFinanceira) {
-          await invalidateCanonicalCaches(queryClient, projetoId);
+          if (queryClient) await invalidateCanonicalCaches(queryClient, projetoId);
           console.log("[ApostaMultiplaDialog] Edição financeira via RPC atômico:", {
             stakeMudou: stakeMudou ? `${aposta.stake} → ${stakeNum}` : false,
             oddMudou: oddMudou ? `${aposta.odd_final} → ${oddFinal}` : false,
