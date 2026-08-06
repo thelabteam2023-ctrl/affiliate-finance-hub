@@ -948,17 +948,29 @@ export function SurebetDialogTable({
     
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
-      if (i === refIndex) return o;
-      if (o.isManuallyEdited || o.stakeOrigem === "print" || o.stakeOrigem === "manual") return o;
+      // Aplicar ajuste nas subentradas retornado pelo motor
+      const adjustedEntries = result.adjustedAdditionalEntries?.[i];
+      let updatedPerna = o;
+      
+      if (adjustedEntries) {
+        const entriesChanged = JSON.stringify(o.additionalEntries) !== JSON.stringify(adjustedEntries);
+        if (entriesChanged) {
+          needsUpdate = true;
+          updatedPerna = { ...o, additionalEntries: adjustedEntries };
+        }
+      }
+
+      if (i === refIndex) return updatedPerna;
+      if (o.isManuallyEdited || o.stakeOrigem === "print" || o.stakeOrigem === "manual") return updatedPerna;
       
       const calculatedStake = result.stakes[i];
       const currentStake = parseFloat(o.stake) || 0;
       
       if (Math.abs(calculatedStake - currentStake) > 0.01) {
         needsUpdate = true;
-        return { ...o, stake: calculatedStake.toFixed(2), stakeOrigem: "referencia" as StakeOrigem };
+        return { ...updatedPerna, stake: calculatedStake.toFixed(2), stakeOrigem: "referencia" as StakeOrigem };
       }
-      return o;
+      return updatedPerna;
     });
     
     if (needsUpdate) {
