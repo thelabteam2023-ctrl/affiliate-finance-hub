@@ -1375,8 +1375,16 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       legs,
       getEffectiveRate as GetEffectiveRateFn,
       arredondarStake,
-      consolidation
+      consolidation,
+      odds.map(o => ({
+        additionalEntries: (o.additionalEntries || []).map(ae => ({
+          moeda: ae.moeda,
+          odd: parseFloat(ae.odd) || 0,
+          stake: parseFloat(ae.stake) || 0
+        }))
+      }))
     );
+
     
     if (!result.isValid) return;
     
@@ -1385,24 +1393,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       if (i === refIndex) return o;
       if (o.isManuallyEdited || o.stakeOrigem === "print" || o.stakeOrigem === "manual") return o;
       
-      let calculatedStake = result.stakes[i];
-      
-      // Fix: ajustar stake para sub-entradas com payouts fixos
-      const additionalEntries = o.additionalEntries || [];
-      if (additionalEntries.length > 0) {
-        const oddMedia = getOddMediaPerna(o);
-        const mainOdd = parseFloat(o.odd) || 0;
-        if (mainOdd > 1 && oddMedia > 0) {
-          const targetReturn = calculatedStake * oddMedia;
-          const subPayout = additionalEntries.reduce((sum, ae) =>
-            sum + (parseFloat(ae.stake) || 0) * (parseFloat(ae.odd) || 0), 0);
-          if (subPayout > 0) {
-            calculatedStake = arredondarStake(Math.max(0, (targetReturn - subPayout) / mainOdd));
-          }
-        }
-      }
-      
+      const calculatedStake = result.stakes[i];
       const currentStake = parseFloat(o.stake) || 0;
+
       
       if (Math.abs(calculatedStake - currentStake) > 0.01) {
         needsUpdate = true;
