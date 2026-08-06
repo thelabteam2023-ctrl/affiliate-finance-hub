@@ -1393,13 +1393,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       if (i === refIndex) return o;
       if (o.isManuallyEdited || o.stakeOrigem === "print" || o.stakeOrigem === "manual") return o;
       
-      let calculatedStake = result.stakes[i];
-      
-      // O utilitário calcularStakesMultiCurrency já trata sub-entradas agora.
-      let calculatedStake = result.stakes[i];
-
-      
+      const calculatedStake = result.stakes[i];
       const currentStake = parseFloat(o.stake) || 0;
+
       
       if (Math.abs(calculatedStake - currentStake) > 0.01) {
         needsUpdate = true;
