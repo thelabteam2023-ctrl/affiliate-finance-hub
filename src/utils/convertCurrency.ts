@@ -110,7 +110,15 @@ export function calcularStakesMultiCurrency(
   }>,
   getEffectiveRate: GetEffectiveRateFn,
   roundFn: (value: number) => number,
-  consolidationCurrency: string
+  consolidationCurrency: string,
+  legsWithEntries?: Array<{
+    additionalEntries?: Array<{
+      moeda: string;
+      odd: number;
+      stake: number;
+    }>;
+  }>
+
 ): {
   stakes: number[];
   isValid: boolean;
@@ -140,11 +148,28 @@ export function calcularStakesMultiCurrency(
   }
 
   // PASSO 1: Retorno-alvo na moeda da referência
-  const targetReturnInRefCurrency = ref.stakeAtual * ref.oddMedia;
+  // Se a perna de referência tem múltiplas entradas, o retorno-alvo é a soma dos retornos de cada entrada
+  // convertido para a moeda da perna de referência (ou simplesmente mantido na moeda de cada entrada se preferir,
+  // mas aqui simplificamos calculando o retorno total da perna na sua moeda principal).
+  const refPernaData = legsWithEntries?.[refIndex];
+  let targetReturnInRefCurrency = 0;
+
+  if (refPernaData && refPernaData.additionalEntries && refPernaData.additionalEntries.length > 0) {
+    // Retorno da entrada principal
+    targetReturnInRefCurrency = ref.stakeAtual * ref.oddMedia;
+    
+    // Somar retornos das entradas adicionais (convertendo para a moeda da perna de referência)
+    refPernaData.additionalEntries.forEach(ae => {
+      const aeReturn = ae.stake * ae.odd;
+      targetReturnInRefCurrency += convertCurrency(aeReturn, ae.moeda, ref.moeda, getEffectiveRate);
+    });
+  } else {
+    targetReturnInRefCurrency = ref.stakeAtual * ref.oddMedia;
+  }
 
   // PASSO 2: Para cada perna, calcular stake na sua própria moeda
   const calculatedStakes = legs.map((leg, i) => {
-    if (i === refIndex) return ref.stakeAtual;
+    if (i === refIndex) return leg.stakeAtual;
     if (leg.isManuallyEdited || leg.isFromPrint) return leg.stakeAtual;
 
     // Converter retorno-alvo da moeda da referência para a moeda desta perna
@@ -155,26 +180,57 @@ export function calcularStakesMultiCurrency(
       getEffectiveRate
     );
 
-    // Stake = retorno / odd (arredondamento apenas aqui, no final)
-    return roundFn(targetReturnInLegCurrency / leg.oddMedia);
+    // Se a perna destino tem múltiplas entradas já preenchidas com stakes fixas,
+    // a stake da entrada principal deve ser o que falta para atingir o retorno-alvo.
+    const legPernaData = legsWithEntries?.[i];
+    let alreadyCoveredReturnInLegCurrency = 0;
+
+    if (legPernaData && legPernaData.additionalEntries && legPernaData.additionalEntries.length > 0) {
+      legPernaData.additionalEntries.forEach(ae => {
+        const aeReturn = ae.stake * ae.odd;
+        alreadyCoveredReturnInLegCurrency += convertCurrency(aeReturn, ae.moeda, leg.moeda, getEffectiveRate);
+      });
+    }
+
+    const remainingReturnNeeded = Math.max(0, targetReturnInLegCurrency - alreadyCoveredReturnInLegCurrency);
+
+    // Stake da entrada principal = retorno restante / odd da entrada principal
+    return roundFn(remainingReturnNeeded / leg.oddMedia);
   });
+
 
   // PASSO 3: Calcular lucro consolidado na moeda de consolidação
   // Para cada cenário (perna que ganha), o lucro deve ser igual
   // Usamos o cenário da referência: retorno_ref - soma_stakes_consolidadas
   const stakeConsolidadoTotal = calculatedStakes.reduce((sum, stake, i) => {
-    const converted = convertCurrency(stake, legs[i].moeda, consolidationCurrency, getEffectiveRate);
-    // Registrar taxas usadas
-    if (legs[i].moeda !== "BRL") {
-      const info = getEffectiveRate(legs[i].moeda);
-      ratesUsed[legs[i].moeda] = { rate: info.rate, source: info.source };
+    // Stake da entrada principal convertida
+    const mainConverted = convertCurrency(stake, legs[i].moeda, consolidationCurrency, getEffectiveRate);
+    
+    // Somar stakes das entradas adicionais convertidas
+    const legPernaData = legsWithEntries?.[i];
+    let additionalConverted = 0;
+    if (legPernaData && legPernaData.additionalEntries) {
+      legPernaData.additionalEntries.forEach(ae => {
+        additionalConverted += convertCurrency(ae.stake, ae.moeda, consolidationCurrency, getEffectiveRate);
+      });
     }
+
+    // Registrar taxas usadas (se necessário)
+    [legs[i].moeda, ...(legPernaData?.additionalEntries?.map(ae => ae.moeda) || [])].forEach(m => {
+      if (m !== "BRL") {
+        const info = getEffectiveRate(m);
+        ratesUsed[m] = { rate: info.rate, source: info.source };
+      }
+    });
+    
     if (consolidationCurrency !== "BRL") {
       const info = getEffectiveRate(consolidationCurrency);
       ratesUsed[consolidationCurrency] = { rate: info.rate, source: info.source };
     }
-    return sum + converted;
+    
+    return sum + mainConverted + additionalConverted;
   }, 0);
+
 
   const retornoRefConsolidado = convertCurrency(
     targetReturnInRefCurrency,
