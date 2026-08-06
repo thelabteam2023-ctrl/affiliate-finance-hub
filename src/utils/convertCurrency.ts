@@ -133,14 +133,14 @@ export function calcularStakesMultiCurrency(
     return { stakes: legs.map(l => l.stakeAtual), isValid: false, lucroConsolidado: 0, ratesUsed };
   }
 
-  // REGRA DE OURO: Só falhamos se a perna de referência não tiver odd.
-  // Pernas sem odd simplesmente não terão stake calculada (retornam stakeAtual).
-  if (legs[refIndex].oddMedia <= 1) {
+  const refIndex = legs.findIndex(l => l.isReference);
+  if (refIndex === -1) {
     return { stakes: legs.map(l => l.stakeAtual), isValid: false, lucroConsolidado: 0, ratesUsed };
   }
 
-  const refIndex = legs.findIndex(l => l.isReference);
-  if (refIndex === -1) {
+  // REGRA DE OURO: Só falhamos se a perna de referência não tiver odd.
+  // Pernas sem odd simplesmente não terão stake calculada (retornam stakeAtual).
+  if (legs[refIndex].oddMedia <= 1) {
     return { stakes: legs.map(l => l.stakeAtual), isValid: false, lucroConsolidado: 0, ratesUsed };
   }
 
@@ -186,7 +186,7 @@ export function calcularStakesMultiCurrency(
     // O sistema agora deve recalcular as SUBENTRADAS para preencher o déficit, mas o motor central
     // de calcularStakesMultiCurrency retorna a stake da entrada principal.
     // Para manter a entrada principal fixa quando editada, o recálculo deve fluir para a última subentrada.
-    return roundFn(targetReturnInLegCurrency / leg.oddMedia);
+    return leg.oddMedia > 1 ? roundFn(targetReturnInLegCurrency / leg.oddMedia) : leg.stakeAtual;
   });
 
   // PASSO 3: Ajustar subentradas para pernas dependentes (não referência)
