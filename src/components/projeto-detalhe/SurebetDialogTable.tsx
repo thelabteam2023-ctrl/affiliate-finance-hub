@@ -900,7 +900,14 @@ export function SurebetDialogTable({
       legs,
       getEffectiveRate as GetEffectiveRateFn,
       arredondarStake,
-      consolidation
+      consolidation,
+      odds.map(o => ({
+        additionalEntries: o.additionalEntries?.map(ae => ({
+          moeda: ae.moeda,
+          odd: parseFloat(ae.odd) || 0,
+          stake: parseFloat(ae.stake) || 0
+        }))
+      }))
     );
     
     if (!result.isValid) return;
@@ -1119,16 +1126,12 @@ export function SurebetDialogTable({
     
     // Calcular lucro por cenário
     const scenarios = parsedOdds.map((odd, i) => {
-      // 1. Calcular o retorno total da perna na moeda consolidada do projeto
-      // Devemos somar o retorno da entrada principal + retornos de entradas adicionais,
-      // convertendo cada um individualmente para a moeda de consolidação.
-      
       const pernaData = odds[i];
       const moedaPerna = moedasSelecionadas[i] || "BRL";
       
       // Retorno da entrada principal na moeda original e consolidada
       const mainOdd = parseFloat(pernaData.odd) || 0;
-      const mainStake = parseFloat(pernaData.stake) || 0;
+      const mainStake = actualStakes[i]; // Agora usamos a stake calculada ou manual (total da perna ajustado para a principal)
       const mainReturnOriginal = mainStake * mainOdd;
       const mainReturnConverted = convertCurrency(
         mainReturnOriginal,
@@ -1265,9 +1268,42 @@ export function SurebetDialogTable({
         const effectiveRate = getEffectiveRate(mainMoeda);
         const mainSnapshotFields = getSnapshotFields(mainStake, mainMoeda, effectiveRate.rate);
         
+        // Mapear entradas adicionais para salvamento (se houver)
+        const additionalEntriesToSave = (entry.additionalEntries || []).map(ae => {
+          const aeMoeda = ae.moeda as SupportedCurrency;
+          const aeRate = getEffectiveRate(aeMoeda);
+          const aeSnapshot = getSnapshotFields(parseFloat(ae.stake) || 0, aeMoeda, aeRate.rate);
+          
+          return {
+            bookmaker_id: ae.bookmaker_id,
+            bookmaker_nome: getBookmakerNome(ae.bookmaker_id),
+            moeda: aeMoeda,
+            odd: parseFloat(ae.odd) || 0,
+            stake: parseFloat(ae.stake) || 0,
+            stake_brl_referencia: aeSnapshot.valor_brl_referencia,
+            cotacao_snapshot: aeSnapshot.cotacao_snapshot,
+            cotacao_snapshot_at: aeSnapshot.cotacao_snapshot_at,
+            selecao_livre: ae.selecaoLivre || ""
+          };
+        });
+        
         return {
           selecao: entry.selecao,
           selecao_livre: entry.selecaoLivre || "",
+          entries: additionalEntriesToSave.length > 0 ? [
+            {
+              bookmaker_id: entry.bookmaker_id,
+              bookmaker_nome: getBookmakerNome(entry.bookmaker_id),
+              moeda: mainMoeda,
+              odd: parseFloat(entry.odd),
+              stake: mainStake,
+              stake_brl_referencia: mainSnapshotFields.valor_brl_referencia,
+              cotacao_snapshot: mainSnapshotFields.cotacao_snapshot,
+              cotacao_snapshot_at: mainSnapshotFields.cotacao_snapshot_at,
+              selecao_livre: entry.selecaoLivre || ""
+            },
+            ...additionalEntriesToSave
+          ] : undefined,
           bookmaker_id: entry.bookmaker_id,
           bookmaker_nome: getBookmakerNome(entry.bookmaker_id),
           moeda: mainMoeda,
@@ -1290,17 +1326,33 @@ export function SurebetDialogTable({
       const modeloString = modeloTipo === "2" ? "1-2" : modeloTipo === "3" ? "1-X-2" : `${numPernasCustom}-way`;
 
       // Criar via RPC atômica: garante STAKE no ledger para cada perna.
-      const pernasParaRPC = pernasToSave.map((perna) => ({
-        bookmaker_id: perna.bookmaker_id,
-        stake: perna.stake,
-        odd: perna.odd,
-        moeda: perna.moeda,
-        selecao: perna.selecao,
-        selecao_livre: perna.selecao_livre || null,
-        cotacao_snapshot: perna.cotacao_snapshot,
-        stake_brl_referencia: perna.stake_brl_referencia,
-        fonte_saldo: 'REAL',
-      }));
+      const pernasParaRPC = pernasToSave.flatMap((perna) => {
+        if (perna.entries && perna.entries.length > 0) {
+          return perna.entries.map(e => ({
+            bookmaker_id: e.bookmaker_id,
+            stake: e.stake,
+            odd: e.odd,
+            moeda: e.moeda,
+            selecao: perna.selecao,
+            selecao_livre: e.selecao_livre || null,
+            cotacao_snapshot: e.cotacao_snapshot,
+            stake_brl_referencia: e.stake_brl_referencia,
+            fonte_saldo: 'REAL',
+          }));
+        }
+        
+        return [{
+          bookmaker_id: perna.bookmaker_id,
+          stake: perna.stake,
+          odd: perna.odd,
+          moeda: perna.moeda,
+          selecao: perna.selecao,
+          selecao_livre: perna.selecao_livre || null,
+          cotacao_snapshot: perna.cotacao_snapshot,
+          stake_brl_referencia: perna.stake_brl_referencia,
+          fonte_saldo: 'REAL',
+        }];
+      });
 
       const { data: rpcResult, error: rpcError } = await supabase.rpc('criar_surebet_atomica', {
         p_workspace_id: workspaceId,
