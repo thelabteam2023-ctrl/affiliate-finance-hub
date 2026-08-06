@@ -1725,7 +1725,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         );
       });
       
-      const retornoConsolidado = mainReturnConverted + additionalReturnsReturnsConverted;
+      const retornoConsolidado = mainReturnConverted + additionalReturnsConverted;
       const lucro = retornoConsolidado - stakeTotal;
       const roi = stakeTotal > 0 ? (lucro / stakeTotal) * 100 : 0;
       
