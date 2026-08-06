@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { probeBookmakerLedgerParity } from "@/utils/integrityProbe";
@@ -440,6 +442,7 @@ const getMoneylineSelecoes = (esporte: string | undefined, evento: string): stri
 
 export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess, defaultEstrategia = 'PUNTER', activeTab = 'apostas', embedded = false }: ApostaDialogProps) {
   const { workspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
   const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
   const { getEffectiveRate } = useProjetoWorkingRates(projetoId);
   const [loading, setLoading] = useState(false);
