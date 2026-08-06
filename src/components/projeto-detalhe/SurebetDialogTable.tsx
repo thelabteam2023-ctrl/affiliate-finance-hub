@@ -873,16 +873,16 @@ export function SurebetDialogTable({
       if (newOdds[pernaIndex].isReference) {
         newOdds.forEach((o, i) => {
           if (i !== pernaIndex && o.stakeOrigem !== "print") {
+            // Se for referência, limpa as outras pernas para que elas recalculem (derivadas)
             o.isManuallyEdited = false;
             o.stakeOrigem = undefined;
           }
         });
       } else {
-        // Se mudou algo na subentrada de uma perna dependente, a stake principal dela deve recalcular
-        if (newOdds[pernaIndex].stakeOrigem !== "print") {
-          newOdds[pernaIndex].isManuallyEdited = false;
-          newOdds[pernaIndex].stakeOrigem = undefined;
-        }
+        // Se mudou algo na subentrada de uma perna dependente, ela se torna "manual"
+        // O motor agora deve respeitar essa stake e ajustar as outras subentradas ou a principal conforme a nova regra
+        // Porém, o requisito diz: subentrada é SEMPRE derivada. 
+        // Se o usuário edita a subentrada manualmente, o motor deve tentar equilibrar o lucro.
       }
     }
     
@@ -948,17 +948,29 @@ export function SurebetDialogTable({
     
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
-      if (i === refIndex) return o;
-      if (o.isManuallyEdited || o.stakeOrigem === "print" || o.stakeOrigem === "manual") return o;
+      // Aplicar ajuste nas subentradas retornado pelo motor
+      const adjustedEntries = result.adjustedAdditionalEntries?.[i];
+      let updatedPerna = o;
+      
+      if (adjustedEntries) {
+        const entriesChanged = JSON.stringify(o.additionalEntries) !== JSON.stringify(adjustedEntries);
+        if (entriesChanged) {
+          needsUpdate = true;
+          updatedPerna = { ...o, additionalEntries: adjustedEntries };
+        }
+      }
+
+      if (i === refIndex) return updatedPerna;
+      if (o.isManuallyEdited || o.stakeOrigem === "print" || o.stakeOrigem === "manual") return updatedPerna;
       
       const calculatedStake = result.stakes[i];
       const currentStake = parseFloat(o.stake) || 0;
       
       if (Math.abs(calculatedStake - currentStake) > 0.01) {
         needsUpdate = true;
-        return { ...o, stake: calculatedStake.toFixed(2), stakeOrigem: "referencia" as StakeOrigem };
+        return { ...updatedPerna, stake: calculatedStake.toFixed(2), stakeOrigem: "referencia" as StakeOrigem };
       }
-      return o;
+      return updatedPerna;
     });
     
     if (needsUpdate) {
