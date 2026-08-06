@@ -1126,23 +1126,28 @@ export function SurebetDialogTable({
       const pernaData = odds[i];
       const moedaPerna = moedasSelecionadas[i] || "BRL";
       
-      // Retorno da entrada principal convertido individualmente
+      // Retorno da entrada principal na moeda original e consolidada
       const mainOdd = parseFloat(pernaData.odd) || 0;
       const mainStake = parseFloat(pernaData.stake) || 0;
+      const mainReturnOriginal = mainStake * mainOdd;
       const mainReturnConverted = convertCurrency(
-        mainStake * mainOdd,
+        mainReturnOriginal,
         moedaPerna,
         moedaDominante,
         getEffectiveRate as GetEffectiveRateFn
       );
       
-      // Retornos das entradas adicionais convertidos individualmente
+      // Retornos das entradas adicionais
+      let additionalReturnsOriginal = 0;
       let additionalReturnsConverted = 0;
       (pernaData.additionalEntries || []).forEach(ae => {
         const aeOdd = parseFloat(ae.odd) || 0;
         const aeStake = parseFloat(ae.stake) || 0;
+        const aeReturnOriginal = aeStake * aeOdd;
+        
+        additionalReturnsOriginal += aeReturnOriginal;
         additionalReturnsConverted += convertCurrency(
-          aeStake * aeOdd,
+          aeReturnOriginal,
           ae.moeda as string,
           moedaDominante,
           getEffectiveRate as GetEffectiveRateFn
@@ -1153,6 +1158,12 @@ export function SurebetDialogTable({
       const lucroConsolidado = retornoConsolidado - stakeTotal;
       const roi = stakeTotal > 0 ? (lucroConsolidado / stakeTotal) * 100 : 0;
       
+      // Lucro na moeda da perna (simplificado para exibição, usando retorno principal + adicionais se mesma moeda)
+      // Se houver múltiplas moedas na mesma perna, a exibição de "Lucro na moeda original" perde o sentido,
+      // então mostramos apenas se todas as entradas forem na mesma moeda.
+      const todasEntradasMesmaMoeda = (pernaData.additionalEntries || []).every(ae => ae.moeda === moedaPerna);
+      const lucroPernaMoeda = todasEntradasMesmaMoeda ? (mainReturnOriginal + additionalReturnsOriginal - actualStakes[i]) : 0;
+      
       const isDirected = directedProfitLegs.includes(i);
       
       return {
@@ -1161,6 +1172,7 @@ export function SurebetDialogTable({
         oddMedia: odd,
         retorno: retornoConsolidado,
         lucro: lucroConsolidado,
+        lucroPernaMoeda,
         moeda: moedaPerna,
         roi,
         isPositive: lucroConsolidado >= 0,
