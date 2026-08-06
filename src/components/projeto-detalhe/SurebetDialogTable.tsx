@@ -1119,25 +1119,58 @@ export function SurebetDialogTable({
     
     // Calcular lucro por cenário
     const scenarios = parsedOdds.map((odd, i) => {
-      const stakeNesseLado = actualStakes[i];
+      // 1. Calcular o retorno total da perna na moeda consolidada do projeto
+      // Devemos somar o retorno da entrada principal + retornos de entradas adicionais,
+      // convertendo cada um individualmente para a moeda de consolidação.
+      
+      const pernaData = odds[i];
       const moedaPerna = moedasSelecionadas[i] || "BRL";
-      const retorno = odd > 1 ? stakeNesseLado * odd : 0;
       
-      // Lucro na moeda da perna (para exibição individual)
-      const lucroPernaMoeda = retorno - stakeNesseLado;
+      // Retorno da entrada principal na moeda original e consolidada
+      const mainOdd = parseFloat(pernaData.odd) || 0;
+      const mainStake = parseFloat(pernaData.stake) || 0;
+      const mainReturnOriginal = mainStake * mainOdd;
+      const mainReturnConverted = convertCurrency(
+        mainReturnOriginal,
+        moedaPerna,
+        moedaDominante,
+        getEffectiveRate as GetEffectiveRateFn
+      );
       
-      // Lucro consolidado (para cálculos de ROI e totais)
-      const retornoConsolidado = convertToConsolidation(retorno, moedaPerna);
+      // Retornos das entradas adicionais
+      let additionalReturnsOriginal = 0;
+      let additionalReturnsConverted = 0;
+      (pernaData.additionalEntries || []).forEach(ae => {
+        const aeOdd = parseFloat(ae.odd) || 0;
+        const aeStake = parseFloat(ae.stake) || 0;
+        const aeReturnOriginal = aeStake * aeOdd;
+        
+        additionalReturnsOriginal += aeReturnOriginal;
+        additionalReturnsConverted += convertCurrency(
+          aeReturnOriginal,
+          ae.moeda as string,
+          moedaDominante,
+          getEffectiveRate as GetEffectiveRateFn
+        );
+      });
+      
+      const retornoConsolidado = mainReturnConverted + additionalReturnsConverted;
       const lucroConsolidado = retornoConsolidado - stakeTotal;
       const roi = stakeTotal > 0 ? (lucroConsolidado / stakeTotal) * 100 : 0;
+      
+      // Lucro na moeda da perna (simplificado para exibição, usando retorno principal + adicionais se mesma moeda)
+      // Se houver múltiplas moedas na mesma perna, a exibição de "Lucro na moeda original" perde o sentido,
+      // então mostramos apenas se todas as entradas forem na mesma moeda.
+      const todasEntradasMesmaMoeda = (pernaData.additionalEntries || []).every(ae => ae.moeda === moedaPerna);
+      const lucroPernaMoeda = todasEntradasMesmaMoeda ? (mainReturnOriginal + additionalReturnsOriginal - actualStakes[i]) : 0;
       
       const isDirected = directedProfitLegs.includes(i);
       
       return {
         selecao: odds[i].selecao,
-        stake: stakeNesseLado,
+        stake: actualStakes[i],
         oddMedia: odd,
-        retorno,
+        retorno: retornoConsolidado,
         lucro: lucroConsolidado,
         lucroPernaMoeda,
         moeda: moedaPerna,
