@@ -2462,6 +2462,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           }
 
           await invalidateSaldos(projetoId);
+          await invalidateCanonicalCaches(queryClient, projetoId);
 
         } else if (apostaEstaLiquidada && houveMudancaFinanceira && !agoraPendente) {
           // ================================================================
@@ -2537,8 +2538,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             console.warn("[ApostaDialog] Erro ao atualizar campos complementares:", updateError);
           }
           
-          // Invalidar caches de saldo
+          // Invalidar caches de saldo e canônicos
           await invalidateSaldos(projetoId);
+          await invalidateCanonicalCaches(queryClient, projetoId);
           
         } else {
           // ================================================================
@@ -2569,6 +2571,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             .update(updatePayload)
             .eq("id", aposta.id);
           if (error) throw error;
+
+          // Garantir invalidação mesmo se não houver mudança financeira (ex: data mudou)
+          await invalidateCanonicalCaches(queryClient, projetoId);
 
           // Sincronizar ledger financeiro se for uma aposta PENDENTE com mudança de stake
           if (!apostaEstaLiquidada && houveMudancaStake) {
