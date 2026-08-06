@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { probeBookmakerLedgerParity } from "@/utils/integrityProbe";
@@ -440,6 +442,7 @@ const getMoneylineSelecoes = (esporte: string | undefined, evento: string): stri
 
 export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess, defaultEstrategia = 'PUNTER', activeTab = 'apostas', embedded = false }: ApostaDialogProps) {
   const { workspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
   const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
   const { getEffectiveRate } = useProjetoWorkingRates(projetoId);
   const [loading, setLoading] = useState(false);
@@ -2462,6 +2465,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           }
 
           await invalidateSaldos(projetoId);
+          if (queryClient) await invalidateCanonicalCaches(queryClient, projetoId);
 
         } else if (apostaEstaLiquidada && houveMudancaFinanceira && !agoraPendente) {
           // ================================================================
@@ -2537,8 +2541,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             console.warn("[ApostaDialog] Erro ao atualizar campos complementares:", updateError);
           }
           
-          // Invalidar caches de saldo
+          // Invalidar caches de saldo e canônicos
           await invalidateSaldos(projetoId);
+          if (queryClient) await invalidateCanonicalCaches(queryClient, projetoId);
           
         } else {
           // ================================================================
@@ -2569,6 +2574,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             .update(updatePayload)
             .eq("id", aposta.id);
           if (error) throw error;
+
+          // Garantir invalidação mesmo se não houver mudança financeira (ex: data mudou)
+          if (queryClient) await invalidateCanonicalCaches(queryClient, projetoId);
 
           // Sincronizar ledger financeiro se for uma aposta PENDENTE com mudança de stake
           if (!apostaEstaLiquidada && houveMudancaStake) {

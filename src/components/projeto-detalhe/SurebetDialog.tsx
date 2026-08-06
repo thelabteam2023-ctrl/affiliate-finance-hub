@@ -57,6 +57,7 @@ import { convertCurrency, calcularStakesMultiCurrency, type GetEffectiveRateFn }
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
+import { useInvalidateFinancialState } from "@/hooks/useInvalidateFinancialState";
 import { getEstrategiaFromTab, isAbaEstrategiaFixa } from "@/lib/apostaConstants";
 
 const ARBITRAGEM_ESTRATEGIA: RegistroApostaValues['estrategia'] = 'SUREBET';
@@ -560,6 +561,7 @@ const getSelecoesPorMercado = (mercado: string, modelo: "1-X-2" | "1-2"): string
 export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSuccess, activeTab = 'surebet', embedded = false, rascunho = null }: SurebetDialogProps) {
   const isEditing = !!surebet;
   const { workspaceId } = useWorkspace();
+  const invalidateFinancialState = useInvalidateFinancialState();
   
   // ========== HOOK DE MULTI-MOEDA ==========
   const { getSnapshotFields, isForeignCurrency, formatCurrency: formatCurrencySnapshot } = useCurrencySnapshot();
@@ -2759,6 +2761,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
   const handleDialogClose = useCallback((newOpen: boolean) => {
     if (!newOpen && hasChangesRef.current) {
       // Chamar onSuccess apenas quando o modal fechar E houve alterações
+      // Garantir invalidação profunda antes do callback
+      invalidateFinancialState(projetoId, { operation: "aposta" });
+      invalidateCanonicalCaches(queryClient, projetoId);
       onSuccess();
       hasChangesRef.current = false;
       toastShownRef.current = false;
