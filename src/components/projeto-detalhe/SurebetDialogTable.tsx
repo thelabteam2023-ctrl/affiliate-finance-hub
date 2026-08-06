@@ -1119,15 +1119,37 @@ export function SurebetDialogTable({
     
     // Calcular lucro por cenário
     const scenarios = parsedOdds.map((odd, i) => {
-      const stakeNesseLado = actualStakes[i];
+      // 1. Calcular o retorno total da perna na moeda consolidada do projeto
+      // Devemos somar o retorno da entrada principal + retornos de entradas adicionais,
+      // convertendo cada um individualmente para a moeda de consolidação.
+      
+      const pernaData = odds[i];
       const moedaPerna = moedasSelecionadas[i] || "BRL";
-      const retorno = odd > 1 ? stakeNesseLado * odd : 0;
       
-      // Lucro na moeda da perna (para exibição individual)
-      const lucroPernaMoeda = retorno - stakeNesseLado;
+      // Retorno da entrada principal convertido individualmente
+      const mainOdd = parseFloat(pernaData.odd) || 0;
+      const mainStake = parseFloat(pernaData.stake) || 0;
+      const mainReturnConverted = convertCurrency(
+        mainStake * mainOdd,
+        moedaPerna,
+        moedaDominante,
+        getEffectiveRate as GetEffectiveRateFn
+      );
       
-      // Lucro consolidado (para cálculos de ROI e totais)
-      const retornoConsolidado = convertToConsolidation(retorno, moedaPerna);
+      // Retornos das entradas adicionais convertidos individualmente
+      let additionalReturnsConverted = 0;
+      (pernaData.additionalEntries || []).forEach(ae => {
+        const aeOdd = parseFloat(ae.odd) || 0;
+        const aeStake = parseFloat(ae.stake) || 0;
+        additionalReturnsConverted += convertCurrency(
+          aeStake * aeOdd,
+          ae.moeda as string,
+          moedaDominante,
+          getEffectiveRate as GetEffectiveRateFn
+        );
+      });
+      
+      const retornoConsolidado = mainReturnConverted + additionalReturnsConverted;
       const lucroConsolidado = retornoConsolidado - stakeTotal;
       const roi = stakeTotal > 0 ? (lucroConsolidado / stakeTotal) * 100 : 0;
       
@@ -1135,11 +1157,10 @@ export function SurebetDialogTable({
       
       return {
         selecao: odds[i].selecao,
-        stake: stakeNesseLado,
+        stake: actualStakes[i],
         oddMedia: odd,
-        retorno,
+        retorno: retornoConsolidado,
         lucro: lucroConsolidado,
-        lucroPernaMoeda,
         moeda: moedaPerna,
         roi,
         isPositive: lucroConsolidado >= 0,
