@@ -984,8 +984,7 @@ export function SurebetDialogTable({
       }
     }
   }, [
-    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}-${o.moeda}-${o.stakeOrigem}-${(o.additionalEntries || []).map(e => `${e.odd}:${e.stake}:${e.moeda}`).join('|')}`).join(','),
-    odds.map(o => o.isReference).join(','),
+    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}-${o.moeda}-${o.stakeOrigem}-${o.isReference}-${(o.additionalEntries || []).map(e => `${e.odd}:${e.stake}:${e.moeda}`).join('|')}`).join(','),
     arredondarAtivado,
     arredondarValor,
     isEditing,
