@@ -3432,6 +3432,24 @@ export function CaixaTransacaoDialog({
               })}
             </SelectContent>
           </Select>
+          {caixaWalletId && caixaWalletId !== "none" && (
+            <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+              {(() => {
+                const wallet = walletsEmpresa.find((w) => w.id === caixaWalletId) as any;
+                if (!wallet) return null;
+                return (
+                  <DestinoConfirmadoCard
+                    wallet={{
+                      label: wallet.label,
+                      exchange: wallet.exchange,
+                      network: wallet.network,
+                      endereco: wallet.endereco,
+                    }}
+                  />
+                );
+              })()}
+            </div>
+          )}
         </div>
       );
     }
