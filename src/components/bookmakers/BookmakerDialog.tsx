@@ -843,17 +843,17 @@ export default function BookmakerDialog({
           </div>
         </DialogContent>
       </Dialog>
-    </Dialog>
-
-    {/* Visualização rápida do parceiro */}
-    {parceiroId && (
-      <ParceiroDialog
-        open={showParceiroView}
-        onClose={() => setShowParceiroView(false)}
-        parceiro={{ id: parceiroId }}
-        viewMode={true}
-      />
-    )}
+      </Dialog>
+      
+      {/* Visualização rápida do parceiro */}
+      {parceiroId && (
+        <ParceiroDialog
+          open={showParceiroView}
+          onClose={() => setShowParceiroView(false)}
+          parceiro={{ id: parceiroId }}
+          viewMode={true}
+        />
+      )}
     </>
   );
 }
