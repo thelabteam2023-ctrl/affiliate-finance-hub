@@ -497,6 +497,7 @@ export default function BookmakerDialog({
   const hasLinks = !isLoadingDetails && selectedBookmaker?.links_json && selectedBookmaker.links_json.length > 0;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto p-0 gap-0">
         {/* ── Header ── */}
