@@ -69,9 +69,11 @@ function FormSection({ icon: Icon, title, children, className, badge }: {
 }) {
   return (
     <div className={cn("space-y-3", className)}>
-      <div className="flex items-center gap-2">
-        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</span>
+        </div>
         {badge}
       </div>
       {children}
@@ -553,18 +555,6 @@ export default function BookmakerDialog({
                           />
                         )}
                       </div>
-                      {parceiroId && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="shrink-0 h-9 w-9 border-dashed hover:border-primary/50 hover:bg-primary/5 transition-colors"
-                          onClick={() => setShowParceiroView(true)}
-                          title="Consultar dados do parceiro"
-                        >
-                          <User className="h-4 w-4 text-primary" />
-                        </Button>
-                      )}
                     </div>
                   </div>
 
@@ -749,7 +739,24 @@ export default function BookmakerDialog({
               )}
 
               {/* ═══ SECTION: Credenciais ═══ */}
-              <FormSection icon={KeyRound} title="Credenciais de Acesso">
+              <FormSection 
+                icon={KeyRound} 
+                title="Credenciais de Acesso"
+                badge={
+                  parceiroId && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="ml-auto h-5 w-5 hover:bg-primary/10 hover:text-primary transition-colors -mr-1"
+                      onClick={() => setShowParceiroView(true)}
+                      title="Consultar dados do parceiro"
+                    >
+                      <User className="h-3.5 w-3.5" />
+                    </Button>
+                  )
+                }
+              >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs">
