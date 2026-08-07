@@ -3592,7 +3592,25 @@ export function CaixaTransacaoDialog({
                  coinFilter={coin}
                  placeholder="Selecione a wallet de origem"
                />
-             </div>
+                {origemWalletId && (
+                  <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                    {(() => {
+                      const wallet = walletsCrypto.find((w) => w.id === origemWalletId) as any;
+                      if (!wallet) return null;
+                      return (
+                        <DestinoConfirmadoCard
+                          wallet={{
+                            label: wallet.label,
+                            exchange: wallet.exchange,
+                            network: wallet.network,
+                            endereco: wallet.endereco,
+                          }}
+                        />
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
            )}
           {origemParceiroId && tipoMoeda === "CRYPTO" && !coin && (
             <Alert className="border-blue-500/50 bg-blue-500/10">
@@ -3879,7 +3897,25 @@ export function CaixaTransacaoDialog({
                      coinFilter={coin}
                      placeholder="Selecione a wallet de origem"
                    />
-                 </div>
+                    {origemWalletId && (
+                      <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                        {(() => {
+                          const wallet = walletsCrypto.find((w) => w.id === origemWalletId) as any;
+                          if (!wallet) return null;
+                          return (
+                            <DestinoConfirmadoCard
+                              wallet={{
+                                label: wallet.label,
+                                exchange: wallet.exchange,
+                                network: wallet.network,
+                                endereco: wallet.endereco,
+                              }}
+                            />
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
                )}
               {origemParceiroId && coin && (() => {
                 const walletsDoParceiroComMoeda = walletsCrypto.filter(
