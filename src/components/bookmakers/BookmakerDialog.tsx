@@ -24,6 +24,7 @@ import { Loader2, AlertTriangle, User, ShieldAlert, Link2, KeyRound, Coins, Stic
 import { Checkbox } from "@/components/ui/checkbox";
 import BookmakerSelect from "./BookmakerSelect";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
+import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import { PasswordInput } from "@/components/parceiros/PasswordInput";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { FIAT_CURRENCIES, type FiatCurrency, CURRENCY_SYMBOLS } from "@/types/currency";
@@ -109,6 +110,7 @@ export default function BookmakerDialog({
   const [checkingOperations, setCheckingOperations] = useState(false);
   const [moedaConfirmada, setMoedaConfirmada] = useState(false);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const [showParceiroView, setShowParceiroView] = useState(false);
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
 
