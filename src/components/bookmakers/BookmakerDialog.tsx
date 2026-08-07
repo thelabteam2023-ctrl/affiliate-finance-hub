@@ -24,6 +24,7 @@ import { Loader2, AlertTriangle, User, ShieldAlert, Link2, KeyRound, Coins, Stic
 import { Checkbox } from "@/components/ui/checkbox";
 import BookmakerSelect from "./BookmakerSelect";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
+import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import { PasswordInput } from "@/components/parceiros/PasswordInput";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { FIAT_CURRENCIES, type FiatCurrency, CURRENCY_SYMBOLS } from "@/types/currency";
@@ -109,6 +110,7 @@ export default function BookmakerDialog({
   const [checkingOperations, setCheckingOperations] = useState(false);
   const [moedaConfirmada, setMoedaConfirmada] = useState(false);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const [showParceiroView, setShowParceiroView] = useState(false);
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
 
@@ -495,6 +497,7 @@ export default function BookmakerDialog({
   const hasLinks = !isLoadingDetails && selectedBookmaker?.links_json && selectedBookmaker.links_json.length > 0;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto p-0 gap-0">
         {/* ── Header ── */}
@@ -524,29 +527,45 @@ export default function BookmakerDialog({
                   {/* Parceiro */}
                   <div className="space-y-1.5">
                     <Label className="text-xs">Parceiro <span className="text-destructive">*</span></Label>
-                    {lockParceiro && parceiroId ? (
-                      <div className="flex items-center gap-2.5 h-9 border rounded-md bg-muted/30 px-3">
-                        <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="text-sm font-medium uppercase truncate">
-                          {parceiroNome || "Carregando..."}
-                        </span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        {lockParceiro && parceiroId ? (
+                          <div className="flex items-center gap-2.5 h-9 border rounded-md bg-muted/30 px-3">
+                            <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="text-sm font-medium uppercase truncate">
+                              {parceiroNome || "Carregando..."}
+                            </span>
+                          </div>
+                        ) : (
+                          <ParceiroSelect
+                            key={open ? 'parceiro-open' : 'parceiro-closed'}
+                            value={parceiroId}
+                            onValueChange={(newParceiroId) => {
+                              setParceiroId(newParceiroId);
+                              if (!bookmaker && !lockBookmaker) {
+                                setBookmakerId("");
+                                setSelectedBookmaker(null);
+                                setSelectedLink("");
+                              }
+                            }}
+                            disabled={loading}
+                            includeParceiroId={bookmaker?.parceiro_id}
+                          />
+                        )}
                       </div>
-                    ) : (
-                      <ParceiroSelect
-                        key={open ? 'parceiro-open' : 'parceiro-closed'}
-                        value={parceiroId}
-                        onValueChange={(newParceiroId) => {
-                          setParceiroId(newParceiroId);
-                          if (!bookmaker && !lockBookmaker) {
-                            setBookmakerId("");
-                            setSelectedBookmaker(null);
-                            setSelectedLink("");
-                          }
-                        }}
-                        disabled={loading}
-                        includeParceiroId={bookmaker?.parceiro_id}
-                      />
-                    )}
+                      {parceiroId && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0 h-9 w-9 border-dashed hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                          onClick={() => setShowParceiroView(true)}
+                          title="Consultar dados do parceiro"
+                        >
+                          <User className="h-4 w-4 text-primary" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Bookmaker */}
@@ -824,6 +843,17 @@ export default function BookmakerDialog({
           </div>
         </DialogContent>
       </Dialog>
-    </Dialog>
+      </Dialog>
+      
+      {/* Visualização rápida do parceiro */}
+      {parceiroId && (
+        <ParceiroDialog
+          open={showParceiroView}
+          onClose={() => setShowParceiroView(false)}
+          parceiro={{ id: parceiroId }}
+          viewMode={true}
+        />
+      )}
+    </>
   );
 }
