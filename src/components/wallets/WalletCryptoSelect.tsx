@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Search } from "lucide-react";
+import { Search, Copy, Check } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -8,9 +8,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { WalletDisplayItem } from "./WalletDisplayItem";
-import { getWalletDisplayName } from "@/utils/cryptoUtils";
+import { getWalletDisplayName, truncateAddress } from "@/utils/cryptoUtils";
 
 export interface WalletCryptoOption {
   id: string;
@@ -50,6 +52,22 @@ export function WalletCryptoSelect({
   triggerRef,
 }: WalletCryptoSelectProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [copied, setCopied] = useState(false);
+  
+  const handleCopy = async (e: React.MouseEvent, address: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      toast.success("Endereço copiado", {
+        description: truncateAddress(address, 8, 6),
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error("Erro ao copiar endereço");
+    }
+  };
 
   const filteredWallets = useMemo(() => {
     const search = searchTerm.toLowerCase().trim();
@@ -80,14 +98,31 @@ export function WalletCryptoSelect({
       <SelectTrigger ref={triggerRef} className={cn("h-auto py-2", className)}>
         <SelectValue placeholder={placeholder}>
           {selectedWallet ? (
-            <WalletDisplayItem
-              nickname={selectedWallet.label}
-              exchange={selectedWallet.exchange}
-              network={selectedWallet.network}
-              address={selectedWallet.endereco}
-              size="sm"
-              showIcon={true}
-            />
+            <div className="flex items-center justify-between w-full min-w-0 pr-4">
+              <WalletDisplayItem
+                nickname={selectedWallet.label}
+                exchange={selectedWallet.exchange}
+                network={selectedWallet.network}
+                address={selectedWallet.endereco}
+                size="sm"
+                showIcon={true}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 ml-2 shrink-0 hover:bg-primary/10 hover:text-primary transition-colors"
+                onClick={(e) => handleCopy(e, selectedWallet.endereco)}
+                title="Copiar endereço"
+              >
+                {copied ? (
+                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5 opacity-50" />
+                )}
+              </Button>
+            </div>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}

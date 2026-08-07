@@ -42,6 +42,7 @@ import {
   AlertTriangle,
   Coins,
   Info,
+  Copy
 } from "lucide-react";
 import { WalletDisplayItem } from "../wallets/WalletDisplayItem";
 import {
@@ -553,17 +554,43 @@ export function ConfirmarSaqueDialog({
                     <span>Destino</span>
                   </div>
                   <div className="text-right min-w-0">
-                    {isCryptoWithdrawal && saque.destino_wallet_id ? (
-                      <WalletDisplayItem
-                        nickname={saque.parceiro_nome}
-                        name={saque.wallet_nome || saque.wallet_exchange}
-                        network={saque.wallet_network}
-                        address={saque.descricao?.match(/0x[a-fA-F0-9]{40}/)?.[0] || ""} // Fallback check if address is in description or other field if needed
-                        showIcon={false}
-                        size="sm"
-                        className="items-end"
-                      />
-                    ) : (
+                    {isCryptoWithdrawal && saque.destino_wallet_id && (
+                      <div className="flex flex-col items-end gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <WalletDisplayItem
+                          nickname={saque.parceiro_nome}
+                          name={saque.wallet_nome || saque.wallet_exchange}
+                          network={saque.wallet_network}
+                          address={saque.descricao?.match(/0x[a-fA-F0-9]{40}/)?.[0] || ""}
+                          showIcon={false}
+                          size="sm"
+                          className="items-end"
+                        />
+                        {(() => {
+                          const address = saque.descricao?.match(/0x[a-fA-F0-9]{40}/)?.[0];
+                          if (!address) return null;
+                          return (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1.5 text-[10px] px-2"
+                              onClick={async () => {
+                                try {
+                                  await navigator.clipboard.writeText(address);
+                                  toast.success("Endereço copiado");
+                                } catch {
+                                  toast.error("Erro ao copiar");
+                                }
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                              Copiar Endereço
+                            </Button>
+                          );
+                        })()}
+                      </div>
+                    )}
+                    {(!isCryptoWithdrawal || !saque.destino_wallet_id) && (
                       <>
                         <span className="font-medium">
                           {saque.wallet_nome || saque.banco_nome || (isCryptoWithdrawal ? "Wallet Crypto" : "Conta Bancária")}

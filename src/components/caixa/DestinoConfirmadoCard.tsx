@@ -67,8 +67,8 @@ export function DestinoConfirmadoCard({
     try {
       await navigator.clipboard.writeText(wallet.endereco);
       setCopied(true);
-      toast.success("Wallet copiada", {
-        description: truncated,
+      toast.success("Endereço da wallet copiado", {
+        description: wallet.endereco,
       });
       setTimeout(() => setCopied(false), 2000);
     } catch {

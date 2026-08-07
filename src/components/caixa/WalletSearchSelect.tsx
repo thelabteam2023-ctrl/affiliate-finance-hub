@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
-import { Check, ChevronsUpDown, Search, User } from "lucide-react";
+import { Check, ChevronsUpDown, Search, User, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WalletDisplayItem } from "../wallets/WalletDisplayItem";
-import { getWalletDisplayName } from "@/utils/cryptoUtils";
+import { getWalletDisplayName, truncateAddress } from "@/utils/cryptoUtils";
+import { toast } from "sonner";
 import {
   Popover,
   PopoverContent,
@@ -51,6 +52,7 @@ export function WalletSearchSelect({
  }: WalletSearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const selected = wallets.find((w) => w.id === value);
 
@@ -146,6 +148,20 @@ export function WalletSearchSelect({
          )}
        </div>
      );
+    };
+ 
+   const handleCopy = async (e: React.MouseEvent, address: string) => {
+     e.stopPropagation();
+     try {
+       await navigator.clipboard.writeText(address);
+       setCopied(address === address); // Simple flag
+       toast.success("Endereço copiado", {
+         description: truncateAddress(address, 8, 6),
+       });
+       setTimeout(() => setCopied(false), 2000);
+     } catch (err) {
+       toast.error("Erro ao copiar endereço");
+     }
    };
 
   return (
@@ -174,7 +190,25 @@ export function WalletSearchSelect({
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <div className="flex items-center gap-2 shrink-0 ml-2">
+            {selected && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 hover:bg-primary/10 hover:text-primary transition-colors"
+                onClick={(e) => handleCopy(e, selected.endereco)}
+                title="Copiar endereço"
+              >
+                {copied ? (
+                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5 opacity-50" />
+                )}
+              </Button>
+            )}
+            <ChevronsUpDown className="h-4 w-4 opacity-50" />
+          </div>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
