@@ -1211,6 +1211,29 @@ export function SurebetDialogTable({
     return pernasCompletasCount >= 2 && pernasCompletasCount < numPernas;
   }, [pernasCompletasCount, numPernas]);
 
+  // Bloqueio visual do botão de registro se houver saldo insuficiente
+  const hasBalanceInconsistency = useMemo(() => {
+    if (isEditing) return false;
+    
+    for (let i = 0; i < odds.length; i++) {
+      const entry = odds[i];
+      if (entry.bookmaker_id) {
+        const stakeTotal = getStakeTotalPerna(entry);
+        if (stakeTotal > 0) {
+          const bk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
+          if (bk) {
+            let stakesOutras = 0;
+            odds.forEach((o, idx) => {
+              if (i !== idx && o.bookmaker_id === entry.bookmaker_id) stakesOutras += getStakeTotalPerna(o);
+            });
+            if (stakeTotal > (bk.saldo_operavel - stakesOutras) + 0.01) return true;
+          }
+        }
+      }
+    }
+    return false;
+  }, [odds, bookmakerSaldos, isEditing]);
+
   // Pernas válidas para potencial conversão
   const pernasValidas = useMemo(() => {
     return odds.filter(entry => {
@@ -1240,6 +1263,38 @@ export function SurebetDialogTable({
     if (pernasCompletasCount < 2) {
       toast.error("Arbitragem requer pelo menos 2 pernas completas");
       return;
+    }
+
+    // VALIDAÇÃO CRÍTICA DE SALDO (ANTI-REGRESSÃO)
+    if (!isEditing) {
+      for (let i = 0; i < odds.length; i++) {
+        const entry = odds[i];
+        if (entry.bookmaker_id) {
+          const stakeTotalPerna = getStakeTotalPerna(entry);
+          if (stakeTotalPerna > 0) {
+            const bk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
+            if (bk) {
+              // Obter saldo disponível base (da RPC canônica)
+              const saldoBase = bk.saldo_operavel;
+              
+              // Somar stakes de OUTRAS pernas que usam o mesmo bookmaker (uso compartilhado)
+              let stakesOutrasPernas = 0;
+              odds.forEach((other, otherIdx) => {
+                if (i !== otherIdx && other.bookmaker_id === entry.bookmaker_id) {
+                  stakesOutrasPernas += getStakeTotalPerna(other);
+                }
+              });
+
+              const saldoDisponivelReal = saldoBase - stakesOutrasPernas;
+
+              if (stakeTotalPerna > saldoDisponivelReal + 0.01) {
+                toast.error(`Saldo insuficiente em ${bk.nome}. Disponível: ${formatCurrency(saldoDisponivelReal, bk.moeda)}. Necessário: ${formatCurrency(stakeTotalPerna, bk.moeda)}.`);
+                return;
+              }
+            }
+          }
+        }
+      }
     }
 
     try {
@@ -2113,7 +2168,7 @@ export function SurebetDialogTable({
             </Button>
             <Button 
               onClick={handleSave} 
-              disabled={saving || analysis.stakeTotal <= 0 || pernasCompletasCount < numPernas}
+              disabled={saving || analysis.stakeTotal <= 0 || pernasCompletasCount < numPernas || hasBalanceInconsistency}
             >
               <Save className="h-4 w-4 mr-1" />
               {isEditing ? "Salvar" : "Registrar"}
@@ -2277,7 +2332,7 @@ export function SurebetDialogTable({
               )}
               <Button 
                 onClick={handleSave} 
-                disabled={saving || analysis.stakeTotal <= 0 || pernasCompletasCount < numPernas}
+                disabled={saving || analysis.stakeTotal <= 0 || pernasCompletasCount < numPernas || hasBalanceInconsistency}
               >
                 <Save className="h-4 w-4 mr-1" />
                 {isEditing ? "Salvar" : "Registrar"}
