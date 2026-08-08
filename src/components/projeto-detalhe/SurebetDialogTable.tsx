@@ -1769,13 +1769,23 @@ export function SurebetDialogTable({
                         )}
                         {/* Metadados fixos - altura fixa para evitar layout jumps */}
                         <BookmakerMetaRow 
-            bookmaker={selectedBookmaker ? {
-              parceiro_nome: selectedBookmaker.parceiro_nome || null,
-              moeda: selectedBookmaker.moeda,
-              saldo_operavel: selectedBookmaker.saldo_operavel,
-              saldo_freebet: selectedBookmaker.saldo_freebet,
-              saldo_disponivel: selectedBookmaker.saldo_disponivel,
-            } : null}
+                          bookmaker={selectedBookmaker ? {
+                            parceiro_nome: selectedBookmaker.parceiro_nome || null,
+                            moeda: selectedBookmaker.moeda,
+                            saldo_operavel: selectedBookmaker.saldo_operavel,
+                            saldo_freebet: selectedBookmaker.saldo_freebet,
+                            saldo_disponivel: selectedBookmaker.saldo_disponivel,
+                          } : null}
+                          className={(() => {
+                            if (!selectedBookmaker || isEditing) return "";
+                            const stakeTotal = getStakeTotalPerna(entry);
+                            let stakesOutras = 0;
+                            odds.forEach((o, idx) => {
+                              if (pernaIndex !== idx && o.bookmaker_id === entry.bookmaker_id) stakesOutras += getStakeTotalPerna(o);
+                            });
+                            const isInsuficiente = stakeTotal > (selectedBookmaker.saldo_operavel - stakesOutras) + 0.01;
+                            return isInsuficiente ? "text-destructive font-bold bg-destructive/10 rounded px-1" : "";
+                          })()}
                         />
                       </div>
                     </td>
