@@ -625,6 +625,8 @@ function deriveBreakdowns(
   const extrasAgrupados = deriveExtrasFromRpc(rawData, convert, moedaConsolidacao);
 
   // Lucro canônico (mesma engine dos ciclos) — HÍBRIDO para bônus
+  // CÁLCULO DO LUCRO CANÔNICO (SSOT)
+  // Nota: calcularLucroCanonicoFromRpc JÁ inclui perdas operacionais em sua lógica SSOT
   const lucroCanonicoResult = calcularLucroCanonicoFromRpc(rawData, convert, moedaConsolidacao, convertOficial);
   const lucroCanonicoTotal = lucroCanonicoResult.consolidado;
 

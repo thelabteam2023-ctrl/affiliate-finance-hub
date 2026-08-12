@@ -144,7 +144,7 @@ interface VisaoGeralChartsProps {
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
   /** Moeda de consolidação do projeto */
   moedaConsolidacao?: string;
-  /** Lucro Operacional canônico (via RPC server-side) — se fornecido, usado como badge total */
+  /** Lucro Operacional canônico (via RPC server-side ou derivação daily) — se fornecido, usado como badge total */
   lucroOperacionalKpi?: number | null;
 }
 

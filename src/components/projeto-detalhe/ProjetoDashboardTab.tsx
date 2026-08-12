@@ -310,12 +310,13 @@ export function ProjetoDashboardTab({ projetoId, refreshTrigger = 0 }: ProjetoDa
   });
 
   // ---- Badge do gráfico: derivado da MESMA fonte (canonicalDaily) que alimenta o chart ----
-  // CORREÇÃO: Antes usava uma RPC separada (get_projetos_lucro_operacional) que divergia
-  // do motor client-side. Agora usa a soma dos dados diários canônicos, garantindo
-  // que badge = soma dos pontos do gráfico = paridade absoluta.
+  // CORREÇÃO: Para garantir paridade absoluta entre a soma dos pontos do gráfico e o KPI
+  // exibido, derivamos o lucroKpiData diretamente dos dados que alimentam o gráfico.
   const lucroKpiData = useMemo(() => {
     if (!canonicalDaily.length) return null;
-    // Filtrar pelo período selecionado
+    
+    // Se houver um range de datas selecionado ( StandardPeriodFilter != 'tudo'),
+    // filtramos os dados diários para que a soma reflita apenas o período visível.
     if (dateRange) {
       const startStr = format(dateRange.start, 'yyyy-MM-dd');
       const endStr = format(dateRange.end, 'yyyy-MM-dd');
@@ -323,6 +324,8 @@ export function ProjetoDashboardTab({ projetoId, refreshTrigger = 0 }: ProjetoDa
         .filter(d => d.dia >= startStr && d.dia <= endStr)
         .reduce((sum, d) => sum + d.lucro, 0);
     }
+    
+    // Caso contrário (filtro "Tudo"), usamos a soma total do daily canônico.
     return canonicalDaily.reduce((sum, d) => sum + d.lucro, 0);
   }, [canonicalDaily, dateRange]);
 
