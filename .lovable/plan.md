@@ -1,47 +1,43 @@
-# Auditoria Forense Fase 2: Sincronismo Financeiro (Ocorrência → Saldo)
+# Plan: Implementação Controlada — Perda Operacional → Saldo da Bookmaker
 
-## 1. Validação da Arquitetura V6
-- **Introdução:** A V6 foi introduzida na migration `20260514171239` para centralizar a atualização de saldos em eventos financeiros (`financial_events`).
-- **Comportamento Alterado:** Antes, o `cash_ledger` (via trigger `atualizar_saldo_bookmaker_v5`) atualizava o saldo diretamente. Agora, o trigger `atualizar_saldo_bookmaker_v6` marca transações como `V6_AUDIT_ONLY`, delegando o impacto real ao trigger `fn_financial_events_sync_balance`.
-- **Cadeia de Sincronização:**
-  `Lançamento (Aposta/Transação) -> financial_events -> fn_financial_events_sync_balance -> bookmakers.saldo_atual`.
-- **Comprovação:** O `cash_ledger` para `PERDA_OPERACIONAL` apenas registra a auditoria. Como as ocorrências não inserem em `financial_events`, o saldo não é atualizado.
+O objetivo é integrar o módulo de Ocorrências com a arquitetura financeira V6, garantindo que perdas operacionais confirmadas debitem corretamente o saldo da bookmaker sem causar duplicidade nos KPIs.
 
-## 2. Investigação: Por que Ocorrências não geram Financial Events?
-- **Quem cria:** No sistema atual, `financial_events` são criados principalmente via triggers de apostas (`apostas_unificada`, `apostas_pernas`) ou via RPCs específicas de liquidação.
-- **Módulo de Ocorrências:** O fluxo em `src/hooks/useOcorrencias.ts` (função `useResolverOcorrenciaComFinanceiro`) utiliza o `ledgerService.ts`, que insere em `cash_ledger`. Ele **não possui** lógica para inserir em `financial_events`.
-- **Lacuna:** O módulo de ocorrências foi mantido na lógica de "Legado Ledger" (v4/v5) e não foi migrado para a arquitetura de eventos (V6).
+## 1. Fase de Investigação e Validação (Concluída)
+- Confirmado que `fn_financial_events_sync_balance` é o mecanismo canônico.
+- Verificado que `financial_events` suporta tipos específicos. Propomos o tipo `LOSS` ou `AJUSTE` com origem `PERDA_OPERACIONAL` se `LOSS` não estiver no check constraint (o check constraint atual tem `AJUSTE`).
+- *Nota:* O check constraint de `financial_events` no arquivo `20260127043904_14fc45b8-59f6-4558-86b3-787c84a26525.sql` aceita: `'STAKE', 'PAYOUT', 'VOID_REFUND', 'REVERSAL', 'FREEBET_STAKE', 'FREEBET_PAYOUT', 'FREEBET_CREDIT', 'FREEBET_EXPIRE', 'DEPOSITO', 'SAQUE', 'CASHBACK', 'BONUS', 'AJUSTE'`.
+- Como `LOSS` não está no constraint, utilizaremos `AJUSTE` com metadados e descrição apropriados, ou adicionaremos `LOSS` ao constraint via migração se for a preferência arquitetural. Seguiremos com a adição de `LOSS` e `LOSS_REVERSAL` para clareza.
 
-## 3. Mapeamento de Responsabilidades
+## 2. Alterações no Banco de Dados (Supabase)
+- **Migração SQL:**
+  - Adicionar `LOSS` e `LOSS_REVERSAL` ao check constraint da tabela `financial_events` (tipo_evento).
+  - Atualizar `fn_cash_ledger_generate_financial_events` para gerar automaticamente o `financial_event` tipo `LOSS` quando uma entrada `PERDA_OPERACIONAL` for inserida no `cash_ledger`.
+  - Isso garante que qualquer módulo (não apenas ocorrências) que use o `ledgerService.registrarPerdaOperacionalViaLedger` tenha o saldo sincronizado automaticamente.
 
-| Entidade | Responsabilidade | Fonte de Verdade? | É derivada? |
-| :--- | :--- | :--- | :--- |
-| **ocorrencias** | Registro operacional da disputa/incidente | Sim (Operacional) | Não |
-| **projeto_perdas** | Impacto de lucro no KPI do projeto | Sim (KPI) | Sim (de Ocorrência) |
-| **cash_ledger** | Auditoria e histórico de movimentação | Sim (Auditoria) | Não |
-| **financial_events** | **Fato Financeiro Canônico** (Sincroniza Saldo) | Sim (Financeiro) | Não |
-| **saldo_atual** | Representação do capital disponível | Sim (Persistido) | Sim (de Financial Events) |
+## 3. Alterações no Frontend
+- **useOcorrencias.ts (`useResolverOcorrenciaComFinanceiro`):**
+  - Garantir que a chamada para `registrarPerdaOperacionalViaLedger` forneça todos os IDs necessários (`bookmakerId`, `projetoIdSnapshot`, `perdaId`).
+  - O fluxo atual já chama o ledger, mas o ledger não está gerando o evento financeiro V6 para perdas. A migração no banco resolverá isso de forma transparente e atômica.
+- **ledgerService.ts:**
+  - Nenhuma mudança estrutural necessária se a lógica for movida para o gatilho do banco (preferencial para atomicidade). Se optarmos por manual, adicionaremos o insert em `financial_events` dentro de `registrarPerdaOperacionalViaLedger`.
 
-## 4. O Caso Lucas Pereira (Sman 365 - R$ 1.422,44)
-- **occorrencia_id:** `[A pesquisar via RPC/Logs]`
-- **projeto_perda_id:** `[A pesquisar via RPC/Logs]`
-- **cash_ledger_id:** `[A pesquisar via RPC/Logs]` (Tipo: PERDA_OPERACIONAL)
-- **financial_event_id:** **NÃO EXISTE** (Causa raiz do saldo incorreto)
-- **bookmaker_id:** Sman 365
-- **projeto_id:** Lucas Pereira
+## 4. Testes e Validação
+- **Caso Real:** Validar o caso "Lucas Pereira → Sman 365 → R$ 1.422,44".
+- **Idempotência:** Testar múltiplos salvamentos. A chave de idempotência no gatilho será `ledger_loss_` + `cash_ledger.id`.
+- **KPIs:** Verificar se a aba Bônus e Visão Geral continuam exibindo os valores corretos (sem dupla contagem).
+- **Reversão:** Testar o cancelamento da ocorrência e se o saldo retorna à bookmaker.
 
-## 5. Diagnóstico da Evolução do Lucro e Patrimônio
-- **Gráfico de Evolução:** A query em `src/hooks/useProjetoDashboardData.ts` (RPC `get_projeto_dashboard_data`) consolida dados de `projeto_perdas`. Por isso o gráfico **mostra** a perda, mas o **Patrimônio Total** (que soma os saldos das casas) está **inflado**, pois o saldo da Sman 365 não caiu.
+## Detalhes Técnicos (Migration)
+```sql
+-- Adicionar LOSS ao constraint se necessário
+ALTER TABLE financial_events DROP CONSTRAINT IF EXISTS financial_events_tipo_evento_check;
+ALTER TABLE financial_events ADD CONSTRAINT financial_events_tipo_evento_check 
+CHECK (tipo_evento IN (
+    'STAKE', 'PAYOUT', 'VOID_REFUND', 'REVERSAL',
+    'FREEBET_STAKE', 'FREEBET_PAYOUT', 'FREEBET_CREDIT', 'FREEBET_EXPIRE',
+    'DEPOSITO', 'SAQUE', 'CASHBACK', 'BONUS', 'AJUSTE', 'LOSS', 'LOSS_REVERSAL'
+));
 
-## 6. Arquitetura Proposta (Anti-Duplicidade)
-A solução canônica deve ser:
-1. **Ocorrência resolvida** -> Gera **UM** `financial_event` do tipo `LOSS`.
-2. O trigger `fn_financial_events_sync_balance` atualiza o **Saldo**.
-3. O **KPI** de lucro operacional deve passar a ler débitos de `financial_events` (tipo LOSS) em vez de `projeto_perdas`, ou `projeto_perdas` deve ser transformado em uma "view" de eventos de perda para evitar dupla contagem.
-
-## 7. Estratégia de Idempotência e Reversão
-- **Idempotência:** Usar `id_ocorrencia` como `referencia_id` no `financial_events` com uma constraint de unicidade.
-- **Reversão:** Inserir um novo evento de `LOSS_REVERSAL` (positivo) em vez de apagar o original, mantendo a trilha de auditoria contábil.
-
----
-**PRÓXIMO PASSO:** Após aprovação deste diagnóstico, realizarei a extração dos IDs reais do caso Lucas Pereira para o relatório final antes da implementação.
+-- Atualizar trigger no cash_ledger para incluir PERDA_OPERACIONAL
+-- (Similar ao bloco de AJUSTE_MANUAL em fn_cash_ledger_generate_financial_events)
+```
