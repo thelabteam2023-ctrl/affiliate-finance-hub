@@ -1,67 +1,47 @@
-# Auditoria Forense: Fluxo Financeiro (Ocorrência → Saldo → KPI)
+# Auditoria Forense Fase 2: Sincronismo Financeiro (Ocorrência → Saldo)
 
-## 1. Diagnóstico
-Existe uma **divergência de sincronismo** entre o reconhecimento de perdas operacionais em Ocorrências e a atualização do saldo das casas de apostas. Enquanto o KPI de Lucro (Projetos) já subtrai corretamente o valor da perda (via tabela `projeto_perdas`), o saldo da bookmaker permanece inalterado porque o fluxo de resolução da ocorrência não está gerando um evento no Ledger que impacte o `saldo_atual`.
+## 1. Validação da Arquitetura V6
+- **Introdução:** A V6 foi introduzida na migration `20260514171239` para centralizar a atualização de saldos em eventos financeiros (`financial_events`).
+- **Comportamento Alterado:** Antes, o `cash_ledger` (via trigger `atualizar_saldo_bookmaker_v5`) atualizava o saldo diretamente. Agora, o trigger `atualizar_saldo_bookmaker_v6` marca transações como `V6_AUDIT_ONLY`, delegando o impacto real ao trigger `fn_financial_events_sync_balance`.
+- **Cadeia de Sincronização:**
+  `Lançamento (Aposta/Transação) -> financial_events -> fn_financial_events_sync_balance -> bookmakers.saldo_atual`.
+- **Comprovação:** O `cash_ledger` para `PERDA_OPERACIONAL` apenas registra a auditoria. Como as ocorrências não inserem em `financial_events`, o saldo não é atualizado.
 
-## 2. Evidência do caso R$ 1.422,44 (Lucas Pereira)
-A investigação preliminar nos arquivos do projeto e lógica de banco aponta para o seguinte estado:
-- **Projeto:** Lucas Pereira (vinculado via `projeto_id`).
-- **Bookmaker:** Sman 365.
-- **Valor:** R$ 1.422,44.
-- **Status:** Resolvido como 'perda_confirmada'.
-- **Causa da Divergência:** O valor foi inserido em `projeto_perdas` (o que corrige o KPI), mas o `registrarPerdaOperacionalViaLedger` chamado no frontend insere um registro em `cash_ledger` que, devido ao trigger `atualizar_saldo_bookmaker_v6`, **não atualiza o saldo diretamente** (audit-only), esperando que um evento financeiro (`financial_events`) faça a sincronização. Como as ocorrências não geram `financial_events`, o saldo fica "congelado".
+## 2. Investigação: Por que Ocorrências não geram Financial Events?
+- **Quem cria:** No sistema atual, `financial_events` são criados principalmente via triggers de apostas (`apostas_unificada`, `apostas_pernas`) ou via RPCs específicas de liquidação.
+- **Módulo de Ocorrências:** O fluxo em `src/hooks/useOcorrencias.ts` (função `useResolverOcorrenciaComFinanceiro`) utiliza o `ledgerService.ts`, que insere em `cash_ledger`. Ele **não possui** lógica para inserir em `financial_events`.
+- **Lacuna:** O módulo de ocorrências foi mantido na lógica de "Legado Ledger" (v4/v5) e não foi migrado para a arquitetura de eventos (V6).
 
-## 3. Fluxo da Ocorrência
-- **Arquivo:** `src/hooks/useOcorrencias.ts`
-- **Função:** `useResolverOcorrenciaComFinanceiro`
-- **Tabela:** `ocorrencias`
-- **Registro Financeiro:** 
-  1. Chama `registrarPerdaOperacionalViaLedger` (LedgerService).
-  2. Insere na tabela `projeto_perdas`.
-- **Destino:** `cash_ledger` (como `PERDA_OPERACIONAL`) e `projeto_perdas`.
+## 3. Mapeamento de Responsabilidades
 
-## 4. Fluxo do KPI
-- **Arquivo:** `src/services/FinancialMetricsService.ts`
-- **Hook:** `useProjetoResultado`
-- **Query/RPC:** `get_projeto_dashboard_data` (que alimenta o `rawData.perdas`).
-- **Regra:** O KPI subtrai explicitamente `operationalLossesConfirmed` (obtido filtrando `projeto_perdas` por status 'CONFIRMADA').
-- **Por que está correto?** Porque a tabela `projeto_perdas` é a fonte primária para esse KPI e ela é alimentada diretamente na resolução.
+| Entidade | Responsabilidade | Fonte de Verdade? | É derivada? |
+| :--- | :--- | :--- | :--- |
+| **ocorrencias** | Registro operacional da disputa/incidente | Sim (Operacional) | Não |
+| **projeto_perdas** | Impacto de lucro no KPI do projeto | Sim (KPI) | Sim (de Ocorrência) |
+| **cash_ledger** | Auditoria e histórico de movimentação | Sim (Auditoria) | Não |
+| **financial_events** | **Fato Financeiro Canônico** (Sincroniza Saldo) | Sim (Financeiro) | Não |
+| **saldo_atual** | Representação do capital disponível | Sim (Persistido) | Sim (de Financial Events) |
 
-## 5. Fluxo do Saldo da Bookmaker
-- **Função:** `get_bookmaker_saldos` (RPC no Postgres).
-- **Tabela:** `bookmakers` (coluna `saldo_atual`).
-- **Cálculo:** O saldo é **calculado em tempo real** subtraindo apostas pendentes do `saldo_atual` persistido.
-- **Origem do erro:** O `saldo_atual` da tabela `bookmakers` não foi decrementado.
+## 4. O Caso Lucas Pereira (Sman 365 - R$ 1.422,44)
+- **occorrencia_id:** `[A pesquisar via RPC/Logs]`
+- **projeto_perda_id:** `[A pesquisar via RPC/Logs]`
+- **cash_ledger_id:** `[A pesquisar via RPC/Logs]` (Tipo: PERDA_OPERACIONAL)
+- **financial_event_id:** **NÃO EXISTE** (Causa raiz do saldo incorreto)
+- **bookmaker_id:** Sman 365
+- **projeto_id:** Lucas Pereira
 
-## 6. Ponto da Divergência
-A divergência ocorre no **Ledger**. O trigger `atualizar_saldo_bookmaker_v6` (migration `20260514171239`) desativou o update direto no saldo para o tipo `PERDA_OPERACIONAL`, marcando-o como `V6_AUDIT_ONLY`. Ele espera que a sincronização venha da tabela `financial_events`, mas o fluxo de ocorrências não gera eventos nessa tabela.
+## 5. Diagnóstico da Evolução do Lucro e Patrimônio
+- **Gráfico de Evolução:** A query em `src/hooks/useProjetoDashboardData.ts` (RPC `get_projeto_dashboard_data`) consolida dados de `projeto_perdas`. Por isso o gráfico **mostra** a perda, mas o **Patrimônio Total** (que soma os saldos das casas) está **inflado**, pois o saldo da Sman 365 não caiu.
 
-## 7. Ledger
-A perda **chega ao Ledger** (`cash_ledger`), mas é ignorada pelo trigger de atualização de saldo.
+## 6. Arquitetura Proposta (Anti-Duplicidade)
+A solução canônica deve ser:
+1. **Ocorrência resolvida** -> Gera **UM** `financial_event` do tipo `LOSS`.
+2. O trigger `fn_financial_events_sync_balance` atualiza o **Saldo**.
+3. O **KPI** de lucro operacional deve passar a ler débitos de `financial_events` (tipo LOSS) em vez de `projeto_perdas`, ou `projeto_perdas` deve ser transformado em uma "view" de eventos de perda para evitar dupla contagem.
 
-## 8. Causa Raiz
-A adoção da **Arquitetura V6/Event-Sync** (onde apenas `financial_events` atualizam saldo) não contemplou o módulo de Ocorrências. O sistema está em um estado híbrido onde KPIs leem de tabelas paralelas (`projeto_perdas`), mas o saldo depende de uma cadeia de eventos que não é disparada por perdas operacionais manuais.
+## 7. Estratégia de Idempotência e Reversão
+- **Idempotência:** Usar `id_ocorrencia` como `referencia_id` no `financial_events` com uma constraint de unicidade.
+- **Reversão:** Inserir um novo evento de `LOSS_REVERSAL` (positivo) em vez de apagar o original, mantendo a trilha de auditoria contábil.
 
-## 9. Impactos Adicionais
-- **Gráfico de Evolução:** Pode ignorar a perda se a query do gráfico ler apenas de `financial_events` em vez de consolidar com `projeto_perdas`.
-- **Patrimônio Total:** Inflado em R$ 1.422,44.
-
-## 10. Solução Proposta
-Unificar o evento canônico. A resolução de uma ocorrência com perda deve gerar um `financial_event` do tipo `LOSS` ou `ADJUSTMENT`. Isso garantirá que o trigger `fn_financial_events_sync_balance` atualize o saldo e que os gráficos (que já leem eventos) reflitam a perda na data correta.
-
-## 11. Risco de Dupla Contagem
-**Altíssimo.** Se passarmos a atualizar o saldo via Ledger e o KPI de lucro continuar subtraindo `projeto_perdas`, a perda será descontada duas vezes (uma no saldo das casas e outra na métrica de perdas).
-- **Estratégia:** O KPI deve parar de ler `projeto_perdas` para o lucro operacional e passar a considerar apenas os débitos confirmados no Ledger/Eventos, ou `projeto_perdas` deve ser a fonte exclusiva para gerar o evento no Ledger.
-
-## 12. Dados Históricos
-- **Registros Afetados:** Todas as ocorrências resolvidas como 'perda' desde a implantação do Trigger V6.
-- **Identificação:** Queries comparando `SUM(valor) FROM projeto_perdas` vs `SUM(valor) FROM cash_ledger WHERE tipo='PERDA_OPERACIONAL'`.
-
-## 13. Plano de Correção (Resumo)
-1. Ajustar `useResolverOcorrenciaComFinanceiro` para garantir integridade.
-2. Atualizar Trigger V6 ou criar `financial_event` para perdas.
-3. Sincronizar query de Lucro para evitar dupla contagem.
-
-## 14. Plano de Testes
-1. Validar caso Lucas Pereira: Saldo Sman 365 deve cair R$ 1.422,44 após correção.
-2. Verificar se o Lucro Total do projeto Lucas Pereira permanece inalterado (confirmando proteção contra dupla contagem).
+---
+**PRÓXIMO PASSO:** Após aprovação deste diagnóstico, realizarei a extração dos IDs reais do caso Lucas Pereira para o relatório final antes da implementação.
