@@ -716,7 +716,11 @@ export function useResolverOcorrenciaComFinanceiro() {
               bkSaldoIrrecuperavel = Number(bkInfo.saldo_irrecuperavel || 0);
               
               // Detectar se a bookmaker ainda está vinculada ao projeto da ocorrência
-              bookmakerStillLinked = bkInfo.projeto_id === ocorrencia.projeto_id;
+              // MELHORIA: Se a ocorrência não tinha snapshot de projeto_id, mas a bookmaker está em um projeto,
+              // assumimos que ela ainda está vinculada para permitir o débito de saldo.
+              bookmakerStillLinked = ocorrencia.projeto_id 
+                ? bkInfo.projeto_id === ocorrencia.projeto_id
+                : !!bkInfo.projeto_id;
             }
           }
 
