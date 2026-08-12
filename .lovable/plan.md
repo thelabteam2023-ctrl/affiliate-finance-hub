@@ -1,43 +1,48 @@
-# Plan: Implementação Controlada — Perda Operacional → Saldo da Bookmaker
+# Auditoria e Sincronização: Resultado por Estratégia × Evolução de Lucro
 
-O objetivo é integrar o módulo de Ocorrências com a arquitetura financeira V6, garantindo que perdas operacionais confirmadas debitem corretamente o saldo da bookmaker sem causar duplicidade nos KPIs.
+## Diagnóstico
+O sistema apresenta divergências entre o KPI de "Resultado por Estratégia" e o gráfico de "Evolução de Lucro" porque, apesar de ambos usarem o hook `useCanonicalCalendarDaily` como fonte no `ProjetoDashboardTab`, a camada de agregação e filtros pode introduzir variações (filtros de data civil vs UTC, arredondamentos ou inclusão de módulos extras).
 
-## 1. Fase de Investigação e Validação (Concluída)
-- Confirmado que `fn_financial_events_sync_balance` é o mecanismo canônico.
-- Verificado que `financial_events` suporta tipos específicos. Propomos o tipo `LOSS` ou `AJUSTE` com origem `PERDA_OPERACIONAL` se `LOSS` não estiver no check constraint (o check constraint atual tem `AJUSTE`).
-- *Nota:* O check constraint de `financial_events` no arquivo `20260127043904_14fc45b8-59f6-4558-86b3-787c84a26525.sql` aceita: `'STAKE', 'PAYOUT', 'VOID_REFUND', 'REVERSAL', 'FREEBET_STAKE', 'FREEBET_PAYOUT', 'FREEBET_CREDIT', 'FREEBET_EXPIRE', 'DEPOSITO', 'SAQUE', 'CASHBACK', 'BONUS', 'AJUSTE'`.
-- Como `LOSS` não está no constraint, utilizaremos `AJUSTE` com metadados e descrição apropriados, ou adicionaremos `LOSS` ao constraint via migração se for a preferência arquitetural. Seguiremos com a adição de `LOSS` e `LOSS_REVERSAL` para clareza.
+### Fluxos Atuais
+1.  **KPI Resultado por Estratégia:**
+    *   `ProjetoDashboardTab.tsx` → `useKpiBreakdowns` → `FinancialMetricsService.calculate` (ou derivação in-memory).
+    *   Usa `useProjetoDashboardData` (RPC `get_projeto_dashboard_data`).
+2.  **Gráfico Evolução de Lucro:**
+    *   `ProjetoDashboardTab.tsx` → `useCanonicalCalendarDaily` (RPC `get_projeto_lucro_operacional_daily`).
+    *   Os pontos do gráfico são alimentados pelo `canonicalDaily`.
 
-## 2. Alterações no Banco de Dados (Supabase)
-- **Migração SQL:**
-  - Adicionar `LOSS` e `LOSS_REVERSAL` ao check constraint da tabela `financial_events` (tipo_evento).
-  - Atualizar `fn_cash_ledger_generate_financial_events` para gerar automaticamente o `financial_event` tipo `LOSS` quando uma entrada `PERDA_OPERACIONAL` for inserida no `cash_ledger`.
-  - Isso garante que qualquer módulo (não apenas ocorrências) que use o `ledgerService.registrarPerdaOperacionalViaLedger` tenha o saldo sincronizado automaticamente.
+### Problema Identificado
+O `useKpiBreakdowns` deriva o lucro a partir dos dados brutos da RPC principal, enquanto o gráfico usa uma RPC secundária focada em dados diários. Embora ambas devessem ser idênticas, qualquer diferença na lógica de `FinancialMetricsService` vs `get_projeto_lucro_operacional_daily` causa a divergência. Além disso, o `dateRange` aplicado no frontend pode filtrar os dados de forma diferente entre o KPI agregado e os pontos do gráfico.
 
-## 3. Alterações no Frontend
-- **useOcorrencias.ts (`useResolverOcorrenciaComFinanceiro`):**
-  - Garantir que a chamada para `registrarPerdaOperacionalViaLedger` forneça todos os IDs necessários (`bookmakerId`, `projetoIdSnapshot`, `perdaId`).
-  - O fluxo atual já chama o ledger, mas o ledger não está gerando o evento financeiro V6 para perdas. A migração no banco resolverá isso de forma transparente e atômica.
-- **ledgerService.ts:**
-  - Nenhuma mudança estrutural necessária se a lógica for movida para o gatilho do banco (preferencial para atomicidade). Se optarmos por manual, adicionaremos o insert em `financial_events` dentro de `registrarPerdaOperacionalViaLedger`.
+---
 
-## 4. Testes e Validação
-- **Caso Real:** Validar o caso "Lucas Pereira → Sman 365 → R$ 1.422,44".
-- **Idempotência:** Testar múltiplos salvamentos. A chave de idempotência no gatilho será `ledger_loss_` + `cash_ledger.id`.
-- **KPIs:** Verificar se a aba Bônus e Visão Geral continuam exibindo os valores corretos (sem dupla contagem).
-- **Reversão:** Testar o cancelamento da ocorrência e se o saldo retorna à bookmaker.
+## Plano de Ação
 
-## Detalhes Técnicos (Migration)
-```sql
--- Adicionar LOSS ao constraint se necessário
-ALTER TABLE financial_events DROP CONSTRAINT IF EXISTS financial_events_tipo_evento_check;
-ALTER TABLE financial_events ADD CONSTRAINT financial_events_tipo_evento_check 
-CHECK (tipo_evento IN (
-    'STAKE', 'PAYOUT', 'VOID_REFUND', 'REVERSAL',
-    'FREEBET_STAKE', 'FREEBET_PAYOUT', 'FREEBET_CREDIT', 'FREEBET_EXPIRE',
-    'DEPOSITO', 'SAQUE', 'CASHBACK', 'BONUS', 'AJUSTE', 'LOSS', 'LOSS_REVERSAL'
-));
+### 1. Camada Canônica de Agregação
+Criar um hook unificado `useProjetoProfitSourced` que utilize a fonte canônica (`useCanonicalCalendarDaily`) para derivar tanto o valor total do período quanto a distribuição temporal.
 
--- Atualizar trigger no cash_ledger para incluir PERDA_OPERACIONAL
--- (Similar ao bloco de AJUSTE_MANUAL em fn_cash_ledger_generate_financial_events)
-```
+### 2. Sincronização de Filtros
+Garantir que o `lucroKpiData` exibido no topo do gráfico seja SEMPRE a soma dos pontos visíveis no gráfico, sem exceções.
+
+### 3. Integração de Perdas Operacionais
+Validar que a RPC `get_projeto_lucro_operacional_daily` no banco de dados já integra o módulo `LOSS` (Perda Operacional) conforme a diretriz V6 recém-implementada, garantindo que o gráfico reflita o impacto econômico na data correta.
+
+### 4. Implementação Técnica
+*   **Refatoração no `ProjetoDashboardTab.tsx`**: Alterar o cálculo do `lucroKpiData` para ser derivado exclusivamente do `mergedCalendarData` filtrado.
+*   **Paridade em `UnifiedStatisticsCard`**: Passar os mesmos parâmetros de consolidação e dados filtrados para garantir que as estatísticas avançadas coincidam com o lucro total.
+*   **Validação da RPC `get_projeto_lucro_operacional_daily`**: Verificar se o SQL inclui transações de `PERDA_OPERACIONAL` via Ledger.
+
+---
+
+## Arquivos Afetados
+*   `src/components/projeto-detalhe/ProjetoDashboardTab.tsx`: Unificação da fonte de dados.
+*   `src/hooks/useCanonicalCalendarDaily.ts`: Adição de suporte a perdas operacionais se necessário.
+*   `src/services/FinancialMetricsService.ts`: Alinhamento de fórmulas.
+*   `src/components/projeto-detalhe/VisaoGeralCharts.tsx`: Garantia de exibição do lucro canônico passado por prop.
+
+---
+
+## Teste de Aceite
+1. Selecionar o projeto "Lucas Pereira".
+2. Confirmar que o lucro do KPI de Estratégias = Soma dos pontos do gráfico.
+3. Inserir uma perda operacional de R$ 1.422,44 e verificar se o gráfico cai exatamente este valor na data do registro.
