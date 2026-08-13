@@ -1,48 +1,33 @@
-# Auditoria e Sincronização: Resultado por Estratégia × Evolução de Lucro
+# Plano de Correção: Ajuste de Saldo (Vínculos) - Arquitetura V6
 
-## Diagnóstico
-O sistema apresenta divergências entre o KPI de "Resultado por Estratégia" e o gráfico de "Evolução de Lucro" porque, apesar de ambos usarem o hook `useCanonicalCalendarDaily` como fonte no `ProjetoDashboardTab`, a camada de agregação e filtros pode introduzir variações (filtros de data civil vs UTC, arredondamentos ou inclusão de módulos extras).
+O diagnóstico confirmou que o tipo de transação `AJUSTE_SALDO` não foi incluído na transição para a arquitetura de eventos financeiros V6, resultando em ajustes que não atualizam o saldo das casas.
 
-### Fluxos Atuais
-1.  **KPI Resultado por Estratégia:**
-    *   `ProjetoDashboardTab.tsx` → `useKpiBreakdowns` → `FinancialMetricsService.calculate` (ou derivação in-memory).
-    *   Usa `useProjetoDashboardData` (RPC `get_projeto_dashboard_data`).
-2.  **Gráfico Evolução de Lucro:**
-    *   `ProjetoDashboardTab.tsx` → `useCanonicalCalendarDaily` (RPC `get_projeto_lucro_operacional_daily`).
-    *   Os pontos do gráfico são alimentados pelo `canonicalDaily`.
+## 1. Correção de Infraestrutura (Backend)
+Atualizar o gatilho `fn_cash_ledger_generate_financial_events` para processar `AJUSTE_SALDO` da mesma forma que `AJUSTE_MANUAL`.
 
-### Problema Identificado
-O `useKpiBreakdowns` deriva o lucro a partir dos dados brutos da RPC principal, enquanto o gráfico usa uma RPC secundária focada em dados diários. Embora ambas devessem ser idênticas, qualquer diferença na lógica de `FinancialMetricsService` vs `get_projeto_lucro_operacional_daily` causa a divergência. Além disso, o `dateRange` aplicado no frontend pode filtrar os dados de forma diferente entre o KPI agregado e os pontos do gráfico.
+### Mudanças Técnicas:
+- Alterar o bloco de `AJUSTE_MANUAL` para incluir `AJUSTE_SALDO` na condição `IF`.
+- Garantir que a idempotência use um prefixo específico para evitar colisões.
 
----
+## 2. Remediação de Dados (Forense)
+Executar uma varredura retroativa na tabela `cash_ledger` para encontrar registros de `AJUSTE_SALDO` que foram marcados como processados (`financial_events_generated = true`), mas que não geraram registros na tabela `financial_events`.
 
-## Plano de Ação
+### Ações:
+- Identificar registros órfãos.
+- Inserir os eventos financeiros faltantes.
+- Recalcular o saldo das bookmakers afetadas (automático via trigger de `financial_events`).
 
-### 1. Camada Canônica de Agregação
-Criar um hook unificado `useProjetoProfitSourced` que utilize a fonte canônica (`useCanonicalCalendarDaily`) para derivar tanto o valor total do período quanto a distribuição temporal.
+## 3. Validação
+- **Caso André (Parimatch):** Confirmar se o débito de R$ 760,77 foi aplicado ao saldo real após a migração.
+- **Teste de Novo Ajuste:** Realizar um ajuste de centavos em um workspace de teste e verificar a propagação imediata para o patrimônio.
 
-### 2. Sincronização de Filtros
-Garantir que o `lucroKpiData` exibido no topo do gráfico seja SEMPRE a soma dos pontos visíveis no gráfico, sem exceções.
+## Detalhes Técnicos (Para aprovação)
 
-### 3. Integração de Perdas Operacionais
-Validar que a RPC `get_projeto_lucro_operacional_daily` no banco de dados já integra o módulo `LOSS` (Perda Operacional) conforme a diretriz V6 recém-implementada, garantindo que o gráfico reflita o impacto econômico na data correta.
+```sql
+-- Resumo da lógica a ser aplicada:
+IF NEW.tipo_transacao IN ('AJUSTE_MANUAL', 'AJUSTE_SALDO') THEN
+    -- ... lógica de roteamento de ENTRADA/SAIDA ...
+END IF;
+```
 
-### 4. Implementação Técnica
-*   **Refatoração no `ProjetoDashboardTab.tsx`**: Alterar o cálculo do `lucroKpiData` para ser derivado exclusivamente do `mergedCalendarData` filtrado.
-*   **Paridade em `UnifiedStatisticsCard`**: Passar os mesmos parâmetros de consolidação e dados filtrados para garantir que as estatísticas avançadas coincidam com o lucro total.
-*   **Validação da RPC `get_projeto_lucro_operacional_daily`**: Verificar se o SQL inclui transações de `PERDA_OPERACIONAL` via Ledger.
-
----
-
-## Arquivos Afetados
-*   `src/components/projeto-detalhe/ProjetoDashboardTab.tsx`: Unificação da fonte de dados.
-*   `src/hooks/useCanonicalCalendarDaily.ts`: Adição de suporte a perdas operacionais se necessário.
-*   `src/services/FinancialMetricsService.ts`: Alinhamento de fórmulas.
-*   `src/components/projeto-detalhe/VisaoGeralCharts.tsx`: Garantia de exibição do lucro canônico passado por prop.
-
----
-
-## Teste de Aceite
-1. Selecionar o projeto "Lucas Pereira".
-2. Confirmar que o lucro do KPI de Estratégias = Soma dos pontos do gráfico.
-3. Inserir uma perda operacional de R$ 1.422,44 e verificar se o gráfico cai exatamente este valor na data do registro.
+O impacto visual será a normalização imediata dos saldos na aba "Vínculos" e no Dashboard para todos os ajustes realizados nos últimos dias.
