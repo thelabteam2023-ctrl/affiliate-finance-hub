@@ -1,33 +1,34 @@
-# Plano de Correção: Ajuste de Saldo (Vínculos) - Arquitetura V6
+# Plano: Auditoria e Blindagem da Arquitetura Financeira V6 (Fase de Execução)
 
-O diagnóstico confirmou que o tipo de transação `AJUSTE_SALDO` não foi incluído na transição para a arquitetura de eventos financeiros V6, resultando em ajustes que não atualizam o saldo das casas.
+A auditoria confirmou que as três operações principais (**Ajuste Manual**, **Reconciliação** e **Reportar Scan**) estão integradas à V6 para bookmakers, mas identificou lacunas em tipos secundários que podem causar "vazamentos" de saldo. Este plano foca na blindagem dessas lacunas.
 
-## 1. Correção de Infraestrutura (Backend)
-Atualizar o gatilho `fn_cash_ledger_generate_financial_events` para processar `AJUSTE_SALDO` da mesma forma que `AJUSTE_MANUAL`.
+### 1. Blindagem do Gatilho V6 (`fn_cash_ledger_generate_financial_events`)
 
-### Mudanças Técnicas:
-- Alterar o bloco de `AJUSTE_MANUAL` para incluir `AJUSTE_SALDO` na condição `IF`.
-- Garantir que a idempotência use um prefixo específico para evitar colisões.
+Precisamos estender o trigger para cobrir os tipos identificados na auditoria:
+- **`PERDA_ATIVO`**: Quando uma perda de ativo (ex: erro de rede) ocorre em uma bookmaker, ela deve abater o saldo operacional.
+- **`TRANSFERENCIA`**: Atualmente, transferências envolvendo bookmakers (BK -> Wallet, Conta -> BK) não estão gerando eventos financeiros na V6, o que causa divergência no patrimônio.
+- **`APORTE_FINANCEIRO`**: Aportes diretos em bookmakers (Broker) precisam ser capturados pela V6.
 
-## 2. Remediação de Dados (Forense)
-Executar uma varredura retroativa na tabela `cash_ledger` para encontrar registros de `AJUSTE_SALDO` que foram marcados como processados (`financial_events_generated = true`), mas que não geraram registros na tabela `financial_events`.
+### 2. Remediação Histórica
 
-### Ações:
-- Identificar registros órfãos.
-- Inserir os eventos financeiros faltantes.
-- Recalcular o saldo das bookmakers afetadas (automático via trigger de `financial_events`).
+Após atualizar o trigger, realizaremos uma varredura para identificar registros destes tipos que ficaram "órfãos" (sem `financial_event`) desde a implantação da V6 e geraremos os eventos retroativos para restaurar a paridade do patrimônio.
 
-## 3. Validação
-- **Caso André (Parimatch):** Confirmar se o débito de R$ 760,77 foi aplicado ao saldo real após a migração.
-- **Teste de Novo Ajuste:** Realizar um ajuste de centavos em um workspace de teste e verificar a propagação imediata para o patrimônio.
+### 3. Padronização de Idempotência
 
-## Detalhes Técnicos (Para aprovação)
+Consolidar o padrão de chaves de idempotência para evitar duplicidade em futuras manutenções.
 
-```sql
--- Resumo da lógica a ser aplicada:
-IF NEW.tipo_transacao IN ('AJUSTE_MANUAL', 'AJUSTE_SALDO') THEN
-    -- ... lógica de roteamento de ENTRADA/SAIDA ...
-END IF;
-```
+## Detalhes Técnicos
 
-O impacto visual será a normalização imediata dos saldos na aba "Vínculos" e no Dashboard para todos os ajustes realizados nos últimos dias.
+### Arquivos e Tabelas
+- **Trigger**: `fn_cash_ledger_generate_financial_events`
+- **Tabelas**: `public.cash_ledger`, `public.financial_events`, `public.bookmaker_balance_audit`
+
+### Alterações no SQL (Migration)
+- Adicionar bloco para `PERDA_ATIVO` (mapeando para tipo_evento `LOSS`).
+- Adicionar blocos para `TRANSFERENCIA` (detectando se a origem ou o destino é uma bookmaker e gerando débito/crédito correspondente).
+- Adicionar bloco para `APORTE_FINANCEIRO` (mapeando para tipo_evento `DEPOSITO`).
+
+### Validação
+- Testar transferência BK -> Conta e confirmar abate no saldo da BK.
+- Testar Reportar Perda de Ativo na BK e confirmar atualização do patrimônio.
+- Verificar logs de auditoria de saldo.
