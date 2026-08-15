@@ -1,34 +1,31 @@
-# Plano: Auditoria e Blindagem da Arquitetura Financeira V6 (Fase de Execução)
+# Plano de Auditoria Forense Completa: Caixa Operacional (Origem vs. Destino V6)
 
-A auditoria confirmou que as três operações principais (**Ajuste Manual**, **Reconciliação** e **Reportar Scan**) estão integradas à V6 para bookmakers, mas identificou lacunas em tipos secundários que podem causar "vazamentos" de saldo. Este plano foca na blindagem dessas lacunas.
+Investigação sistêmica para identificar por que depósitos em bookmakers estão sendo classificados como "Despesa Externa" no histórico do Caixa Operacional, especialmente em operações multimoeda/crypto.
 
-### 1. Blindagem do Gatilho V6 (`fn_cash_ledger_generate_financial_events`)
+## 1. Diagnóstico e Investigação do Caso André
+- **Reconstrução do Fluxo**: Localizar o lançamento no workspace afetado (André/Tiago) via `financial_events` e `cash_ledger`.
+- **Mapeamento de Dados**: Extrair `origem_tipo`, `destino_tipo`, `finalidade`, `tipo_uso`, `moeda` e metadados.
+- **Ponto de Ruptura**: Identificar se a classificação errônea ocorre na persistência do evento (Trigger V6) ou na projeção de leitura do histórico.
 
-Precisamos estender o trigger para cobrir os tipos identificados na auditoria:
-- **`PERDA_ATIVO`**: Quando uma perda de ativo (ex: erro de rede) ocorre em uma bookmaker, ela deve abater o saldo operacional.
-- **`TRANSFERENCIA`**: Atualmente, transferências envolvendo bookmakers (BK -> Wallet, Conta -> BK) não estão gerando eventos financeiros na V6, o que causa divergência no patrimônio.
-- **`APORTE_FINANCEIRO`**: Aportes diretos em bookmakers (Broker) precisam ser capturados pela V6.
+## 2. Auditoria de Regressão Sistêmica
+- **Histórico de Código**: Analisar alterações recentes no gatilho `fn_cash_ledger_generate_financial_events` e na RPC `get_caixa_historico`.
+- **Conflito de Lógica**: Verificar se condicionais de `tipoMoeda === 'CRYPTO'` ou mapeamento de `investidor` estão sobrescrevendo a natureza econômica de `DEPÓSITO`.
+- **Origem vs. Destino**: Validar se o sistema está inferindo "Despesa" apenas porque a origem é uma Wallet externa, ignorando o destino `BOOKMAKER`.
 
-### 2. Remediação Histórica
+## 3. Correção na Camada de Classificação (SSOT)
+- **Blindagem do Gatilho**: Garantir que `financial_events` receba a classificação correta baseada no par (Origem, Destino, Finalidade).
+- **Padronização do Histórico**: Atualizar a lógica de exibição para usar a taxonomia canônica da transação, não inferências voláteis da UI.
+- **Tratamento Multimoeda**: Assegurar que conversões cambiais não alterem o tipo do evento.
 
-Após atualizar o trigger, realizaremos uma varredura para identificar registros destes tipos que ficaram "órfãos" (sem `financial_event`) desde a implantação da V6 e geraremos os eventos retroativos para restaurar a paridade do patrimônio.
-
-### 3. Padronização de Idempotência
-
-Consolidar o padrão de chaves de idempotência para evitar duplicidade em futuras manutenções.
+## 4. Validação e Matriz de Testes
+- **Matriz de Cobertura**:
+  - `Wallet USDT -> Bookmaker USD` (Deve ser DEPÓSITO)
+  - `Investidor BRL -> Bookmaker USD` (Deve ser DEPÓSITO)
+  - `Caixa -> Despesa Externa` (Deve ser DESPESA)
+  - `Reversão de Depósito Crypto` (Deve ser REVERSÃO)
+- **Auditoria de Dados Históricos**: Identificar outros registros afetados pela regressão para eventual backfill/reprocessamento.
 
 ## Detalhes Técnicos
-
-### Arquivos e Tabelas
-- **Trigger**: `fn_cash_ledger_generate_financial_events`
-- **Tabelas**: `public.cash_ledger`, `public.financial_events`, `public.bookmaker_balance_audit`
-
-### Alterações no SQL (Migration)
-- Adicionar bloco para `PERDA_ATIVO` (mapeando para tipo_evento `LOSS`).
-- Adicionar blocos para `TRANSFERENCIA` (detectando se a origem ou o destino é uma bookmaker e gerando débito/crédito correspondente).
-- Adicionar bloco para `APORTE_FINANCEIRO` (mapeando para tipo_evento `DEPOSITO`).
-
-### Validação
-- Testar transferência BK -> Conta e confirmar abate no saldo da BK.
-- Testar Reportar Perda de Ativo na BK e confirmar atualização do patrimônio.
-- Verificar logs de auditoria de saldo.
+- **Trigger**: `supabase/migrations/..._fn_cash_ledger_generate_financial_events.sql`
+- **RPC Histórico**: `get_caixa_historico` ou `fetch_caixa_transactions`.
+- **Invariante**: Se `destino_tipo === 'BOOKMAKER'`, a operação é obrigatoriamente um Depósito (ou Reversão de Saque).
