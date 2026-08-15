@@ -1202,7 +1202,11 @@ export default function Caixa() {
 
     // Outros sem destino definido
     if (!transacao.destino_tipo) {
-      return { primary: "Despesa Externa" };
+      // Se for uma saída (sinal negativo no valor ou tipo que indica saída), mas sem destino, pode ser despesa
+      if (transacao.tipo_transacao === 'SAQUE' || transacao.tipo_transacao === 'TRANSFERENCIA') {
+         return { primary: "Despesa Externa" };
+      }
+      return { primary: "Destino Indefinido" };
     }
     
     return { primary: "Destino" };
