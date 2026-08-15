@@ -1,31 +1,26 @@
-# Plano de Auditoria Forense Completa: Caixa Operacional (Origem vs. Destino V6)
+# Plano: Correção Forense de Classificação Econômica no Caixa
 
-Investigação sistêmica para identificar por que depósitos em bookmakers estão sendo classificados como "Despesa Externa" no histórico do Caixa Operacional, especialmente em operações multimoeda/crypto.
+## 1. Frontend: Blindagem de Labels
+Refatorar as funções de resolução de nomes no `Caixa.tsx` para serem baseadas em evidência de ID, não apenas em tags de tipo.
 
-## 1. Diagnóstico e Investigação do Caso André
-- **Reconstrução do Fluxo**: Localizar o lançamento no workspace afetado (André/Tiago) via `financial_events` e `cash_ledger`.
-- **Mapeamento de Dados**: Extrair `origem_tipo`, `destino_tipo`, `finalidade`, `tipo_uso`, `moeda` e metadados.
-- **Ponto de Ruptura**: Identificar se a classificação errônea ocorre na persistência do evento (Trigger V6) ou na projeção de leitura do histórico.
+- **getOrigemInfo/getDestinoInfo**: Se houver um ID de bookmaker/wallet/conta, usar esse objeto para o label, mesmo que a coluna `origem_tipo` esteja vazia.
+- **Fallback**: Mudar o fallback de "Despesa Externa" para algo mais neutro ou derivado do `tipo_transacao` se não houver destino identificado.
 
-## 2. Auditoria de Regressão Sistêmica
-- **Histórico de Código**: Analisar alterações recentes no gatilho `fn_cash_ledger_generate_financial_events` e na RPC `get_caixa_historico`.
-- **Conflito de Lógica**: Verificar se condicionais de `tipoMoeda === 'CRYPTO'` ou mapeamento de `investidor` estão sobrescrevendo a natureza econômica de `DEPÓSITO`.
-- **Origem vs. Destino**: Validar se o sistema está inferindo "Despesa" apenas porque a origem é uma Wallet externa, ignorando o destino `BOOKMAKER`.
+## 2. Banco: Normalização de Metadados
+Migration para preencher `origem_tipo` e `destino_tipo` onde estão nulos mas os IDs correspondentes existem.
 
-## 3. Correção na Camada de Classificação (SSOT)
-- **Blindagem do Gatilho**: Garantir que `financial_events` receba a classificação correta baseada no par (Origem, Destino, Finalidade).
-- **Padronização do Histórico**: Atualizar a lógica de exibição para usar a taxonomia canônica da transação, não inferências voláteis da UI.
-- **Tratamento Multimoeda**: Assegurar que conversões cambiais não alterem o tipo do evento.
+```sql
+UPDATE cash_ledger 
+SET destino_tipo = 'BOOKMAKER' 
+WHERE destino_bookmaker_id IS NOT NULL AND (destino_tipo IS NULL OR destino_tipo = '');
+```
 
-## 4. Validação e Matriz de Testes
-- **Matriz de Cobertura**:
-  - `Wallet USDT -> Bookmaker USD` (Deve ser DEPÓSITO)
-  - `Investidor BRL -> Bookmaker USD` (Deve ser DEPÓSITO)
-  - `Caixa -> Despesa Externa` (Deve ser DESPESA)
-  - `Reversão de Depósito Crypto` (Deve ser REVERSÃO)
-- **Auditoria de Dados Históricos**: Identificar outros registros afetados pela regressão para eventual backfill/reprocessamento.
+## 3. Backend: Expansão da Cobertura V6
+Atualizar o trigger `fn_cash_ledger_generate_financial_events` para cobrir os tipos faltantes:
+- `TRANSFERENCIA`: Quando uma ponta for Bookmaker.
+- `PERDA_ATIVO`: Mapear como `LOSS` no patrimônio.
+- `APORTE_FINANCEIRO` (Aporte Direto): Garantir que o aporte em BK gere evento.
 
-## Detalhes Técnicos
-- **Trigger**: `supabase/migrations/..._fn_cash_ledger_generate_financial_events.sql`
-- **RPC Histórico**: `get_caixa_historico` ou `fetch_caixa_transactions`.
-- **Invariante**: Se `destino_tipo === 'BOOKMAKER'`, a operação é obrigatoriamente um Depósito (ou Reversão de Saque).
+## 4. Validação
+- Testar no preview um depósito em bookmaker e verificar o label no histórico.
+- Validar via psql se os tipos foram normalizados.
