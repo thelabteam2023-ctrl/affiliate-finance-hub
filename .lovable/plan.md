@@ -1,26 +1,27 @@
-# Plano: Correção Forense de Classificação Econômica no Caixa
+---
+name: Clean History (Hide Reverted Transactions)
+description: Hides transactions marked as reverted or estorno by default to clean up the operational cash history view.
+type: feature
+---
 
-## 1. Frontend: Blindagem de Labels
-Refatorar as funções de resolução de nomes no `Caixa.tsx` para serem baseadas em evidência de ID, não apenas em tags de tipo.
+# Plano: Limpeza do Histórico de Movimentações (Ocultar Revertidas)
 
-- **getOrigemInfo/getDestinoInfo**: Se houver um ID de bookmaker/wallet/conta, usar esse objeto para o label, mesmo que a coluna `origem_tipo` esteja vazia.
-- **Fallback**: Mudar o fallback de "Despesa Externa" para algo mais neutro ou derivado do `tipo_transacao` se não houver destino identificado.
+## 1. UI: Filtro de Visibilidade de Reversões
+Implementar um novo estado de filtro no componente `HistoricoMovimentacoes.tsx` para permitir que o usuário oculte transações que foram revertidas ou que são estornos (espelhos).
 
-## 2. Banco: Normalização de Metadados
-Migration para preencher `origem_tipo` e `destino_tipo` onde estão nulos mas os IDs correspondentes existem.
+- **Estado**: `ocultarRevertidas` (default: `true`).
+- **Local**: Adicionar um botão de alternância (toggle/switch) na barra de filtros superior.
+- **Lógica de Filtragem**: 
+  - Excluir transações onde `reversed_at` não é nulo.
+  - Excluir transações onde `descricao` começa com "ESTORNO:".
 
-```sql
-UPDATE cash_ledger 
-SET destino_tipo = 'BOOKMAKER' 
-WHERE destino_bookmaker_id IS NOT NULL AND (destino_tipo IS NULL OR destino_tipo = '');
-```
+## 2. Feedback Visual e Contador
+Adicionar um pequeno indicador visual na barra de filtros informando quando há registros ocultos e permitir reexibi-los com um clique.
 
-## 3. Backend: Expansão da Cobertura V6
-Atualizar o trigger `fn_cash_ledger_generate_financial_events` para cobrir os tipos faltantes:
-- `TRANSFERENCIA`: Quando uma ponta for Bookmaker.
-- `PERDA_ATIVO`: Mapear como `LOSS` no patrimônio.
-- `APORTE_FINANCEIRO` (Aporte Direto): Garantir que o aporte em BK gere evento.
+## 3. Justificativa Técnica
+Em sistemas financeiros, a remoção física (Hard Delete) de registros legados é desencorajada para manter o histórico de auditoria. Ocultar por padrão resolve o problema de "poluição visual" relatado pelo usuário (que considera a informação "sem sentido" por ser um erro) sem comprometer a integridade dos dados para futuras auditorias.
 
-## 4. Validação
-- Testar no preview um depósito em bookmaker e verificar o label no histórico.
-- Validar via psql se os tipos foram normalizados.
+## 4. Detalhes de Implementação
+- **Arquivo**: `src/components/caixa/HistoricoMovimentacoes.tsx`
+- **Hook**: `useState(true)` para `ocultarRevertidas`.
+- **Componente**: Usar `EyeOff` / `Eye` da Lucide para o botão de toggle.
