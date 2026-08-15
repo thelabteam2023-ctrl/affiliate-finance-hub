@@ -934,19 +934,17 @@ export default function Caixa() {
       };
     }
     
-    if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
-      return getCaixaInfo(transacao.origem_conta_bancaria_id, transacao.origem_wallet_id, isCryptoTx(transacao));
+    // PRIORIDADE: ID Físico (Evidência Real)
+    if (transacao.origem_bookmaker_id) {
+      const bookmaker = bookmakers[transacao.origem_bookmaker_id];
+      const parceiroNome = bookmaker?.parceiro_id ? parceiros[bookmaker.parceiro_id] : undefined;
+      return { 
+        primary: bookmaker?.nome || "Bookmaker",
+        secondary: parceiroNome
+      };
     }
-    
-    if (transacao.origem_tipo === "PARCEIRO_CONTA" && transacao.origem_conta_bancaria_id) {
-      const conta = contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id);
-      if (conta) {
-        return { primary: conta.banco, secondary: conta.titular };
-      }
-      return { primary: "Conta Bancária" };
-    }
-    
-    if (transacao.origem_tipo === "PARCEIRO_WALLET" && transacao.origem_wallet_id) {
+
+    if (transacao.origem_wallet_id) {
       const wallet = walletsDetalhes.find(w => w.id === transacao.origem_wallet_id);
       if (wallet) {
         const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
@@ -958,14 +956,18 @@ export default function Caixa() {
       }
       return { primary: wallets[transacao.origem_wallet_id] || "Wallet" };
     }
-    
-    if (transacao.origem_tipo === "BOOKMAKER" && transacao.origem_bookmaker_id) {
-      const bookmaker = bookmakers[transacao.origem_bookmaker_id];
-      const parceiroNome = bookmaker?.parceiro_id ? parceiros[bookmaker.parceiro_id] : undefined;
-      return { 
-        primary: bookmaker?.nome || "Bookmaker",
-        secondary: parceiroNome
-      };
+
+    if (transacao.origem_conta_bancaria_id) {
+      const conta = contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id);
+      if (conta) {
+        return { primary: conta.banco, secondary: conta.titular };
+      }
+      return { primary: "Conta Bancária" };
+    }
+
+    // FALLBACK: Tipo declarado
+    if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
+      return getCaixaInfo(transacao.origem_conta_bancaria_id, transacao.origem_wallet_id, isCryptoTx(transacao));
     }
     
     return { primary: "Origem" };
@@ -1037,19 +1039,17 @@ export default function Caixa() {
       return { primary: transacao.nome_investidor || "Investidor Externo" };
     }
     
-    if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
-      return getCaixaInfo(transacao.destino_conta_bancaria_id, transacao.destino_wallet_id, isCryptoTx(transacao));
+    // PRIORIDADE: ID Físico (Evidência Real)
+    if (transacao.destino_bookmaker_id) {
+      const bookmaker = bookmakers[transacao.destino_bookmaker_id];
+      const parceiroNome = bookmaker?.parceiro_id ? parceiros[bookmaker.parceiro_id] : undefined;
+      return { 
+        primary: bookmaker?.nome || "Bookmaker",
+        secondary: parceiroNome
+      };
     }
-    
-    if (transacao.destino_tipo === "PARCEIRO_CONTA" && transacao.destino_conta_bancaria_id) {
-      const conta = contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id);
-      if (conta) {
-        return { primary: conta.banco, secondary: conta.titular };
-      }
-      return { primary: "Conta Bancária" };
-    }
-    
-    if (transacao.destino_tipo === "PARCEIRO_WALLET" && transacao.destino_wallet_id) {
+
+    if (transacao.destino_wallet_id) {
       const wallet = walletsDetalhes.find(w => w.id === transacao.destino_wallet_id);
       if (wallet) {
         const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
@@ -1061,14 +1061,18 @@ export default function Caixa() {
       }
       return { primary: wallets[transacao.destino_wallet_id] || "Wallet" };
     }
-    
-    if (transacao.destino_tipo === "BOOKMAKER" && transacao.destino_bookmaker_id) {
-      const bookmaker = bookmakers[transacao.destino_bookmaker_id];
-      const parceiroNome = bookmaker?.parceiro_id ? parceiros[bookmaker.parceiro_id] : undefined;
-      return { 
-        primary: bookmaker?.nome || "Bookmaker",
-        secondary: parceiroNome
-      };
+
+    if (transacao.destino_conta_bancaria_id) {
+      const conta = contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id);
+      if (conta) {
+        return { primary: conta.banco, secondary: conta.titular };
+      }
+      return { primary: "Conta Bancária" };
+    }
+
+    // FALLBACK: Tipo declarado
+    if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
+      return getCaixaInfo(transacao.destino_conta_bancaria_id, transacao.destino_wallet_id, isCryptoTx(transacao));
     }
     
     // Pagamentos para parceiros, indicadores, operadores
@@ -1198,7 +1202,11 @@ export default function Caixa() {
 
     // Outros sem destino definido
     if (!transacao.destino_tipo) {
-      return { primary: "Despesa Externa" };
+      // Se for uma saída (sinal negativo no valor ou tipo que indica saída), mas sem destino, pode ser despesa
+      if (transacao.tipo_transacao === 'SAQUE' || transacao.tipo_transacao === 'TRANSFERENCIA') {
+         return { primary: "Despesa Externa" };
+      }
+      return { primary: "Destino Indefinido" };
     }
     
     return { primary: "Destino" };
