@@ -34,15 +34,30 @@ const Index = () => {
           <div className="mx-auto max-w-4xl text-center">
             {/* Heading */}
             <h1 className="mb-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-              Aprove e execute este plano por completo{" "}
-              <span className="text-gradient">de forma detalhada</span>
+              Faça um plano completo e detalhado: Contexto
             </h1>
 
-            <p className="mb-10 text-lg text-muted-foreground sm:text-xl max-w-3xl mx-auto">
-              Organize parceiros, projetos, operadores, apostas e financeiro em um único sistema.
-              <br className="hidden sm:block" />
-              Sem planilhas, sem improviso, com controle real e visão clara do resultado.
-            </p>
+            <div className="mb-10 text-left text-sm text-muted-foreground sm:text-base max-w-4xl mx-auto space-y-4 bg-card/50 p-6 rounded-lg border border-border/50">
+              <p>Após realizar o lançamento de uma perda promocional de €169,39 através do módulo de Bônus, identifiquei uma inconsistência na propagação desse evento para os indicadores do sistema.</p>
+              <p>O lançamento foi realizado corretamente pela aba Bônus, utilizando a visualização “Por Casa”.</p>
+              <p>Porém, após o lançamento, o valor de €169,39 foi refletido no ajuste/saldo financeiro, mas não foi refletido no gráfico de Evolução do Lucro, dentro de Visão Geral.</p>
+              <p>Isso indica que o evento financeiro foi registrado, mas não percorreu corretamente toda a cadeia de indicadores.</p>
+              
+              <h3 className="text-lg font-bold text-foreground mt-6">Problema identificado</h3>
+              <p>O evento deveria produzir dois efeitos simultâneos:</p>
+              <div className="pl-4 space-y-2">
+                <p><strong>1. Impacto financeiro geral</strong></p>
+                <p>A perda promocional de €169,39 deve reduzir o resultado financeiro do projeto e, consequentemente, aparecer corretamente no lucro/prejuízo, KPI de resultado, gráfico de Evolução do Lucro e demais indicadores derivados do resultado financeiro.</p>
+                <p><strong>2. Impacto específico na performance de bônus</strong></p>
+                <p>Como o lançamento foi realizado através do módulo Bônus, a perda também altera a performance dessa estratégia/categoria. Portanto, a mesma perda deve ser refletida na visão Bônus → Por Casa e nos respectivos KPIs, lucro/prejuízo de bônus e performance por bookmaker.</p>
+              </div>
+
+              <h3 className="text-lg font-bold text-foreground mt-6">Regra conceitual</h3>
+              <p>A perda promocional não deve ser tratada apenas como uma alteração de saldo. Ela é simultaneamente um evento financeiro e um evento de resultado da promoção.</p>
+              <div className="bg-background/50 p-4 rounded text-center font-mono text-xs border border-border/30">
+                Perda promocional → Ajuste financeiro → Saldo da bookmaker → Resultado do projeto → Evolução do lucro → KPI geral → Performance de Bônus
+              </div>
+            </div>
 
             {/* CTA único */}
             <Button
@@ -250,7 +265,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border py-12">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2025 Labbet One. Controle profissional para operações de apostas.</p>
+          <p>© 2025 Labbet One. Uma ocorrência financeira → múltiplas visões analíticas.</p>
         </div>
       </footer>
     </div>
