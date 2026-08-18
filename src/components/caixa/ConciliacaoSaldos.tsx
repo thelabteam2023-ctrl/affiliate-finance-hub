@@ -406,6 +406,9 @@ export function ConciliacaoSaldos({
               transacaoOrigemId: selectedTransaction.id,
               projetoIdSnapshot: fxProjetoSnapshot || undefined,
               cotacao: selectedTransaction.cotacao_destino_usd || selectedTransaction.cotacao_origem_usd || undefined,
+              valor_usd_referencia: (selectedTransaction.valor_usd_referencia && selectedTransaction.valor_destino && selectedTransaction.valor_destino > 0)
+                ? (selectedTransaction.valor_usd_referencia / selectedTransaction.valor_destino) * diferenca
+                : undefined,
             });
             
             if (!result.success) {
@@ -426,6 +429,9 @@ export function ConciliacaoSaldos({
               transacaoOrigemId: selectedTransaction.id,
               projetoIdSnapshot: fxProjetoSnapshot || undefined,
               cotacao: selectedTransaction.cotacao_destino_usd || selectedTransaction.cotacao_origem_usd || undefined,
+              valor_usd_referencia: (selectedTransaction.valor_usd_referencia && selectedTransaction.valor_destino && selectedTransaction.valor_destino > 0)
+                ? (selectedTransaction.valor_usd_referencia / selectedTransaction.valor_destino) * Math.abs(diferenca)
+                : undefined,
             });
             
             if (!result.success) {
