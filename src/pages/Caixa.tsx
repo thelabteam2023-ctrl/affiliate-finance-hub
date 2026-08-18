@@ -46,6 +46,40 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { parseLocalDateTime, extractCivilDateKey, getCivilDateRangeForQuery } from "@/utils/dateUtils";
 import { getWalletDisplayName, truncateAddress } from "@/utils/cryptoUtils";
 
+export interface WalletDetalhe {
+  id: string;
+  exchange: string;
+  label?: string | null;
+  nickname?: string | null;
+  identificacao_wallet?: string | null;
+  endereco: string;
+  network: string;
+  parceiro_id: string;
+}
+
+export interface ContaBancaria {
+  id: string;
+  banco: string;
+  titular: string;
+  agencia?: string | null;
+  conta?: string | null;
+  pix_key?: string | null;
+}
+
+export interface LabelInfo {
+  primary: string;
+  secondary?: string;
+  badgeLabel?: string;
+  badgeColor?: string;
+  BadgeIcon?: any;
+  instrumento?: {
+    tipo: 'wallet' | 'banco';
+    identificador: string;
+    subinfo?: string;
+    enderecoCompleto?: string;
+  };
+}
+
 interface LocationState {
   openDialog?: boolean;
   bookmakerId?: string;
@@ -218,9 +252,9 @@ export default function Caixa() {
   // Data for displaying names
   const [parceiros, setParceiros] = useState<{ [key: string]: string }>({});
   const [contas, setContas] = useState<{ [key: string]: string }>({});
-  const [contasBancarias, setContasBancarias] = useState<Array<{ id: string; banco: string; titular: string }>>([]);
+  const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
   const [wallets, setWallets] = useState<{ [key: string]: string }>({});
-  const [walletsDetalhes, setWalletsDetalhes] = useState<Array<{ id: string; exchange: string; endereco: string; network: string; parceiro_id: string }>>([]);
+  const [walletsDetalhes, setWalletsDetalhes] = useState<WalletDetalhe[]>([]);
   const [bookmakers, setBookmakers] = useState<{ [key: string]: { nome: string; status: string; parceiro_id?: string; projeto_id?: string } }>({});
   const [operadoresMap, setOperadoresMap] = useState<{ [key: string]: string }>({});
   const [projetos, setProjetos] = useState<Array<{ id: string; nome: string }>>([]);
@@ -350,7 +384,7 @@ export default function Caixa() {
       
       const { data: contasData } = await supabase
         .from("contas_bancarias")
-        .select("id, banco, titular");
+        .select("id, banco, titular, agencia, conta, pix_key");
       
       const { data: walletsData } = await supabase
         .from("wallets_crypto")
@@ -380,7 +414,14 @@ export default function Caixa() {
       const contasMap: { [key: string]: string } = {};
       contasData?.forEach(c => contasMap[c.id] = c.banco);
       setContas(contasMap);
-      setContasBancarias(contasData || []);
+      setContasBancarias(contasData?.map(c => ({
+        id: c.id,
+        banco: c.banco,
+        titular: c.titular,
+        agencia: c.agencia,
+        conta: c.conta,
+        pix_key: c.pix_key
+      })) || []);
 
       const walletsMap: { [key: string]: string } = {};
       walletsData?.forEach(w => walletsMap[w.id] = w.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET');
@@ -852,32 +893,63 @@ export default function Caixa() {
     contaBancariaId?: string | null,
     walletId?: string | null,
     isCrypto?: boolean
-  ): { primary: string; secondary?: string } => {
-    // FONTE ÚNICA DE VERDADE: em operações CRYPTO o meio real é SEMPRE a wallet.
-    // Lançamentos legados podem carregar também um conta_bancaria_id espúrio —
-    // exibi-lo faria a mesma transação aparecer como bancária no Histórico.
+  ): LabelInfo => {
     if (isCrypto && walletId) {
       const wallet = walletsDetalhes.find(w => w.id === walletId);
       if (wallet) {
-        return { primary: getWalletDisplayName(wallet), secondary: "Caixa Operacional" };
+        return { 
+          primary: getWalletDisplayName(wallet), 
+          secondary: "Caixa Operacional",
+          instrumento: {
+            tipo: 'wallet',
+            identificador: truncateAddress(wallet.endereco),
+            subinfo: wallet.network,
+            enderecoCompleto: wallet.endereco
+          }
+        };
       }
     }
     if (contaBancariaId && !isCrypto) {
       const conta = contasBancarias.find(c => c.id === contaBancariaId);
       if (conta) {
-        return { primary: conta.banco, secondary: "Caixa Operacional" };
+        return { 
+          primary: conta.banco, 
+          secondary: "Caixa Operacional",
+          instrumento: {
+            tipo: 'banco',
+            identificador: conta.pix_key ? `Pix: ${conta.pix_key.includes('@') ? conta.pix_key.replace(/(.{3})(.*)(@.*)/, "$1...$3") : conta.pix_key.slice(0, 3) + '...'}` : `C: ****${conta.conta ? conta.conta.slice(-4) : ''}`,
+            subinfo: `Ag. ${conta.agencia || '****'}`
+          }
+        };
       }
     }
     if (walletId) {
       const wallet = walletsDetalhes.find(w => w.id === walletId);
       if (wallet) {
-        return { primary: getWalletDisplayName(wallet), secondary: "Caixa Operacional" };
+        return { 
+          primary: getWalletDisplayName(wallet), 
+          secondary: "Caixa Operacional",
+          instrumento: {
+            tipo: 'wallet',
+            identificador: truncateAddress(wallet.endereco),
+            subinfo: wallet.network,
+            enderecoCompleto: wallet.endereco
+          }
+        };
       }
     }
     if (contaBancariaId) {
       const conta = contasBancarias.find(c => c.id === contaBancariaId);
       if (conta) {
-        return { primary: conta.banco, secondary: "Caixa Operacional" };
+        return { 
+          primary: conta.banco, 
+          secondary: "Caixa Operacional",
+          instrumento: {
+            tipo: 'banco',
+            identificador: conta.pix_key ? `Pix: ${conta.pix_key.includes('@') ? conta.pix_key.replace(/(.{3})(.*)(@.*)/, "$1...$3") : conta.pix_key.slice(0, 3) + '...'}` : `C: ****${conta.conta ? conta.conta.slice(-4) : ''}`,
+            subinfo: `Ag. ${conta.agencia || '****'}`
+          }
+        };
       }
     }
     return { primary: "Caixa Operacional" };
@@ -885,7 +957,7 @@ export default function Caixa() {
 
   const isCryptoTx = (t: Transacao) => t.tipo_moeda === "CRYPTO" || !!t.coin;
 
-  const getOrigemInfo = (transacao: Transacao): { primary: string; secondary?: string } => {
+  const getOrigemInfo = (transacao: Transacao): LabelInfo => {
     // SWAP: Mostrar wallet de origem com nome do parceiro
     if (transacao.tipo_transacao === "SWAP_OUT" && transacao.origem_wallet_id) {
       const wallet = walletsDetalhes.find(w => w.id === transacao.origem_wallet_id);
@@ -894,7 +966,13 @@ export default function Caixa() {
         const displayName = getWalletDisplayName(wallet);
         return {
           primary: displayName !== 'Wallet sem identificação' ? displayName : `Wallet ${parceiroNome || wallet.exchange || 'Crypto'}`,
-          secondary: `${transacao.coin || transacao.moeda_origem || ''}`
+          secondary: `${transacao.coin || transacao.moeda_origem || ''}`,
+          instrumento: {
+            tipo: 'wallet',
+            identificador: truncateAddress(wallet.endereco),
+            subinfo: wallet.network,
+            enderecoCompleto: wallet.endereco
+          }
         };
       }
       return { primary: "Wallet Crypto" };
@@ -951,7 +1029,13 @@ export default function Caixa() {
         const displayName = getWalletDisplayName(wallet);
         return { 
           primary: displayName,
-          secondary: parceiroNome
+          secondary: parceiroNome,
+          instrumento: {
+            tipo: 'wallet',
+            identificador: truncateAddress(wallet.endereco),
+            subinfo: wallet.network,
+            enderecoCompleto: wallet.endereco
+          }
         };
       }
       return { primary: wallets[transacao.origem_wallet_id] || "Wallet" };
@@ -960,7 +1044,15 @@ export default function Caixa() {
     if (transacao.origem_conta_bancaria_id) {
       const conta = contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id);
       if (conta) {
-        return { primary: conta.banco, secondary: conta.titular };
+        return { 
+          primary: conta.banco, 
+          secondary: conta.titular,
+          instrumento: {
+            tipo: 'banco',
+            identificador: conta.pix_key ? `Pix: ${conta.pix_key.includes('@') ? conta.pix_key.replace(/(.{3})(.*)(@.*)/, "$1...$3") : conta.pix_key.slice(0, 3) + '...'}` : `C: ****${conta.conta ? conta.conta.slice(-4) : ''}`,
+            subinfo: `Ag. ${conta.agencia || '****'}`
+          }
+        };
       }
       return { primary: "Conta Bancária" };
     }
@@ -978,7 +1070,7 @@ export default function Caixa() {
     return info.primary;
   };
 
-  const getDestinoInfo = (transacao: Transacao): { primary: string; secondary?: string; badgeLabel?: string; badgeColor?: string; BadgeIcon?: any } => {
+  const getDestinoInfo = (transacao: Transacao): LabelInfo => {
     // SWAP: Mostrar wallet de destino com nome do parceiro
     if (transacao.tipo_transacao === "SWAP_IN" && transacao.destino_wallet_id) {
       const wallet = walletsDetalhes.find(w => w.id === transacao.destino_wallet_id);
@@ -1056,7 +1148,13 @@ export default function Caixa() {
         const displayName = getWalletDisplayName(wallet);
         return { 
           primary: displayName,
-          secondary: parceiroNome
+          secondary: parceiroNome,
+          instrumento: {
+            tipo: 'wallet',
+            identificador: truncateAddress(wallet.endereco),
+            subinfo: wallet.network,
+            enderecoCompleto: wallet.endereco
+          }
         };
       }
       return { primary: wallets[transacao.destino_wallet_id] || "Wallet" };
@@ -1065,7 +1163,15 @@ export default function Caixa() {
     if (transacao.destino_conta_bancaria_id) {
       const conta = contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id);
       if (conta) {
-        return { primary: conta.banco, secondary: conta.titular };
+        return { 
+          primary: conta.banco, 
+          secondary: conta.titular,
+          instrumento: {
+            tipo: 'banco',
+            identificador: conta.pix_key ? `Pix: ${conta.pix_key.includes('@') ? conta.pix_key.replace(/(.{3})(.*)(@.*)/, "$1...$3") : conta.pix_key.slice(0, 3) + '...'}` : `C: ****${conta.conta ? conta.conta.slice(-4) : ''}`,
+            subinfo: `Ag. ${conta.agencia || '****'}`
+          }
+        };
       }
       return { primary: "Conta Bancária" };
     }
