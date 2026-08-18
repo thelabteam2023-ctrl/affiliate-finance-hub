@@ -103,7 +103,7 @@ export function FinalizeBonusDialog({
   const selectedReasonData = FINALIZE_REASONS.find(r => r.value === selectedReason);
   const hasFinancialImpact = selectedReasonData?.hasFinancialImpact ?? false;
   const parsedDebit = parseFloat(debitAmount.replace(",", "."));
-  const isValidDebit = !hasFinancialImpact || (parsedDebit > 0 && !isNaN(parsedDebit));
+  const isValidDebit = !hasFinancialImpact || (selectedReason === "completed_with_limit" ? (parsedDebit >= 0 && !isNaN(parsedDebit) && permitidoAmount !== "") : (parsedDebit > 0 && !isNaN(parsedDebit)));
 
   const handleReasonChange = (value: FinalizeReason) => {
     setSelectedReason(value);
