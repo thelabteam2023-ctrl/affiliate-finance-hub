@@ -724,7 +724,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
 
   const handleConfirmFinalize = async (reason: FinalizeReason, debitAmount?: number): Promise<boolean> => {
     if (!bonusToFinalize) return false;
-    const success = await finalizeBonus(bonusToFinalize.id, reason, debitAmount);
+    const success = await finalizeBonus(bonusToFinalize.bonus.id, reason, debitAmount);
     if (success) setFinalizeDialogOpen(false);
     setBonusToFinalize(null);
     return success;
@@ -1058,7 +1058,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                                           variant="ghost"
                                           size="sm"
                                           className="h-7 px-2 text-xs hover:bg-emerald-500/20 hover:text-emerald-400 shrink-0"
-                                          onClick={() => handleFinalizeClick(bonus)}
+                                          onClick={() => handleFinalizeClick(bonus, bk.saldo_real)}
                                         >
                                           Finalizar
                                         </Button>
@@ -1168,7 +1168,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                                     variant="ghost"
                                     size="sm"
                                     className="h-6 px-2 text-xs hover:bg-emerald-500/20 hover:text-emerald-400"
-                                    onClick={() => handleFinalizeClick(bonus)}
+                                    onClick={() => handleFinalizeClick(bonus, bk.saldo_real)}
                                   >
                                     <CheckCircle2 className="h-3 w-3 mr-1" />
                                     Finalizar
@@ -1311,8 +1311,8 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
       <FinalizeBonusDialog
         open={finalizeDialogOpen}
         onOpenChange={setFinalizeDialogOpen}
-        bonusAmount={bonusToFinalize?.bonus_amount || 0}
-        currency={bonusToFinalize?.currency || 'BRL'}
+        bonusAmount={bonusToFinalize?.realBalance || 0}
+        currency={bonusToFinalize?.bonus.currency || 'BRL'}
         onConfirm={handleConfirmFinalize}
       />
     </div>

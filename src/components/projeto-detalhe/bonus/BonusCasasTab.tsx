@@ -815,8 +815,8 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
       <FinalizeBonusDialog
         open={finalizeDialogOpen}
         onOpenChange={setFinalizeDialogOpen}
-        bonusAmount={bonusToFinalize?.bonus_amount || 0}
-        currency={bonusToFinalize?.currency || 'BRL'}
+        bonusAmount={bonusToFinalize?.realBalance || 0}
+        currency={bonusToFinalize?.bonus.currency || 'BRL'}
         onConfirm={handleConfirmFinalize}
       />
     </div>
