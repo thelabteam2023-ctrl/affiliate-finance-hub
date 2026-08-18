@@ -252,9 +252,9 @@ export default function Caixa() {
   // Data for displaying names
   const [parceiros, setParceiros] = useState<{ [key: string]: string }>({});
   const [contas, setContas] = useState<{ [key: string]: string }>({});
-  const [contasBancarias, setContasBancarias] = useState<Array<{ id: string; banco: string; titular: string }>>([]);
+  const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
   const [wallets, setWallets] = useState<{ [key: string]: string }>({});
-  const [walletsDetalhes, setWalletsDetalhes] = useState<Array<{ id: string; exchange: string; endereco: string; network: string; parceiro_id: string }>>([]);
+  const [walletsDetalhes, setWalletsDetalhes] = useState<WalletDetalhe[]>([]);
   const [bookmakers, setBookmakers] = useState<{ [key: string]: { nome: string; status: string; parceiro_id?: string; projeto_id?: string } }>({});
   const [operadoresMap, setOperadoresMap] = useState<{ [key: string]: string }>({});
   const [projetos, setProjetos] = useState<Array<{ id: string; nome: string }>>([]);
