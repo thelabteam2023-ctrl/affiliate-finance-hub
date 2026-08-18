@@ -21,8 +21,26 @@ import {
   Scale,
   ShieldCheck,
 } from "lucide-react";
-import { registrarAjusteViaLedger } from "@/lib/ledgerService";
+import { registrarAjusteViaLedger, type AjusteNatureza } from "@/lib/ledgerService";
 import { getCurrencySymbol, SupportedCurrency } from "@/types/currency";
+
+const NATUREZAS: { value: AjusteNatureza; label: string; hint: string }[] = [
+  {
+    value: "RECONCILIACAO_OPERACIONAL",
+    label: "Reconciliação operacional",
+    hint: "Faz parte da operação (arredondamento de odds, retorno fracionado, retenção da casa). Entra no Lucro Operacional e no gráfico.",
+  },
+  {
+    value: "EFEITO_FINANCEIRO",
+    label: "Efeito financeiro (câmbio)",
+    hint: "Diferença cambial ou de recebimento, fora do controle do operador. Não entra no Lucro Operacional.",
+  },
+  {
+    value: "EXTRAORDINARIO",
+    label: "Extraordinário",
+    hint: "Estorno administrativo ou correção de lançamento sem vínculo com a operação. Não entra no Lucro Operacional.",
+  },
+];
 
 interface AjusteSaldoDialogProps {
   open: boolean;
@@ -51,6 +69,7 @@ export function AjusteSaldoDialog({
 }: AjusteSaldoDialogProps) {
   const [saldoReal, setSaldoReal] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [natureza, setNatureza] = useState<AjusteNatureza>("RECONCILIACAO_OPERACIONAL");
   const [saving, setSaving] = useState(false);
 
   const saldoSistema = vinculo?.saldo_atual || 0;
@@ -102,6 +121,7 @@ export function AjusteSaldoDialog({
         descricao: `Ajuste de saldo manual. Projeto: ${projetoNome || projetoId}`,
         motivo: observacoes.trim(),
         projetoIdSnapshot: projetoId,
+        natureza,
       });
 
       if (!result.success) {
@@ -115,6 +135,7 @@ export function AjusteSaldoDialog({
 
       setSaldoReal("");
       setObservacoes("");
+      setNatureza("RECONCILIACAO_OPERACIONAL");
       onOpenChange(false);
       onAjustado();
     } catch (error: any) {
@@ -132,6 +153,7 @@ export function AjusteSaldoDialog({
       if (!o) {
         setSaldoReal("");
         setObservacoes("");
+        setNatureza("RECONCILIACAO_OPERACIONAL");
       }
       onOpenChange(o);
     }}>
@@ -201,6 +223,28 @@ export function AjusteSaldoDialog({
           )}
 
           {/* Observações */}
+          {/* Natureza econômica */}
+          <div className="space-y-2">
+            <Label>Natureza do ajuste</Label>
+            <div className="grid gap-2">
+              {NATUREZAS.map((n) => (
+                <button
+                  key={n.value}
+                  type="button"
+                  onClick={() => setNatureza(n.value)}
+                  className={`text-left rounded-lg border p-2.5 transition-colors ${
+                    natureza === n.value
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-muted/20 hover:bg-muted/40"
+                  }`}
+                >
+                  <p className="text-sm font-medium">{n.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{n.hint}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label className={temDiferenca ? "text-destructive" : ""}>
               Observações {temDiferenca && <span className="text-destructive">*</span>}
