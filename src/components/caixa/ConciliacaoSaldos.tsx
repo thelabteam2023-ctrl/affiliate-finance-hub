@@ -406,7 +406,7 @@ export function ConciliacaoSaldos({
               transacaoOrigemId: selectedTransaction.id,
               projetoIdSnapshot: fxProjetoSnapshot || undefined,
               cotacao: selectedTransaction.cotacao_destino_usd || selectedTransaction.cotacao_origem_usd || undefined,
-              valor_usd_referencia: (selectedTransaction.valor_usd_referencia && selectedTransaction.valor_destino && selectedTransaction.valor_destino > 0)
+              valorUsdReferencia: (selectedTransaction.valor_usd_referencia && selectedTransaction.valor_destino && selectedTransaction.valor_destino > 0)
                 ? (selectedTransaction.valor_usd_referencia / selectedTransaction.valor_destino) * diferenca
                 : undefined,
               valor_usd_referencia: (selectedTransaction.valor_usd_referencia && selectedTransaction.valor_destino && selectedTransaction.valor_destino > 0)
@@ -432,7 +432,7 @@ export function ConciliacaoSaldos({
               transacaoOrigemId: selectedTransaction.id,
               projetoIdSnapshot: fxProjetoSnapshot || undefined,
               cotacao: selectedTransaction.cotacao_destino_usd || selectedTransaction.cotacao_origem_usd || undefined,
-              valor_usd_referencia: (selectedTransaction.valor_usd_referencia && selectedTransaction.valor_destino && selectedTransaction.valor_destino > 0)
+              valorUsdReferencia: (selectedTransaction.valor_usd_referencia && selectedTransaction.valor_destino && selectedTransaction.valor_destino > 0)
                 ? (selectedTransaction.valor_usd_referencia / selectedTransaction.valor_destino) * Math.abs(diferenca)
                 : undefined,
               valor_usd_referencia: (selectedTransaction.valor_usd_referencia && selectedTransaction.valor_destino && selectedTransaction.valor_destino > 0)

@@ -438,6 +438,7 @@ export async function registrarGanhoCambialViaLedger(params: {
   transacaoOrigemId?: string;
   projetoIdSnapshot?: string;
   cotacao?: number;
+  valorUsdReferencia?: number;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'GANHO_CAMBIAL',
@@ -451,6 +452,7 @@ export async function registrarGanhoCambialViaLedger(params: {
     referenciaTransacaoId: params.transacaoOrigemId,
     projetoIdSnapshot: params.projetoIdSnapshot,
     cotacao: params.cotacao,
+    valor_usd_referencia: params.valorUsdReferencia,
     auditoriaMetadata: { tipo: 'ganho_cambial' },
   });
 }
@@ -468,6 +470,7 @@ export async function registrarPerdaCambialViaLedger(params: {
   transacaoOrigemId?: string;
   projetoIdSnapshot?: string;
   cotacao?: number;
+  valorUsdReferencia?: number;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'PERDA_CAMBIAL',
@@ -481,6 +484,7 @@ export async function registrarPerdaCambialViaLedger(params: {
     referenciaTransacaoId: params.transacaoOrigemId,
     projetoIdSnapshot: params.projetoIdSnapshot,
     cotacao: params.cotacao,
+    valor_usd_referencia: params.valorUsdReferencia,
     auditoriaMetadata: { tipo: 'perda_cambial' },
   });
 }
