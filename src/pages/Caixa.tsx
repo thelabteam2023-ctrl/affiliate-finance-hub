@@ -1168,7 +1168,7 @@ export default function Caixa() {
           secondary: conta.titular,
           instrumento: {
             tipo: 'banco',
-            identificador: conta.pix_key ? `Pix: ${conta.pix_key.includes('@') ? conta.pix_key.replace(/(.{3})(.*)(@.*)/, "$1...$3") : conta.pix_key.slice(0, 3) + '...'}` : `C: ****${conta.conta?.slice(-4) || ''}`,
+            identificador: conta.pix_key ? `Pix: ${conta.pix_key.includes('@') ? conta.pix_key.replace(/(.{3})(.*)(@.*)/, "$1...$3") : conta.pix_key.slice(0, 3) + '...'}` : `C: ****${conta.conta ? conta.conta.slice(-4) : ''}`,
             subinfo: `Ag. ${conta.agencia || '****'}`
           }
         };
