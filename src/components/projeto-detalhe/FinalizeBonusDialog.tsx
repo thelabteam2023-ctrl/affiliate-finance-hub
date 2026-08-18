@@ -193,59 +193,59 @@ export function FinalizeBonusDialog({
                 Cálculo de Perda Promocional
               </Label>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Valor Obtido (Total)</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">{currency === "BRL" ? "R$" : currency === "USD" ? "$" : currency}</span>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={obtidoAmount}
-                      onChange={(e) => {
-                        setObtidoAmount(e.target.value);
-                        const obt = parseFloat(e.target.value.replace(",", "."));
-                        const per = parseFloat(permitidoAmount.replace(",", "."));
-                        if (!isNaN(obt) && !isNaN(per)) {
-                          setDebitAmount((obt - per).toFixed(2));
-                        }
-                      }}
-                      className="h-8 text-sm"
-                    />
-                  </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="p-2 rounded bg-background/50 border border-border/50">
+                  <p className="text-xs text-muted-foreground mb-1">Valor no Sistema (Saldo Admitido)</p>
+                  <p className="text-sm font-semibold">{formatCurrency(bonusAmount, currency)}</p>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Valor Permitido (Saque)</Label>
+                  <Label className="text-xs text-muted-foreground">Valor Efetivamente Permitido (Saque)</Label>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">{currency === "BRL" ? "R$" : currency === "USD" ? "$" : currency}</span>
                     <Input
                       type="text"
                       inputMode="decimal"
                       placeholder="0.00"
+                      autoFocus
                       value={permitidoAmount}
                       onChange={(e) => {
-                        setPermitidoAmount(e.target.value);
-                        const obt = parseFloat(obtidoAmount.replace(",", "."));
-                        const per = parseFloat(e.target.value.replace(",", "."));
-                        if (!isNaN(obt) && !isNaN(per)) {
-                          setDebitAmount((obt - per).toFixed(2));
+                        const val = e.target.value;
+                        setPermitidoAmount(val);
+                        const per = parseFloat(val.replace(",", "."));
+                        if (!isNaN(per)) {
+                          const diff = bonusAmount - per;
+                          setDebitAmount(diff > 0 ? diff.toFixed(2) : "0.00");
+                        } else {
+                          setDebitAmount("");
                         }
                       }}
-                      className="h-8 text-sm border-emerald-500/50"
+                      className="h-9 text-sm border-emerald-500/50"
                     />
                   </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Informe o valor final que a casa liberou para seu saldo real.
+                  </p>
                 </div>
               </div>
 
-              {parsedDebit > 0 && (
+              {parsedDebit > 0 ? (
                 <div className="pt-2 border-t border-amber-500/20">
-                  <p className="text-xs text-amber-200/70 flex justify-between">
-                    Perda a debitar: <span className="font-bold text-amber-400">{formatCurrency(parsedDebit, currency)}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-amber-200/70">Diferença a ser perdida:</span>
+                    <span className="text-sm font-bold text-red-400">-{formatCurrency(parsedDebit, currency)}</span>
+                  </div>
+                  <p className="text-[10px] text-amber-500/60 mt-1 italic">
+                    * Este valor será debitado do saldo da casa no projeto.
                   </p>
                 </div>
-              )}
+              ) : permitidoAmount && parsedDebit <= 0 && parseFloat(permitidoAmount.replace(",", ".")) >= bonusAmount ? (
+                <div className="pt-2 border-t border-emerald-500/20">
+                  <p className="text-[10px] text-emerald-400">
+                    O valor permitido é igual ou maior que o saldo atual. Nenhuma perda será registrada.
+                  </p>
+                </div>
+              ) : null}
             </div>
           )}
 
