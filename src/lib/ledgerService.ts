@@ -152,6 +152,11 @@ export async function insertLedgerEntry(
       ajuste_direcao: input.ajusteDirecao || null,
       // Isolamento financeiro: herdar projeto do lançamento pai (ex: FX de saque pós-desvínculo)
       projeto_id_snapshot: input.projetoIdSnapshot || null,
+      // SNAPSHOT USD: Para variações cambiais, herdar a cotação da transação original
+      // Se preenchido, o trigger V6 no banco usará isso para preencher valor_usd_referencia
+      valor_usd_referencia: (input.tipoTransacao === 'GANHO_CAMBIAL' || input.tipoTransacao === 'PERDA_CAMBIAL') && input.cotacao
+        ? input.valor * input.cotacao
+        : null,
       // INTEGRIDADE LEDGER: Preencher valor_destino/valor_origem para reconstrução de saldo
       valor_destino: isCredit ? input.valor : null,
       valor_origem: isDebit ? input.valor : null,
@@ -430,6 +435,7 @@ export async function registrarGanhoCambialViaLedger(params: {
   descricao?: string;
   transacaoOrigemId?: string;
   projetoIdSnapshot?: string;
+  cotacao?: number;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'GANHO_CAMBIAL',
@@ -442,6 +448,7 @@ export async function registrarGanhoCambialViaLedger(params: {
     impactaCaixaOperacional: false, // Ajuste contábil, não cash real
     referenciaTransacaoId: params.transacaoOrigemId,
     projetoIdSnapshot: params.projetoIdSnapshot,
+    cotacao: params.cotacao,
     auditoriaMetadata: { tipo: 'ganho_cambial' },
   });
 }
@@ -458,6 +465,7 @@ export async function registrarPerdaCambialViaLedger(params: {
   descricao?: string;
   transacaoOrigemId?: string;
   projetoIdSnapshot?: string;
+  cotacao?: number;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'PERDA_CAMBIAL',
@@ -470,6 +478,7 @@ export async function registrarPerdaCambialViaLedger(params: {
     impactaCaixaOperacional: false, // Ajuste contábil, não cash real
     referenciaTransacaoId: params.transacaoOrigemId,
     projetoIdSnapshot: params.projetoIdSnapshot,
+    cotacao: params.cotacao,
     auditoriaMetadata: { tipo: 'perda_cambial' },
   });
 }

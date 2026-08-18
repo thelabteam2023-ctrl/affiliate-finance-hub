@@ -604,9 +604,8 @@ function useProjetoExtrato(
         if (e.tipo_transacao === "SAQUE_VIRTUAL") return;
 
         // 5) Demais (AJUSTE_*, CASHBACK, BONUS, ESTORNO, PERDA_CAMBIAL, GANHO_CAMBIAL)
-        // O sinal define se é entrada ou saída do caixa do projeto. Tudo isso é
-        // responsabilidade do projeto (não da empresa) e PRECISA influenciar o
-        // Resultado de Caixa para o fechamento final refletir a realidade.
+        // CRÍTICO: Perda/Ganho cambial deve ser agrupado separadamente se o usuário preferir,
+        // mas aqui mantemos no ajustesTotal por padrão.
         const cm = ensureCM(moeda);
         const consolidadoEv = resolveConsolidado(e, valorBase, moeda);
 
