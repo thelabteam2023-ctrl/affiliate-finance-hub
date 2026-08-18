@@ -585,7 +585,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
   
   // Finalize dialog state
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
-  const [bonusToFinalize, setBonusToFinalize] = useState<ProjectBonus | null>(null);
+  const [bonusToFinalize, setBonusToFinalize] = useState<{ bonus: ProjectBonus; realBalance: number } | null>(null);
   
   // Pending bonus edit dialog state (separate from drawer)
   const [pendingBonusDialogOpen, setPendingBonusDialogOpen] = useState(false);
@@ -717,8 +717,8 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
     setBonusDrawerOpen(true);
   };
 
-  const handleFinalizeClick = (bonus: ProjectBonus) => {
-    setBonusToFinalize(bonus);
+  const handleFinalizeClick = (bonus: ProjectBonus, realBalance: number) => {
+    setBonusToFinalize({ bonus, realBalance });
     setFinalizeDialogOpen(true);
   };
 
