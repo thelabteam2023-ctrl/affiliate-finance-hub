@@ -564,6 +564,7 @@ interface BookmakerInBonusMode {
   parceiro_nome: string | null;
   // UNIFICADO: saldo_operavel vem direto da RPC canônica (já inclui bônus creditados)
   saldo_operavel: number;
+  saldo_real: number;
   moeda: string;
   bonuses: ProjectBonus[];
   nearest_expiry: Date | null;
@@ -676,6 +677,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           parceiro_nome: bk.parceiros?.nome || null,
           // UNIFICADO: saldo_operavel já inclui tudo (real + bônus + freebet)
           saldo_operavel: saldoOperavel,
+          saldo_real: saldoCanonicoData?.saldo_real ?? 0,
           moeda: bk.moeda || 'BRL',
           bonuses: bkBonuses,
           nearest_expiry: nearestExpiry,
