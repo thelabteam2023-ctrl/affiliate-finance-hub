@@ -112,6 +112,17 @@ export interface LedgerEntryInput {
   ajusteDirecao?: 'ENTRADA' | 'SAIDA';
 }
 
+/**
+ * Natureza econômica de um ajuste de saldo.
+ * - RECONCILIACAO_OPERACIONAL: parte da operação → entra no Lucro Operacional e no gráfico.
+ * - EFEITO_FINANCEIRO: variação cambial/tesouraria → fora do Lucro Operacional.
+ * - EXTRAORDINARIO: estorno/correção administrativa → fora do Lucro Operacional.
+ */
+export type AjusteNatureza =
+  | 'RECONCILIACAO_OPERACIONAL'
+  | 'EFEITO_FINANCEIRO'
+  | 'EXTRAORDINARIO';
+
 export interface LedgerEntryResult {
   success: boolean;
   entryId?: string;
@@ -152,6 +163,7 @@ export async function insertLedgerEntry(
       status: 'CONFIRMADO',
       ajuste_motivo: input.ajusteMotivo || null,
       ajuste_direcao: input.ajusteDirecao || null,
+      ajuste_natureza: input.ajusteNatureza || null,
       // Isolamento financeiro: herdar projeto do lançamento pai (ex: FX de saque pós-desvínculo)
       projeto_id_snapshot: input.projetoIdSnapshot || null,
       // SNAPSHOT USD: Para variações cambiais, herdar a cotação da transação original
