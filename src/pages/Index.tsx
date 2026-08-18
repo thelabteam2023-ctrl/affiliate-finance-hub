@@ -34,8 +34,8 @@ const Index = () => {
           <div className="mx-auto max-w-4xl text-center">
             {/* Heading */}
             <h1 className="mb-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-              Controle profissional para quem{" "}
-              <span className="text-gradient">leva apostas a sério</span>
+              Aprove e execute este plano por completo{" "}
+              <span className="text-gradient">de forma detalhada</span>
             </h1>
 
             <p className="mb-10 text-lg text-muted-foreground sm:text-xl max-w-3xl mx-auto">
