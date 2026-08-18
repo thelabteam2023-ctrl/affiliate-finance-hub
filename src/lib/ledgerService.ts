@@ -110,6 +110,8 @@ export interface LedgerEntryInput {
   ajusteMotivo?: string;
   /** Direção do ajuste: ENTRADA ou SAIDA */
   ajusteDirecao?: 'ENTRADA' | 'SAIDA';
+  /** Natureza econômica do ajuste (apenas para AJUSTE_SALDO) */
+  ajusteNatureza?: 'RECONCILIACAO_OPERACIONAL' | 'EFEITO_FINANCEIRO' | 'EXTRAORDINARIO';
 }
 
 /**
