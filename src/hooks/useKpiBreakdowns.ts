@@ -367,6 +367,9 @@ function deriveExtrasFromRpc(
           }
         } else {
           // Ajuste de saldo normal
+          // CLASSIFICAÇÃO ECONÔMICA: apenas RECONCILIACAO_OPERACIONAL entra no Lucro Operacional.
+          const natureza = (le as any).ajuste_natureza ?? 'RECONCILIACAO_OPERACIONAL';
+          if (natureza !== 'RECONCILIACAO_OPERACIONAL') break;
           const ajusteValor = le.ajuste_direcao === 'SAIDA' ? -valor : valor;
           addEntry('ajuste_saldo', ajusteValor, moeda);
         }

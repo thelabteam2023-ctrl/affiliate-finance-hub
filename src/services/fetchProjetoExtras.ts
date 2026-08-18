@@ -293,7 +293,7 @@ async function fetchPerdasCancelamentoBonuses(
 async function fetchAjustesSaldo(projetoId: string): Promise<ProjetoExtraEntry[]> {
   const { data } = await supabase
     .from('cash_ledger')
-    .select('data_transacao, valor, moeda, ajuste_direcao')
+    .select('data_transacao, valor, moeda, ajuste_direcao, ajuste_motivo, ajuste_natureza')
     .eq('status', 'CONFIRMADO')
     .eq('tipo_transacao', 'AJUSTE_SALDO')
     .eq('projeto_id_snapshot', projetoId)
@@ -301,6 +301,12 @@ async function fetchAjustesSaldo(projetoId: string): Promise<ProjetoExtraEntry[]
 
   return (data || [])
     .filter(aj => Number(aj.valor || 0) !== 0)
+    // ANTI-DUPLA-CONTAGEM: perdas de bônus (cancelamento / limite promocional) já são
+    // contabilizadas por fetchPerdasCancelamentoBonuses.
+    .filter(aj => !['BONUS_CANCELAMENTO', 'PROMO_LIMIT'].includes((aj as any).ajuste_motivo))
+    // CLASSIFICAÇÃO ECONÔMICA: apenas reconciliação operacional entra no Lucro Operacional.
+    // EFEITO_FINANCEIRO e EXTRAORDINARIO vivem em Indicadores Financeiros.
+    .filter(aj => ((aj as any).ajuste_natureza ?? 'RECONCILIACAO_OPERACIONAL') === 'RECONCILIACAO_OPERACIONAL')
     .map(aj => ({
       data: extractCivilDateKey(aj.data_transacao),
       valor: aj.ajuste_direcao === 'SAIDA' ? -Number(aj.valor) : Number(aj.valor),

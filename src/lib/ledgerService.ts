@@ -110,7 +110,20 @@ export interface LedgerEntryInput {
   ajusteMotivo?: string;
   /** Direção do ajuste: ENTRADA ou SAIDA */
   ajusteDirecao?: 'ENTRADA' | 'SAIDA';
+  /** Natureza econômica do ajuste (apenas para AJUSTE_SALDO) */
+  ajusteNatureza?: 'RECONCILIACAO_OPERACIONAL' | 'EFEITO_FINANCEIRO' | 'EXTRAORDINARIO';
 }
+
+/**
+ * Natureza econômica de um ajuste de saldo.
+ * - RECONCILIACAO_OPERACIONAL: parte da operação → entra no Lucro Operacional e no gráfico.
+ * - EFEITO_FINANCEIRO: variação cambial/tesouraria → fora do Lucro Operacional.
+ * - EXTRAORDINARIO: estorno/correção administrativa → fora do Lucro Operacional.
+ */
+export type AjusteNatureza =
+  | 'RECONCILIACAO_OPERACIONAL'
+  | 'EFEITO_FINANCEIRO'
+  | 'EXTRAORDINARIO';
 
 export interface LedgerEntryResult {
   success: boolean;
@@ -152,6 +165,7 @@ export async function insertLedgerEntry(
       status: 'CONFIRMADO',
       ajuste_motivo: input.ajusteMotivo || null,
       ajuste_direcao: input.ajusteDirecao || null,
+      ajuste_natureza: input.ajusteNatureza || null,
       // Isolamento financeiro: herdar projeto do lançamento pai (ex: FX de saque pós-desvínculo)
       projeto_id_snapshot: input.projetoIdSnapshot || null,
       // SNAPSHOT USD: Para variações cambiais, herdar a cotação da transação original
@@ -333,6 +347,8 @@ export async function registrarAjusteViaLedger(params: {
   projetoIdSnapshot?: string;
   /** Metadados extras de auditoria (ex.: bonus_id, origem) mesclados no auditoria_metadata */
   metadataExtra?: Record<string, any>;
+  /** Natureza econômica do ajuste. Default: RECONCILIACAO_OPERACIONAL */
+  natureza?: AjusteNatureza;
 }): Promise<LedgerEntryResult> {
   const isCredito = params.delta > 0;
   const motivoFinal = params.motivo || params.descricao || 'Ajuste de saldo';
@@ -350,10 +366,12 @@ export async function registrarAjusteViaLedger(params: {
     projetoIdSnapshot: params.projetoIdSnapshot,
     ajusteMotivo: motivoFinal,
     ajusteDirecao: isCredito ? 'ENTRADA' : 'SAIDA',
+    ajusteNatureza: params.natureza || 'RECONCILIACAO_OPERACIONAL',
     auditoriaMetadata: { 
       delta: params.delta,
       tipo: 'ajuste_saldo',
       motivo: motivoFinal,
+      natureza: params.natureza || 'RECONCILIACAO_OPERACIONAL',
       ...(params.metadataExtra || {}),
     },
   });
