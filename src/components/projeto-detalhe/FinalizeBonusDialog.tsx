@@ -195,8 +195,8 @@ export function FinalizeBonusDialog({
               
               <div className="grid grid-cols-1 gap-4">
                 <div className="p-2 rounded bg-background/50 border border-border/50">
-                  <p className="text-xs text-muted-foreground mb-1">Valor no Sistema (Saldo Admitido)</p>
-                  <p className="text-sm font-semibold">{formatCurrency(bonusAmount, currency)}</p>
+                  <p className="text-[10px] text-muted-foreground mb-0.5 uppercase tracking-wider font-semibold">Valor no Sistema (Saldo Admitido)</p>
+                  <p className="text-base font-bold text-foreground">{formatCurrency(bonusAmount, currency)}</p>
                 </div>
 
                 <div className="space-y-1.5">

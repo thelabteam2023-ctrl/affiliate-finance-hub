@@ -97,7 +97,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
   
   // Finalize dialog state
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
-  const [bonusToFinalize, setBonusToFinalize] = useState<ProjectBonus | null>(null);
+  const [bonusToFinalize, setBonusToFinalize] = useState<{ bonus: ProjectBonus; realBalance: number } | null>(null);
 
   // Para análise por casa: usar TODOS os bookmakers que já tiveram bônus (ativos OU finalizados)
   const bookmakersWithAnyBonusHistory = getBookmakersWithAnyBonus();
@@ -242,13 +242,18 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
   };
 
   const handleFinalizeClick = (bonus: ProjectBonus) => {
-    setBonusToFinalize(bonus);
+    // Find the current bookmaker to get the canonical real balance
+    const bk = bookmakers.find(b => b.id === bonus.bookmaker_id);
+    setBonusToFinalize({ 
+      bonus, 
+      realBalance: bk?.saldo_real ?? bonus.bonus_amount 
+    });
     setFinalizeDialogOpen(true);
   };
 
-   const handleConfirmFinalize = async (reason: FinalizeReason): Promise<boolean> => {
+   const handleConfirmFinalize = async (reason: FinalizeReason, debitAmount?: number): Promise<boolean> => {
      if (!bonusToFinalize) return false;
-     const success = await finalizeBonus(bonusToFinalize.id, reason);
+     const success = await finalizeBonus(bonusToFinalize.bonus.id, reason, debitAmount);
      if (success) setFinalizeDialogOpen(false);
      setBonusToFinalize(null);
      return success;
@@ -810,8 +815,8 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
       <FinalizeBonusDialog
         open={finalizeDialogOpen}
         onOpenChange={setFinalizeDialogOpen}
-        bonusAmount={bonusToFinalize?.bonus_amount || 0}
-        currency={bonusToFinalize?.currency || 'BRL'}
+        bonusAmount={bonusToFinalize?.realBalance || 0}
+        currency={bonusToFinalize?.bonus.currency || 'BRL'}
         onConfirm={handleConfirmFinalize}
       />
     </div>

@@ -674,7 +674,7 @@ export function useProjectBonuses({ projectId, bookmakerId, dateRange }: UseProj
       }
 
       // FINANCIAL IMPACT: cancelled_reversed or completed_with_limit MUST create ledger entry
-      if ((reason === "cancelled_reversed" || reason === "completed_with_limit") && currentBonus) {
+      if ((reason === "cancelled_reversed" || reason === "completed_with_limit") && currentBonus && debitAmount && debitAmount > 0) {
         const tipoBonus = (currentBonus as any).tipo_bonus || 'BONUS';
         
         if (tipoBonus === 'FREEBET') {
