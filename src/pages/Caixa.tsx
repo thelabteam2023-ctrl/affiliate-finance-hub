@@ -1058,46 +1058,6 @@ export default function Caixa() {
     return { primary: "Origem" };
   };
 
-    // Para APORTE_FINANCEIRO, verificamos o fluxo pela direção
-    if (transacao.tipo_transacao === "APORTE_FINANCEIRO") {
-      // Se destino é CAIXA_OPERACIONAL, é um aporte (Investidor → Caixa)
-      if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
-        return { primary: transacao.nome_investidor || "Investidor Externo" };
-      }
-      // Se origem é CAIXA_OPERACIONAL, é uma liquidação (Caixa → Investidor)
-      if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
-        return getCaixaInfo(transacao.origem_conta_bancaria_id, transacao.origem_wallet_id, isCryptoTx(transacao));
-      }
-    }
-    
-    if (transacao.tipo_transacao === "APORTE") {
-      return { primary: transacao.nome_investidor || "Investidor Externo" };
-    }
-    
-    if (transacao.tipo_transacao === "LIQUIDACAO") {
-      return getCaixaInfo(transacao.origem_conta_bancaria_id, transacao.origem_wallet_id, isCryptoTx(transacao));
-    }
-    
-    // AJUSTE_SALDO: origem é a bookmaker ajustada
-    if (transacao.tipo_transacao === "AJUSTE_SALDO" && transacao.origem_bookmaker_id) {
-      const bookmaker = bookmakers[transacao.origem_bookmaker_id];
-      const parceiroNome = bookmaker?.parceiro_id ? parceiros[bookmaker.parceiro_id] : undefined;
-      return { 
-        primary: bookmaker?.nome || "Bookmaker",
-        secondary: parceiroNome
-      };
-    }
-    
-    // PRIORIDADE: ID Físico (Evidência Real)
-    if (transacao.origem_bookmaker_id) {
-      const bookmaker = bookmakers[transacao.origem_bookmaker_id];
-      const parceiroNome = bookmaker?.parceiro_id ? parceiros[bookmaker.parceiro_id] : undefined;
-      return { 
-        primary: bookmaker?.nome || "Bookmaker",
-        secondary: parceiroNome
-      };
-    }
-
     if (transacao.origem_wallet_id) {
       const wallet = walletsDetalhes.find(w => w.id === transacao.origem_wallet_id);
       if (wallet) {
