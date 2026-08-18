@@ -63,7 +63,7 @@ interface ContaBancaria {
   titular: string;
   agencia?: string | null;
   conta?: string | null;
-  pix?: string | null;
+  pix_key?: string | null;
 }
 
 export interface LabelInfo {
@@ -414,7 +414,14 @@ export default function Caixa() {
       const contasMap: { [key: string]: string } = {};
       contasData?.forEach(c => contasMap[c.id] = c.banco);
       setContas(contasMap);
-      setContasBancarias(contasData || []);
+      setContasBancarias(contasData?.map(c => ({
+        id: c.id,
+        banco: c.banco,
+        titular: c.titular,
+        agencia: c.agencia,
+        conta: c.conta,
+        pix_key: c.pix_key
+      })) || []);
 
       const walletsMap: { [key: string]: string } = {};
       walletsData?.forEach(w => walletsMap[w.id] = w.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET');
