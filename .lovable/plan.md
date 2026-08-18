@@ -1,38 +1,52 @@
-# Plano de Ação: Consistência de Perda Promocional nos Indicadores (V16)
+# Perda Promocional (PROMO_LIMIT): propagação para Lucro e Performance de Bônus
 
-Foi detectado que o lançamento de "Perda Promocional" (categoria `PROMO_LIMIT`) via módulo de Bônus impacta o saldo contábil, mas não é refletido na **Evolução do Lucro** e nos **KPIs de Performance de Bônus**.
+## O que foi confirmado nos dados reais
 
-## Causa Raiz
-A RPC `get_projeto_lucro_operacional_daily` (base do gráfico e KPIs operacionais) ignora eventos do `cash_ledger` que não sejam explicitamente mapeados como operacionais. Atualmente, o motivo `PROMO_LIMIT` é tratado apenas como um ajuste de saldo, sem vínculo com a série temporal de lucro do projeto ou com a agregação de estratégia de bônus.
+Consultei o lançamento citado. Ele existe, está correto e é único:
 
-## Objetivos
-1.  **Integridade do Lucro**: Garantir que perdas por limitação promocional reduzam o Lucro Operacional real.
-2.  **Performance de Estratégia**: Refletir a perda na aba Bônus (Por Casa e Geral).
-3.  **SSOT Financeiro**: Manter um único evento no Ledger (`PERDA_OPERACIONAL`) que alimente todas as visões.
+- `cash_ledger`: `AJUSTE_SALDO`, `ajuste_motivo = 'PROMO_LIMIT'`, `ajuste_direcao = 'SAIDA'`, valor **169,39 USD**, projeto AGOSTO, casa OROBET, data 18/08.
+- `financial_events`: gerou um evento `AJUSTE` de **-169,39** (chave `ledger_ajuste_<id>`) — o saldo da casa foi debitado corretamente, sem duplicidade.
+- O bônus está `finalized` com motivo `completed_with_limit`.
 
-## Detalhes Técnicos
+Observação: a moeda registrada é USD (moeda da casa e de consolidação do projeto), não EUR. O valor financeiro está coerente; o símbolo exibido na tela pode ser conferido depois.
 
-### 1. Banco de Dados (PostgreSQL)
-- **RPC `get_projeto_lucro_operacional_daily`**:
-    - Adicionar um novo bloco `bonus_losses_daily` para capturar registros do `cash_ledger` onde `ajuste_motivo = 'PROMO_LIMIT'`.
-    - Garantir que esses valores sejam subtraídos do lucro diário, respeitando a moeda de consolidação.
-- **RPC `get_projeto_lucro_operacional` (ou similar)**:
-    - Atualizar a agregação de bônus para incluir débitos de `PROMO_LIMIT` vinculados a bônus.
+## Causa raiz (confirmada)
 
-### 2. Backend / Ledger Logic
-- **`useProjectBonuses.ts`**:
-    - Ao finalizar um bônus com `completed_with_limit`, a `PERDA_OPERACIONAL` gerada deve incluir no `auditoria_metadata` o `bonus_id` e a tag `origem: 'BONUS'`.
-    - Isso permite que a aba Bônus filtre esses prejuízos na visão "Por Casa".
+O evento existe apenas como ajuste de saldo. Três agregadores reconhecem `BONUS_CANCELAMENTO`, mas **nenhum reconhece `PROMO_LIMIT`**:
 
-### 3. Frontend (UI/Analytics)
-- **`ExtratoProjetoTab.tsx`**:
-    - Adicionar rótulo específico para `PROMO_LIMIT` (ex: "Perda Promocional (Limite de Saque)").
-- **`BonusPerformanceCard` / Analytics**:
-    - Ajustar os hooks de performance para subtrair as perdas promocionais do lucro bruto gerado pelos bônus.
+1. `get_projeto_lucro_operacional_daily` (fonte do gráfico Evolução do Lucro) — filtra `ajuste_motivo = 'BONUS_CANCELAMENTO'`.
+2. `get_projetos_lucro_operacional` (KPI canônico de lucro, ambas as assinaturas) — idem, sem nenhuma menção a `PROMO_LIMIT`.
+3. `BonusVisaoGeralTab.tsx`, query `bonus-perdas-cancelamento` — idem; alimenta KPIs de bônus, visão Por Casa e o gráfico de resultado líquido.
 
-## Plano de Teste
-1.  Registrar bônus de €200.
-2.  Finalizar com "Restrição de Ganho", informando saque permitido de €30.61.
-3.  Verificar se a perda de €169.39 aparece no extrato como saída.
-4.  Validar se o gráfico de Evolução do Lucro na Visão Geral caiu exatamente €169.39 na data da finalização.
-5.  Confirmar na aba Bônus que a performance daquela casa específica foi reduzida pelo mesmo valor.
+Ou seja: o evento é canônico e único; falta apenas ser **lido** pelas três agregações. Não é necessário criar nenhum lançamento novo.
+
+## Correção proposta
+
+Princípio: um único evento no ledger, reconhecido por todas as visões. A mudança é de leitura, não de escrita.
+
+### Banco de dados
+
+- `get_projeto_lucro_operacional_daily`: ampliar o bloco `perdas_cancel_daily` para aceitar `ajuste_motivo IN ('BONUS_CANCELAMENTO', 'PROMO_LIMIT')`, mantendo `SAIDA` + `CONFIRMADO` e a mesma conversão por moeda.
+- `get_projetos_lucro_operacional` (as duas assinaturas existentes): mesma ampliação no bloco equivalente, com `DROP FUNCTION IF EXISTS` antes de recriar para evitar ambiguidade de assinatura no PostgREST.
+
+O valor já é gravado na moeda da casa e o projeto consolida em USD com Cotação de Trabalho, então nenhuma lógica cambial nova é necessária — reaproveita a conversão já existente nesses blocos.
+
+### Frontend
+
+- `BonusVisaoGeralTab.tsx`: trocar `.eq("ajuste_motivo", "BONUS_CANCELAMENTO")` por `.in("ajuste_motivo", ["BONUS_CANCELAMENTO", "PROMO_LIMIT"])`. Isso propaga automaticamente para os KPIs de bônus, a visão Por Casa e o `BonusResultadoLiquidoChart`, que já consomem esse mesmo array.
+- `ExtratoProjetoTab.tsx`: rótulo dedicado para o ajuste com motivo `PROMO_LIMIT` ("Perda Promocional — limite de saque"), distinguindo de um ajuste manual comum.
+
+### Rastreabilidade (para lançamentos futuros)
+
+- `useProjectBonuses.ts`: incluir `bonus_id` e `origem: 'BONUS'` no `auditoria_metadata` do débito de `PROMO_LIMIT`. Hoje o metadata só traz `delta`/`motivo`, o que impede reconciliar o lançamento com o bônus de origem. Não é necessário para o cálculo (casa + projeto já bastam), mas é necessário para auditoria.
+
+## Sem duplicidade
+
+O mesmo registro passa a ser lido por Visão Geral e por Bônus, mas cada agregação soma o ledger **uma vez**. As apostas de bônus vêm de `apostas_unificada` e o débito vem de `cash_ledger` — fontes disjuntas, sem caminho para contar 169,39 duas vezes.
+
+## Validação
+
+1. Evolução do Lucro do projeto AGOSTO deve cair 169,39 no dia 18/08.
+2. KPI de lucro da Visão Geral deve variar exatamente o mesmo valor (não o dobro).
+3. Aba Bônus → Por Casa: OROBET reduzida em 169,39, com o total da categoria acompanhando.
+4. Saldo da casa permanece 194,00 (não deve mudar — já estava debitado).
