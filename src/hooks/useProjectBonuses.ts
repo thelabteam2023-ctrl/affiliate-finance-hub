@@ -708,6 +708,11 @@ export function useProjectBonuses({ projectId, bookmakerId, dateRange }: UseProj
               : `Débito por cancelamento de bônus: ${currentBonus.title || "Bônus"} — valor perdido`,
             motivo: reason === "completed_with_limit" ? "PROMO_LIMIT" : "BONUS_CANCELAMENTO",
             projetoIdSnapshot: currentBonus.project_id,
+            metadataExtra: {
+              origem: "BONUS",
+              bonus_id: id,
+              valor_perdido: Math.abs(debitAmount!),
+            },
           });
 
           if (!result.success) {
