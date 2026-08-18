@@ -46,7 +46,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { parseLocalDateTime, extractCivilDateKey, getCivilDateRangeForQuery } from "@/utils/dateUtils";
 import { getWalletDisplayName, truncateAddress } from "@/utils/cryptoUtils";
 
-interface WalletDetalhe {
+export interface WalletDetalhe {
   id: string;
   exchange: string;
   label?: string | null;
@@ -57,7 +57,7 @@ interface WalletDetalhe {
   parceiro_id: string;
 }
 
-interface ContaBancaria {
+export interface ContaBancaria {
   id: string;
   banco: string;
   titular: string;
