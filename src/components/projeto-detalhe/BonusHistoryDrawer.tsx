@@ -124,6 +124,7 @@ const getFinalizeReasonLabel = (reason: FinalizeReason | null): string => {
     cycle_completed: "Ciclo encerrado",
     expired: "Expirado",
     cancelled_reversed: "Cancelado / Revertido",
+    completed_with_limit: "Restrição de Ganho",
   };
   return labels[reason] || reason;
 };

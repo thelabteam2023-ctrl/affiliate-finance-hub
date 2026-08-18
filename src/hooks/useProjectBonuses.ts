@@ -12,7 +12,7 @@ import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 
 export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "reversed" | "finalized";
 
-export type FinalizeReason = "rollover_completed" | "cycle_completed" | "expired" | "cancelled_reversed";
+export type FinalizeReason = "rollover_completed" | "cycle_completed" | "expired" | "cancelled_reversed" | "completed_with_limit";
 
 export type BonusSource = "manual" | "template";
 
@@ -673,8 +673,8 @@ export function useProjectBonuses({ projectId, bookmakerId, dateRange }: UseProj
         throw new Error("Este bônus não está mais em estado creditado para finalização.");
       }
 
-      // FINANCIAL IMPACT: cancelled_reversed MUST create ledger entry
-      if (reason === "cancelled_reversed" && currentBonus) {
+      // FINANCIAL IMPACT: cancelled_reversed or completed_with_limit MUST create ledger entry
+      if ((reason === "cancelled_reversed" || reason === "completed_with_limit") && currentBonus) {
         const tipoBonus = (currentBonus as any).tipo_bonus || 'BONUS';
         
         if (tipoBonus === 'FREEBET') {
@@ -703,8 +703,10 @@ export function useProjectBonuses({ projectId, bookmakerId, dateRange }: UseProj
             moeda: currentBonus.currency || "BRL",
             workspaceId: currentBonus.workspace_id || "",
             userId: userData.user.id,
-            descricao: `Débito por cancelamento de bônus: ${currentBonus.title || "Bônus"} — valor perdido`,
-            motivo: "BONUS_CANCELAMENTO",
+            descricao: reason === "completed_with_limit" 
+              ? `Débito por restrição de ganho (regra da casa): ${currentBonus.title || "Bônus"}`
+              : `Débito por cancelamento de bônus: ${currentBonus.title || "Bônus"} — valor perdido`,
+            motivo: reason === "completed_with_limit" ? "PROMO_LIMIT" : "BONUS_CANCELAMENTO",
             projetoIdSnapshot: currentBonus.project_id,
           });
 
@@ -721,7 +723,7 @@ export function useProjectBonuses({ projectId, bookmakerId, dateRange }: UseProj
       
       // Para FREEBET finalizada (expirada/ciclo encerrado/rollover concluído),
       // estornar o saldo remanescente no ledger para evitar saldo fantasma.
-      if (reason !== "cancelled_reversed" && currentBonus) {
+      if (reason !== "cancelled_reversed" && reason !== "completed_with_limit" && currentBonus) {
         const tipoBonus = (currentBonus as any).tipo_bonus || 'BONUS';
         if (tipoBonus === 'FREEBET') {
           const valorCreditado = Number((currentBonus as any).valor_creditado_no_saldo || (currentBonus as any).bonus_amount || 0);
@@ -770,6 +772,7 @@ export function useProjectBonuses({ projectId, bookmakerId, dateRange }: UseProj
         cycle_completed: "Bônus utilizado / ciclo encerrado",
         expired: "Expirado",
         cancelled_reversed: "Cancelado / Revertido",
+        completed_with_limit: "Finalizado com Restrição de Ganho",
       };
       toast.success(`Bônus finalizado: ${reasonLabels[reason]}`);
       // Force immediate refetch before invalidation to ensure UI updates

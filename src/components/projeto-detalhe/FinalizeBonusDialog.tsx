@@ -15,13 +15,22 @@ import { Input } from "@/components/ui/input";
 import { Loader2, CheckCircle2, AlertTriangle, Clock, XCircle } from "lucide-react";
 import { FinalizeReason } from "@/hooks/useProjectBonuses";
 
-const FINALIZE_REASONS: { value: FinalizeReason; label: string; description: string; icon: React.ReactNode; impact: string; hasFinancialImpact?: boolean }[] = [
+const FINALIZE_REASONS: { value: FinalizeReason; label: string; description: string; icon: React.ReactNode; impact: string; hasFinancialImpact?: boolean; type?: 'total' | 'partial' }[] = [
   {
     value: "rollover_completed",
     label: "Rollover concluído (Saque liberado)",
     description: "O requisito de rollover foi cumprido. O saldo agora é 100% real e pode ser sacado.",
     icon: <CheckCircle2 className="h-4 w-4 text-emerald-400" />,
     impact: "Sem impacto financeiro",
+  },
+  {
+    value: "completed_with_limit",
+    label: "Finalizado com Restrição de Ganho",
+    description: "Rollover cumprido, mas a casa limitou o ganho conforme as regras promocionais.",
+    icon: <AlertTriangle className="h-4 w-4 text-amber-400" />,
+    impact: "Debita diferença (perda) do saldo",
+    hasFinancialImpact: true,
+    type: 'partial'
   },
   {
     value: "cycle_completed",
@@ -44,6 +53,7 @@ const FINALIZE_REASONS: { value: FinalizeReason; label: string; description: str
     icon: <XCircle className="h-4 w-4 text-red-400" />,
     impact: "Debita valor perdido do saldo",
     hasFinancialImpact: true,
+    type: 'total'
   },
 ];
 
@@ -76,12 +86,16 @@ export function FinalizeBonusDialog({
   const [selectedReason, setSelectedReason] = useState<FinalizeReason>("rollover_completed");
   const [confirming, setConfirming] = useState(false);
   const [debitAmount, setDebitAmount] = useState<string>("");
+  const [obtidoAmount, setObtidoAmount] = useState<string>("");
+  const [permitidoAmount, setPermitidoAmount] = useState<string>("");
 
   // Reset state when dialog opens to avoid stale data
   useEffect(() => {
     if (open) {
       setSelectedReason("rollover_completed");
       setDebitAmount("");
+      setObtidoAmount("");
+      setPermitidoAmount("");
       setConfirming(false);
     }
   }, [open]);
@@ -93,8 +107,10 @@ export function FinalizeBonusDialog({
 
   const handleReasonChange = (value: FinalizeReason) => {
     setSelectedReason(value);
-    if (value !== "cancelled_reversed") {
+    if (value !== "cancelled_reversed" && value !== "completed_with_limit") {
       setDebitAmount("");
+      setObtidoAmount("");
+      setPermitidoAmount("");
     }
   };
 
@@ -170,7 +186,70 @@ export function FinalizeBonusDialog({
             ))}
           </RadioGroup>
 
-          {hasFinancialImpact && (
+          {hasFinancialImpact && selectedReason === "completed_with_limit" && (
+            <div className="mt-4 p-4 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-4">
+              <Label className="text-sm font-medium flex items-center gap-2 text-amber-400">
+                <AlertTriangle className="h-4 w-4" />
+                Cálculo de Perda Promocional
+              </Label>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Valor Obtido (Total)</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">{currency === "BRL" ? "R$" : currency === "USD" ? "$" : currency}</span>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={obtidoAmount}
+                      onChange={(e) => {
+                        setObtidoAmount(e.target.value);
+                        const obt = parseFloat(e.target.value.replace(",", "."));
+                        const per = parseFloat(permitidoAmount.replace(",", "."));
+                        if (!isNaN(obt) && !isNaN(per)) {
+                          setDebitAmount((obt - per).toFixed(2));
+                        }
+                      }}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Valor Permitido (Saque)</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">{currency === "BRL" ? "R$" : currency === "USD" ? "$" : currency}</span>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={permitidoAmount}
+                      onChange={(e) => {
+                        setPermitidoAmount(e.target.value);
+                        const obt = parseFloat(obtidoAmount.replace(",", "."));
+                        const per = parseFloat(e.target.value.replace(",", "."));
+                        if (!isNaN(obt) && !isNaN(per)) {
+                          setDebitAmount((obt - per).toFixed(2));
+                        }
+                      }}
+                      className="h-8 text-sm border-emerald-500/50"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {parsedDebit > 0 && (
+                <div className="pt-2 border-t border-amber-500/20">
+                  <p className="text-xs text-amber-200/70 flex justify-between">
+                    Perda a debitar: <span className="font-bold text-amber-400">{formatCurrency(parsedDebit, currency)}</span>
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {hasFinancialImpact && selectedReason === "cancelled_reversed" && (
             <div className="mt-4 p-3 rounded-lg border border-red-500/30 bg-red-500/5 space-y-2">
               <Label className="text-sm font-medium flex items-center gap-2 text-red-400">
                 <AlertTriangle className="h-4 w-4" />

@@ -86,6 +86,7 @@ const REASON_LABELS: Record<FinalizeReason, { label: string; icon: React.Element
   cycle_completed: { label: "Ciclo Encerrado", icon: CheckCircle2, color: "text-blue-400 bg-blue-500/20 border-blue-500/30" },
   expired: { label: "Expirado", icon: XCircle, color: "text-red-400 bg-red-500/20 border-red-500/30" },
   cancelled_reversed: { label: "Cancelado / Revertido", icon: RotateCcw, color: "text-gray-400 bg-gray-500/20 border-gray-500/30" },
+  completed_with_limit: { label: "Restrição de Ganho", icon: AlertTriangle, color: "text-amber-400 bg-amber-500/20 border-amber-500/30" },
 };
 
 // Subcomponent to show finalized bonus history
