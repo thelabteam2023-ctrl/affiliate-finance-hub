@@ -163,30 +163,6 @@ const getStatusBadge = (status: string) => {
   }
 };
 
-interface ContaBancaria {
-  id: string;
-  banco: string;
-  titular: string;
-}
-
-interface WalletDetalhe {
-  id: string;
-  exchange: string;
-  label?: string | null;
-  nickname?: string | null;
-  identificacao_wallet?: string | null;
-  endereco: string;
-  network: string;
-  parceiro_id: string;
-}
-
-interface LabelInfo {
-  primary: string;
-  secondary?: string;
-  badgeLabel?: string;
-  badgeColor?: string;
-  BadgeIcon?: any;
-}
 
 interface HistoricoMovimentacoesProps {
   transacoes: any[];
