@@ -1058,49 +1058,6 @@ export default function Caixa() {
     return { primary: "Origem" };
   };
 
-    if (transacao.origem_wallet_id) {
-      const wallet = walletsDetalhes.find(w => w.id === transacao.origem_wallet_id);
-      if (wallet) {
-        const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
-        const displayName = getWalletDisplayName(wallet);
-        return { 
-          primary: displayName,
-          secondary: parceiroNome,
-          instrumento: {
-            tipo: 'wallet',
-            identificador: truncateAddress(wallet.endereco),
-            subinfo: wallet.network,
-            enderecoCompleto: wallet.endereco
-          }
-        };
-      }
-      return { primary: wallets[transacao.origem_wallet_id] || "Wallet" };
-    }
-
-    if (transacao.origem_conta_bancaria_id) {
-      const conta = contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id);
-      if (conta) {
-        return { 
-          primary: conta.banco, 
-          secondary: conta.titular,
-          instrumento: {
-            tipo: 'banco',
-            identificador: conta.pix_key ? `Pix: ${conta.pix_key.includes('@') ? conta.pix_key.replace(/(.{3})(.*)(@.*)/, "$1...$3") : conta.pix_key.slice(0, 3) + '...'}` : `C: ****${conta.conta?.slice(-4) || ''}`,
-            subinfo: `Ag. ${conta.agencia || '****'}`
-          }
-        };
-      }
-      return { primary: "Conta Bancária" };
-    }
-
-    // FALLBACK: Tipo declarado
-    if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
-      return getCaixaInfo(transacao.origem_conta_bancaria_id, transacao.origem_wallet_id, isCryptoTx(transacao));
-    }
-    
-    return { primary: "Origem" };
-  };
-
   const getDestinoLabel = (transacao: Transacao): string => {
     const info = getDestinoInfo(transacao);
     return info.primary;
