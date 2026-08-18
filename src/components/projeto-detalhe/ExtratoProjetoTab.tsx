@@ -557,6 +557,10 @@ function useProjetoExtrato(
           return snapshotToConsolidacao(snap);
         }
         // Fallback (registros antigos sem snapshot): Cotação de Trabalho
+        // KPI SSOT: Se houver valor_usd_referencia (snapshot congelado), usar ele para neutralizar drift.
+        if (e.valor_usd_referencia && Number(e.valor_usd_referencia) !== 0) {
+          return Math.abs(Number(e.valor_usd_referencia));
+        }
         return convertToConsolidation(valorBase, moeda);
       };
 
