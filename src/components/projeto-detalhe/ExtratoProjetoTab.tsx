@@ -532,7 +532,7 @@ function useProjetoExtrato(
 
       // Acumuladores em moeda de consolidação usando SNAPSHOT (valor_usd_referencia).
       // Hierarquia (memory: analytics-snapshot-conversion-hierarchy):
-      //   1º  valor_usd_referencia → cotação congelada no momento do registro
+      //   1º  valor_usd_referencia → cotação congelada no momento do registro (SSOT)
       //   2º  Cotação de Trabalho do projeto (convertToConsolidation)
       //   3º  PTAX/live (já dentro do convertToConsolidation como fallback)
       let depositosConsolidadoSnap = 0;
@@ -551,16 +551,13 @@ function useProjetoExtrato(
 
       // Resolve o valor consolidado de UM evento usando hierarquia snapshot → trabalho.
       const resolveConsolidado = (e: any, valorBase: number, moeda: string): number => {
+        // Se houver valor_usd_referencia (snapshot congelado), usar ele (SSOT)
+        // para neutralizar drift cambial e manter paridade com o capital aportado.
         const snap = Number(e.valor_usd_referencia ?? 0);
         if (snap > 0) {
-          // Snapshot congelado existe → fonte da verdade histórica
           return snapshotToConsolidacao(snap);
         }
         // Fallback (registros antigos sem snapshot): Cotação de Trabalho
-        // KPI SSOT: Se houver valor_usd_referencia (snapshot congelado), usar ele para neutralizar drift.
-        if (e.valor_usd_referencia && Number(e.valor_usd_referencia) !== 0) {
-          return Math.abs(Number(e.valor_usd_referencia));
-        }
         return convertToConsolidation(valorBase, moeda);
       };
 
@@ -642,12 +639,15 @@ function useProjetoExtrato(
       // ainda não foi confirmado no destino. Compõe patrimônio total.
       const { data: pendentes } = await supabase
         .from("cash_ledger")
-        .select("valor, valor_usd_referencia, moeda")
+        .select("valor, valor_usd, valor_usd_referencia, moeda, cotacao_destino_usd, cotacao_origem_usd")
         .eq("projeto_id_snapshot", projetoId)
         .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
         .eq("status", "PENDENTE");
 
-      // Saldo Casas convertido p/ moeda de consolidação
+      // Saldo Casas convertido p/ moeda de consolidação.
+      // ⚠️ IMPORTANTE: O Saldo das Casas reflete o valor ATUAL (mark-to-market).
+      // Se a moeda da casa valorizou frente ao USD, o patrimônio aumenta.
+      // Se desvalorizou, diminui. Isso é o comportamento correto para "Sacar Hoje".
       let saldoCasasTotal = 0;
       (balances || []).forEach((b: any) => {
         saldoCasasTotal += convertToConsolidation(
