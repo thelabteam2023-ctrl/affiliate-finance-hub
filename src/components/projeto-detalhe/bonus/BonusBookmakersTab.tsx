@@ -145,7 +145,7 @@ function FinalizedBonusHistory({
       const { data, error } = await supabase
         .from("cash_ledger")
         .select("id, valor, moeda, auditoria_metadata")
-        .eq("ajuste_motivo", "BONUS_CANCELAMENTO");
+        .in("ajuste_motivo", ["BONUS_CANCELAMENTO", "PROMO_LIMIT"]);
       if (error) throw error;
       // Filter by bonus_id in metadata
       return (data || []).filter(d => {

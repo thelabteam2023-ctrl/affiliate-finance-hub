@@ -331,6 +331,8 @@ export async function registrarAjusteViaLedger(params: {
   descricao?: string;
   motivo?: string;
   projetoIdSnapshot?: string;
+  /** Metadados extras de auditoria (ex.: bonus_id, origem) mesclados no auditoria_metadata */
+  metadataExtra?: Record<string, any>;
 }): Promise<LedgerEntryResult> {
   const isCredito = params.delta > 0;
   const motivoFinal = params.motivo || params.descricao || 'Ajuste de saldo';
@@ -351,7 +353,8 @@ export async function registrarAjusteViaLedger(params: {
     auditoriaMetadata: { 
       delta: params.delta,
       tipo: 'ajuste_saldo',
-      motivo: motivoFinal 
+      motivo: motivoFinal,
+      ...(params.metadataExtra || {}),
     },
   });
 }

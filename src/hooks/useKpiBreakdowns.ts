@@ -358,8 +358,8 @@ function deriveExtrasFromRpc(
 
     switch (le.tipo_transacao) {
       case 'AJUSTE_SALDO': {
-        // Verificar se é BONUS_CANCELAMENTO
-        if (le.ajuste_motivo === 'BONUS_CANCELAMENTO' && le.ajuste_direcao === 'SAIDA') {
+        // Perdas da estratégia de bônus: cancelamento/reversão e limite promocional de saque
+        if ((le.ajuste_motivo === 'BONUS_CANCELAMENTO' || le.ajuste_motivo === 'PROMO_LIMIT') && le.ajuste_direcao === 'SAIDA') {
           const meta = typeof le.auditoria_metadata === 'string' ? JSON.parse(le.auditoria_metadata) : le.auditoria_metadata;
           const valorPerdido = Number(meta?.valor_perdido ?? valor) || 0;
           if (valorPerdido !== 0) {
