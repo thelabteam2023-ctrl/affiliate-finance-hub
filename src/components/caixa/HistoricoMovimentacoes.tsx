@@ -28,7 +28,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { parseLocalDateTime, extractCivilDateKey } from "@/utils/dateUtils";
 import { truncateAddress, getWalletDisplayName } from "@/utils/cryptoUtils";
-
+import { type LabelInfo } from "@/pages/Caixa";
 import { WalletDisplayItem } from "../wallets/WalletDisplayItem";
 import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFilterBar";
 import { DashboardPeriodFilter, getDashboardDateRange } from "@/types/dashboardFilters";
