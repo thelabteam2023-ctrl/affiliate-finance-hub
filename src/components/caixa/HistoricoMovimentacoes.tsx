@@ -28,6 +28,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { parseLocalDateTime, extractCivilDateKey } from "@/utils/dateUtils";
 import { truncateAddress, getWalletDisplayName } from "@/utils/cryptoUtils";
+import { type LabelInfo } from "@/pages/Caixa";
 import { WalletDisplayItem } from "../wallets/WalletDisplayItem";
 import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFilterBar";
 import { DashboardPeriodFilter, getDashboardDateRange } from "@/types/dashboardFilters";
@@ -1356,23 +1357,73 @@ export function HistoricoMovimentacoes({
                       <div className="min-w-0">
                         <TransactionBadge type={txType} label={getTipoLabel(txType, tx)} />
                         <div className="flex items-center gap-2">
-                          <span className="text-[12px] font-medium text-[var(--text-secondary)] truncate">
-                            {isScan
-                              ? tx.descricao?.replace(/\[SCAN.*?\]\s*/i, '')
-                              : (
-                                <>
-                                  {origemInfo.primary}
-                                  {origemInfo.secondary && (
-                                    <span className="text-[var(--text-faint)] font-normal"> · {origemInfo.secondary}</span>
-                                  )}
-                                  {' → '}
-                                  {destinoInfo.primary}
-                                  {destinoInfo.secondary && (
-                                    <span className="text-[var(--text-faint)] font-normal"> · {destinoInfo.secondary}</span>
-                                  )}
-                                </>
-                              )}
-                          </span>
+                          <div className="flex flex-col items-start min-w-0">
+                            <span className="text-[12px] font-medium text-[var(--text-secondary)] truncate flex items-center gap-1.5 w-full">
+                              {isScan
+                                ? tx.descricao?.replace(/\[SCAN.*?\]\s*/i, '')
+                                : (
+                                  <>
+                                    <div className="flex flex-col">
+                                      <div className="flex items-center gap-1">
+                                        <span className="truncate">{origemInfo.primary}</span>
+                                        {origemInfo.secondary && (
+                                          <span className="text-[var(--text-faint)] font-normal text-[10px]"> · {origemInfo.secondary}</span>
+                                        )}
+                                      </div>
+                                      {origemInfo.instrumento && (
+                                        <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-faint)] font-normal mt-0.5">
+                                          {origemInfo.instrumento.tipo === 'wallet' ? <Wallet className="h-2.5 w-2.5" /> : <Building2 className="h-2.5 w-2.5" />}
+                                          <span>{origemInfo.instrumento.identificador}</span>
+                                          {origemInfo.instrumento.subinfo && <span> · {origemInfo.instrumento.subinfo}</span>}
+                                          {origemInfo.instrumento.enderecoCompleto && (
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-3.5 w-3.5 p-0 hover:bg-white/10"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigator.clipboard.writeText(origemInfo.instrumento!.enderecoCompleto!);
+                                              }}
+                                            >
+                                              <i className="ti ti-copy text-[9px]" />
+                                            </Button>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <ArrowRight className="h-3 w-3 shrink-0 mx-1 text-[var(--text-ghost)]" />
+                                    <div className="flex flex-col">
+                                      <div className="flex items-center gap-1">
+                                        <span className="truncate">{destinoInfo.primary}</span>
+                                        {destinoInfo.secondary && (
+                                          <span className="text-[var(--text-faint)] font-normal text-[10px]"> · {destinoInfo.secondary}</span>
+                                        )}
+                                      </div>
+                                      {destinoInfo.instrumento && (
+                                        <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-faint)] font-normal mt-0.5">
+                                          {destinoInfo.instrumento.tipo === 'wallet' ? <Wallet className="h-2.5 w-2.5" /> : <Building2 className="h-2.5 w-2.5" />}
+                                          <span>{destinoInfo.instrumento.identificador}</span>
+                                          {destinoInfo.instrumento.subinfo && <span> · {destinoInfo.instrumento.subinfo}</span>}
+                                          {destinoInfo.instrumento.enderecoCompleto && (
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-3.5 w-3.5 p-0 hover:bg-white/10"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigator.clipboard.writeText(destinoInfo.instrumento!.enderecoCompleto!);
+                                              }}
+                                            >
+                                              <i className="ti ti-copy text-[9px]" />
+                                            </Button>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                            </span>
+                          </div>
                         </div>
                         <div className="text-[11px] text-[var(--text-faint)] truncate mt-px">
                           {isScan ? "Prejuízo operacional por fraude/scam" : (tx.descricao || "Sem descrição")}
