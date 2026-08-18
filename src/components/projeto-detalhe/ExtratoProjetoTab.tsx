@@ -199,7 +199,11 @@ function getTransactionIcon(tipo: string) {
  * é taxa cobrada pela casa no recebimento (ex: depositou 200 USD, casa creditou 198 USD).
  * Para diferenças vindas de cross-currency real (origem≠destino), mantém "cambial".
  */
-function getTransactionLabel(tipo: string, descricao?: string | null) {
+function getTransactionLabel(tipo: string, descricao?: string | null, ajusteMotivo?: string | null) {
+  // Perda promocional (limite de saque imposto pela casa) é um AJUSTE_SALDO,
+  // mas conceitualmente é resultado da estratégia de bônus.
+  if (ajusteMotivo === "PROMO_LIMIT") return "Perda Promocional — limite de saque";
+  if (ajusteMotivo === "BONUS_CANCELAMENTO") return "Perda de Bônus — cancelamento";
   if (tipo === "PERDA_CAMBIAL") {
     const d = (descricao || "").toLowerCase();
     if (d.includes("conciliação")) return "Perda no recebimento";

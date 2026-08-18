@@ -351,7 +351,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       const { data, error } = await supabase
         .from("cash_ledger")
         .select("id, valor, moeda, origem_bookmaker_id, data_transacao, auditoria_metadata")
-        .eq("ajuste_motivo", "BONUS_CANCELAMENTO")
+        .in("ajuste_motivo", ["BONUS_CANCELAMENTO", "PROMO_LIMIT"])
         .eq("ajuste_direcao", "SAIDA")
         .eq("projeto_id_snapshot", projetoId);
 

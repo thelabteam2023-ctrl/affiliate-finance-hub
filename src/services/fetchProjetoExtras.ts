@@ -266,7 +266,7 @@ async function fetchPerdasCancelamentoBonuses(
   const { data } = await supabase
     .from('cash_ledger')
     .select('valor, moeda, origem_bookmaker_id, data_transacao, auditoria_metadata')
-    .eq('ajuste_motivo', 'BONUS_CANCELAMENTO')
+    .in('ajuste_motivo', ['BONUS_CANCELAMENTO', 'PROMO_LIMIT'])
     .eq('ajuste_direcao', 'SAIDA')
     .is('reversed_at', null)
     .filter('projeto_id_snapshot', 'eq', projetoId);
