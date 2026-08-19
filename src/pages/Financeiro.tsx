@@ -16,6 +16,7 @@ import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFil
 import {
   DashboardPeriodFilter,
   getDashboardDateRangeAsStrings,
+  getPreviousDashboardDateRange,
   getDashboardPeriodDescription,
 } from "@/types/dashboardFilters";
 import { useTopBar } from "@/contexts/TopBarContext";
@@ -98,6 +99,12 @@ export default function Financeiro() {
     [periodoPreset, customRange]
   );
 
+  // Período anterior canônico (reproduzível pelo filtro manual do dashboard)
+  const prevRange = useMemo(
+    () => getPreviousDashboardDateRange(periodoPreset, customRange),
+    [periodoPreset, customRange]
+  );
+
   // Lucro operacional
   const { resultado: lucroOperacionalData, loading: loadingLucroOperacional, refresh: refreshLucroOperacional } = useWorkspaceLucroOperacional({
     dataInicio: dataInicio || null, dataFim: dataFim || null, cotacaoUSD, cotacoes: cotacoesMap,
@@ -169,6 +176,7 @@ export default function Financeiro() {
     getCryptoUSDValue,
     convertFromBRL,
     convertUnified,
+    prevRange,
   });
 
   // Dados mensais (12/24m) — independentes do filtro de período (relatório histórico)
@@ -557,6 +565,8 @@ export default function Financeiro() {
                       infraestruturaDetalhes={calc.infraestruturaDetalhes}
                       operadoresDetalhes={calc.operadoresDetalhes}
                       periodBadge={periodBadge}
+                      periodoAnteriorLabel={calc.prevRangeLabel}
+                      comparisonMode={calc.prevRangeMode}
                     />
                   </div>
                 </div>
