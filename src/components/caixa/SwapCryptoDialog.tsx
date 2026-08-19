@@ -556,23 +556,127 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSwap} disabled={!canSubmit || loading}>
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Registrando...
-              </>
+        {/* ═══ REVISÃO E CONFIRMAÇÃO ═══ */}
+        {step === "review" && (
+          <div className="space-y-4">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Revise seu swap
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-1">
+                <Badge variant="outline" className="text-[10px] uppercase">Origem</Badge>
+                <div className="text-xs font-medium">{parceiroNome || "—"}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {selectedOrigemWallet ? formatExchangeName(selectedOrigemWallet) : "—"}
+                </div>
+                <div className="text-[11px] font-mono text-muted-foreground">
+                  {selectedOrigemWallet?.endereco ? truncAddr(selectedOrigemWallet.endereco) : "—"}
+                </div>
+                <div className="pt-1 text-sm font-semibold text-destructive">
+                  − {qtdEnviadaNum} {coinOrigem}
+                </div>
+                <div className="text-[11px] text-muted-foreground">≈ ${usdEnviado.toFixed(2)}</div>
+              </div>
+
+              <div className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-1">
+                <Badge variant="outline" className="text-[10px] uppercase text-emerald-500 border-emerald-500/30">
+                  Destino
+                </Badge>
+                <div className="text-xs font-medium">{parceiroNome || "—"}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {needsNewWallet
+                    ? `Nova wallet (${novaRedeName || "rede selecionada"})`
+                    : destinoWalletReview
+                      ? formatExchangeName(destinoWalletReview)
+                      : "—"}
+                </div>
+                <div className="text-[11px] font-mono text-muted-foreground">
+                  {destinoWalletReview?.endereco ? truncAddr(destinoWalletReview.endereco) : "—"}
+                </div>
+                <div className="pt-1 text-sm font-semibold text-emerald-500">
+                  + {qtdRecebidaNum} {coinDestino}
+                </div>
+                <div className="text-[11px] text-muted-foreground">≈ ${usdEnviado.toFixed(2)}</div>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-border/50 bg-muted/10 p-2 text-[11px] text-muted-foreground">
+              Taxa implícita: 1 {coinOrigem} = {(qtdRecebidaNum / qtdEnviadaNum).toFixed(6)} {coinDestino}
+              {" · "}Valor econômico preservado (${usdEnviado.toFixed(2)})
+            </div>
+
+            {/* Banner por cenário */}
+            {isMesmaCarteira ? (
+              <div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-2.5 text-[11px]">
+                <Wallet className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                <span>
+                  <strong>Mesma carteira:</strong> a conversão ocorrerá dentro da própria carteira, sem
+                  transferência externa.
+                </span>
+              </div>
             ) : (
-              <>
-                <ArrowRightLeft className="h-4 w-4 mr-2" />
-                Confirmar Swap
-              </>
+              <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-[11px]">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-600" />
+                <span>
+                  <strong>Carteira de destino diferente da origem.</strong> Confirme o endereço acima antes de
+                  prosseguir — a operação só pode ser desfeita por reversão auditada.
+                </span>
+              </div>
             )}
-          </Button>
+
+            {needsNewWallet && (
+              <div className="flex items-start gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 p-2.5 text-[11px]">
+                <Plus className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                <span>
+                  Será criada uma nova wallet {novaRedeName ? `na rede ${novaRedeName}` : "na rede selecionada"} para
+                  receber {coinDestino}, com o mesmo endereço da origem.
+                </span>
+              </div>
+            )}
+
+            <label className="flex items-start gap-2 cursor-pointer text-xs">
+              <Checkbox
+                checked={confirmChecked}
+                onCheckedChange={(v) => setConfirmChecked(v === true)}
+                className="mt-0.5"
+              />
+              <span>Confirmei que a carteira de destino e os valores estão corretos.</span>
+            </label>
+          </div>
+        )}
+
+        <DialogFooter>
+          {step === "form" ? (
+            <>
+              <Button variant="outline" onClick={onClose} disabled={loading}>
+                Cancelar
+              </Button>
+              <Button onClick={() => { setConfirmChecked(false); setStep("review"); }} disabled={!canSubmit || loading}>
+                <ArrowRightLeft className="h-4 w-4 mr-2" />
+                Revisar Swap
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setStep("form")} disabled={loading}>
+                Voltar
+              </Button>
+              <Button onClick={handleSwap} disabled={!canSubmit || !confirmChecked || loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Registrando...
+                  </>
+                ) : (
+                  <>
+                    <ArrowRightLeft className="h-4 w-4 mr-2" />
+                    Confirmar Swap
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
