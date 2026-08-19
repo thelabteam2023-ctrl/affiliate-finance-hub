@@ -215,22 +215,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [tabId, retryQuery]);
 
   const resolveWorkspaceId = useCallback(async (userId: string, profileData: { default_workspace_id: string | null }): Promise<string | null> => {
-    // Priority 1: this tab's sessionStorage
-    const tabWsId = getTabWorkspaceId();
-    if (tabWsId && isTabWorkspaceInitialized()) {
-      console.log(`[Auth][${tabId}] Using tab workspace:`, tabWsId);
-      return tabWsId;
-    }
+    // Preferência da aba (sessionStorage) — validada no servidor
+    const tabWsId = isTabWorkspaceInitialized() ? getTabWorkspaceId() : null;
+    const preferred = tabWsId || profileData.default_workspace_id || null;
 
-    // Priority 2: profile default
-    if (profileData.default_workspace_id) {
-      console.log(`[Auth][${tabId}] Using profile default workspace:`, profileData.default_workspace_id);
-      setTabWorkspaceId(profileData.default_workspace_id);
+    // Fonte da verdade: RPC valida membership ativo + workspace ativo
+    // e auto-cura o default do perfil quando estiver obsoleto.
+    try {
+      const { data: resolved } = await retryQuery(async () => {
+        const result = await supabase.rpc('resolve_my_workspace' as any, { _preferred: preferred });
+        if (result.error && result.error.message?.includes('fetch')) throw new Error('Network error');
+        return result;
+      });
+
+      if (resolved) {
+        const wsId = resolved as unknown as string;
+        if (wsId !== tabWsId) setTabWorkspaceId(wsId);
+        markTabAsInitialized();
+        return wsId;
+      }
+
+      // Sem workspace válido: limpar estado obsoleto da aba
+      if (tabWsId) clearTabWorkspaceId();
       markTabAsInitialized();
-      return profileData.default_workspace_id;
+      return null;
+    } catch (error) {
+      console.error(`[Auth][${tabId}] Error resolving workspace after retries:`, error);
     }
 
-    // Priority 3: first membership (with retry for network resilience)
+    // Fallback offline-resiliente: primeiro membership ativo
     try {
       const fetchMembership = async () => {
         const result = await supabase
