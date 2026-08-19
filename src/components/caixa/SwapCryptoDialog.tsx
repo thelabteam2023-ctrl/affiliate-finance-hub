@@ -332,7 +332,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className={`space-y-4 ${step === "review" ? "hidden" : ""}`}>
           {/* ═══ ORIGEM ═══ */}
            <div className="space-y-1.5">
              <Label className="text-xs font-semibold uppercase tracking-wider">Wallet de Origem</Label>
