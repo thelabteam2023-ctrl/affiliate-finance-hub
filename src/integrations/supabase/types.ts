@@ -18870,6 +18870,7 @@ export type Database = {
         }
         Returns: Json
       }
+      resolve_my_workspace: { Args: { _preferred?: string }; Returns: string }
       resolver_impacto_saldo: {
         Args: { p_fonte_saldo: string; p_resultado: string; p_valor: number }
         Returns: {
