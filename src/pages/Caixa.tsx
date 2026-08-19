@@ -957,28 +957,55 @@ export default function Caixa() {
 
   const isCryptoTx = (t: Transacao) => t.tipo_moeda === "CRYPTO" || !!t.coin;
 
+  // Resolve a wallet de uma perna de swap (própria ou da perna irmã) em um label completo
+  // com Proprietário • Carteira • Endereço, evitando o antigo rótulo genérico "Swap Interno".
+  const buildSwapWalletInfo = (walletId: string | null | undefined, coinLabel: string): LabelInfo | null => {
+    if (!walletId) return null;
+    const wallet = walletsDetalhes.find(w => w.id === walletId);
+    if (!wallet) return null;
+    const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
+    const displayName = getWalletDisplayName(wallet);
+    const carteira = displayName !== 'Wallet sem identificação'
+      ? displayName
+      : `Wallet ${parceiroNome || wallet.exchange || 'Crypto'}`;
+    return {
+      primary: parceiroNome ? `${parceiroNome} • ${carteira}` : carteira,
+      secondary: coinLabel,
+      instrumento: {
+        tipo: 'wallet',
+        identificador: truncateAddress(wallet.endereco),
+        subinfo: wallet.network,
+        enderecoCompleto: wallet.endereco,
+      },
+    };
+  };
+
+  // Encontra a perna irmã do swap (SWAP_OUT <-> SWAP_IN) na lista carregada
+  const findSwapSibling = (transacao: Transacao): Transacao | undefined => {
+    if (transacao.tipo_transacao === "SWAP_IN") {
+      return transacoes.find(t => t.id === (transacao as any).referencia_transacao_id);
+    }
+    if (transacao.tipo_transacao === "SWAP_OUT") {
+      return transacoes.find(t => (t as any).referencia_transacao_id === transacao.id);
+    }
+    return undefined;
+  };
+
   const getOrigemInfo = (transacao: Transacao): LabelInfo => {
     // SWAP: Mostrar wallet de origem com nome do parceiro
     if (transacao.tipo_transacao === "SWAP_OUT" && transacao.origem_wallet_id) {
-      const wallet = walletsDetalhes.find(w => w.id === transacao.origem_wallet_id);
-      if (wallet) {
-        const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
-        const displayName = getWalletDisplayName(wallet);
-        return {
-          primary: displayName !== 'Wallet sem identificação' ? displayName : `Wallet ${parceiroNome || wallet.exchange || 'Crypto'}`,
-          secondary: `${transacao.coin || transacao.moeda_origem || ''}`,
-          instrumento: {
-            tipo: 'wallet',
-            identificador: truncateAddress(wallet.endereco),
-            subinfo: wallet.network,
-            enderecoCompleto: wallet.endereco
-          }
-        };
-      }
+      const info = buildSwapWalletInfo(transacao.origem_wallet_id, `${transacao.coin || transacao.moeda_origem || ''}`);
+      if (info) return info;
       return { primary: "Wallet Crypto" };
     }
     if (transacao.tipo_transacao === "SWAP_IN") {
-      // SWAP_IN: origem é conceitual (a moeda que foi trocada)
+      // Origem real = wallet da perna SWAP_OUT (perna irmã)
+      const sibling = findSwapSibling(transacao);
+      const info = buildSwapWalletInfo(
+        sibling?.origem_wallet_id,
+        `${transacao.moeda_origem || ''} → ${transacao.coin || transacao.moeda_destino || ''}`,
+      );
+      if (info) return info;
       return { primary: `Swap Interno`, secondary: `${transacao.moeda_origem || ''} → ${transacao.coin || transacao.moeda_destino || ''}` };
     }
 
@@ -1073,18 +1100,18 @@ export default function Caixa() {
   const getDestinoInfo = (transacao: Transacao): LabelInfo => {
     // SWAP: Mostrar wallet de destino com nome do parceiro
     if (transacao.tipo_transacao === "SWAP_IN" && transacao.destino_wallet_id) {
-      const wallet = walletsDetalhes.find(w => w.id === transacao.destino_wallet_id);
-      if (wallet) {
-        const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
-        const displayName = getWalletDisplayName(wallet);
-        return {
-          primary: displayName !== 'Wallet sem identificação' ? displayName : `Wallet ${parceiroNome || wallet.exchange || 'Crypto'}`,
-          secondary: `${transacao.coin || transacao.moeda_destino || ''}`
-        };
-      }
+      const info = buildSwapWalletInfo(transacao.destino_wallet_id, `${transacao.coin || transacao.moeda_destino || ''}`);
+      if (info) return info;
       return { primary: "Wallet Crypto" };
     }
     if (transacao.tipo_transacao === "SWAP_OUT") {
+      // Destino real = wallet da perna SWAP_IN (perna irmã)
+      const sibling = findSwapSibling(transacao);
+      const info = buildSwapWalletInfo(
+        sibling?.destino_wallet_id,
+        `${transacao.coin || ''} → ${transacao.moeda_destino || ''}`,
+      );
+      if (info) return info;
       return { primary: "Swap Interno", secondary: `${transacao.coin || ''} → ${transacao.moeda_destino || ''}` };
     }
 
