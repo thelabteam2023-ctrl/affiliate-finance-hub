@@ -257,84 +257,36 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
         }
       }
 
-      // SWAP_OUT: Débito da moeda origem
-      // REGRA: valor USD = preço da moeda ENVIADA × quantidade enviada
-      const swapOutData: any = {
-        user_id: userData.user.id,
-        workspace_id: workspaceId,
-        tipo_transacao: "SWAP_OUT",
-        tipo_moeda: "CRYPTO",
-        moeda: "USD",
-        valor: usdEnviado,
-        coin: coinOrigem,
-        qtd_coin: qtdEnviadaNum,
-        valor_usd: usdEnviado,
-        valor_usd_referencia: usdEnviado,
-        cotacao: precoOrigem,
-        cotacao_origem_usd: precoOrigem,
-        cotacao_snapshot_at: now,
-        data_transacao: dataTransacao,
-        status: "CONFIRMADO",
-        transit_status: "CONFIRMED",
-        impacta_caixa_operacional: true,
-        descricao: `Swap ${coinOrigem} → ${coinDestino}`,
-        origem_wallet_id: walletOrigemId,
-        origem_tipo: "PARCEIRO_WALLET",
-        origem_parceiro_id: caixaParceiroId,
-        moeda_origem: coinOrigem,
-        valor_origem: qtdEnviadaNum,
-        moeda_destino: coinDestino,
-        valor_destino: qtdRecebidaNum,
-        cotacao_implicita: qtdRecebidaNum / qtdEnviadaNum,
-      };
+      // Registro ATÔMICO das duas pernas (SWAP_OUT + SWAP_IN) via RPC.
+      // As pernas nascem juntas, compartilham swap_operation_id e são revertidas em par.
+      const { data: swapResult, error: swapError } = await supabase.rpc(
+        "fn_registrar_swap_crypto" as any,
+        {
+          p_workspace_id: workspaceId,
+          p_parceiro_id: caixaParceiroId,
+          p_wallet_origem_id: walletOrigemId,
+          p_coin_origem: coinOrigem,
+          p_qtd_origem: qtdEnviadaNum,
+          p_wallet_destino_id: finalDestinoWalletId,
+          p_coin_destino: coinDestino,
+          p_qtd_destino: qtdRecebidaNum,
+          p_preco_origem: precoOrigem,
+          p_preco_destino: precoDestino,
+          p_metadata: {
+            origem_wallet_endereco: selectedOrigemWallet?.endereco || null,
+            destino_wallet_endereco:
+              (destinoMode === "same" ? selectedOrigemWallet?.endereco : selectedDestinoWallet?.endereco) || null,
+            proprietario: parceiroNome || null,
+            destino_mode: destinoMode,
+            wallet_criada: needsNewWallet,
+            registrado_em: now,
+          },
+        }
+      );
 
-      const { data: outResult, error: outError } = await supabase
-        .from("cash_ledger")
-        .insert([swapOutData])
-        .select("id")
-        .single();
-
-      if (outError) throw outError;
-
-      // SWAP_IN: Crédito da moeda destino (na wallet de destino)
-      // REGRA CRÍTICA: valor USD deve ser IGUAL ao SWAP_OUT (swap é zero-sum para capital)
-      // O campo qtd_coin registra a quantidade real de coins recebida,
-      // mas o valor econômico (USD) não muda — é a mesma quantia convertida.
-      const swapInData: any = {
-        user_id: userData.user.id,
-        workspace_id: workspaceId,
-        tipo_transacao: "SWAP_IN",
-        tipo_moeda: "CRYPTO",
-        moeda: "USD",
-        valor: usdEnviado, // IGUAL ao SWAP_OUT — swap não cria nem destrói valor
-        coin: coinDestino,
-        qtd_coin: qtdRecebidaNum,
-        valor_usd: usdEnviado, // IGUAL ao SWAP_OUT
-        valor_usd_referencia: usdEnviado, // IGUAL ao SWAP_OUT
-        cotacao: precoDestino,
-        cotacao_destino_usd: precoDestino,
-        cotacao_snapshot_at: now,
-        data_transacao: dataTransacao,
-        status: "CONFIRMADO",
-        transit_status: "CONFIRMED",
-        impacta_caixa_operacional: true,
-        descricao: `Swap ${coinOrigem} → ${coinDestino}`,
-        destino_wallet_id: finalDestinoWalletId,
-        destino_tipo: "PARCEIRO_WALLET",
-        destino_parceiro_id: caixaParceiroId,
-        referencia_transacao_id: outResult.id,
-        moeda_origem: coinOrigem,
-        valor_origem: qtdEnviadaNum,
-        moeda_destino: coinDestino,
-        valor_destino: qtdRecebidaNum,
-        cotacao_implicita: qtdRecebidaNum / qtdEnviadaNum,
-      };
-
-      const { error: inError } = await supabase
-        .from("cash_ledger")
-        .insert([swapInData]);
-
-      if (inError) throw inError;
+      if (swapError) throw swapError;
+      const rpcResult = swapResult as unknown as { success: boolean; message?: string };
+      if (!rpcResult?.success) throw new Error(rpcResult?.message || "Falha ao registrar swap");
 
       toast({
         title: "Swap registrado!",
