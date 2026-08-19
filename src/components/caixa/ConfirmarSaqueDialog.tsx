@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -120,15 +120,33 @@ export function ConfirmarSaqueDialog({
   // Determinar se é saque cripto
   const isCryptoWithdrawal = !!saque?.destino_wallet_id;
 
-  // Resetar estados quando abre o dialog e verificar status do parceiro
+  // Referência sempre atualizada do saque (evita depender da identidade do objeto,
+  // que o pai recria a cada render e reinicializaria o formulário).
+  const saqueRef = useRef(saque);
+  saqueRef.current = saque;
+
+  // Guard: id do saque já inicializado neste ciclo de abertura.
+  const initializedForIdRef = useRef<string | null>(null);
+
+  const saqueId = saque?.id ?? null;
+
+  // Resetar estados APENAS ao abrir ou ao trocar o saque, nunca em re-renders.
   useEffect(() => {
-    if (open && saque) {
+    if (!open || !saqueId) {
+      initializedForIdRef.current = null;
+      return;
+    }
+    if (initializedForIdRef.current === saqueId) return;
+    initializedForIdRef.current = saqueId;
+
+    const saque = saqueRef.current;
+    if (saque) {
        setObservacoes("");
       setParceiroInativo(null);
       // Data de confirmação padrão = hoje
       setDataConfirmacao(getTodayCivilDate());
       
-      if (isCryptoWithdrawal) {
+      if (saque.destino_wallet_id) {
         // Pré-preencher com estimativa
         setQtdCoinRecebida(saque.qtd_coin?.toString() || "");
         setValorRecebido("");
@@ -157,7 +175,7 @@ export function ConfirmarSaqueDialog({
       };
       verificarParceiroAtivo();
     }
-  }, [open, saque, isCryptoWithdrawal]);
+  }, [open, saqueId]);
 
   const formatCurrency = (value: number, currency: string = "BRL") => {
     // Tratar moedas cripto
