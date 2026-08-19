@@ -9,7 +9,7 @@
  * Filtros: Mês atual | Anterior | Tudo + Calendário para período customizado
  */
 
-import { startOfMonth, endOfDay, subMonths, startOfYear, endOfMonth, format } from "date-fns";
+import { startOfMonth, endOfDay, subMonths, startOfYear, endOfMonth, format, subYears, startOfDay, subDays, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toZonedTime } from "date-fns-tz";
 
@@ -142,6 +142,87 @@ export function getDashboardDateRangeAsStrings(
 export function getDashboardPeriodLabel(filter: DashboardPeriodFilter): string {
   const option = DASHBOARD_PERIOD_OPTIONS.find(o => o.value === filter);
   return option?.label ?? filter;
+}
+
+/**
+ * Modo de comparação temporal utilizado pelos KPIs "vs anterior".
+ * - CALENDAR: período calendário anterior completo (mês/ano)
+ * - ROLLING: janela móvel de mesma duração imediatamente anterior
+ * - NONE: sem comparação possível
+ */
+export type DashboardComparisonMode = "CALENDAR" | "ROLLING" | "NONE";
+
+export interface DashboardPreviousRange {
+  start: Date | null;
+  end: Date | null;
+  /** Rótulo humano do período comparado (ex: "julho de 2026") */
+  label: string | null;
+  mode: DashboardComparisonMode;
+}
+
+/**
+ * PERÍODO ANTERIOR CANÔNICO (SSOT de comparação temporal dos dashboards).
+ *
+ * REGRA-MÃE: o valor usado como "período anterior" por um KPI deve ser
+ * reproduzível pelo usuário ao selecionar manualmente aquele período no filtro.
+ *
+ * - mes      -> mês calendário anterior COMPLETO (não janela móvel truncada)
+ * - anterior -> mês retrasado completo
+ * - ano      -> ano calendário anterior completo
+ * - tudo     -> sem comparação
+ * - custom   -> janela móvel de mesma duração imediatamente anterior
+ */
+export function getPreviousDashboardDateRange(
+  filter: DashboardPeriodFilter,
+  customRange?: { start: Date; end: Date }
+): DashboardPreviousRange {
+  const nowLocal = toZonedTime(new Date(), OPERATIONAL_TIMEZONE);
+
+  const monthRange = (ref: Date): DashboardPreviousRange => ({
+    start: startOfMonth(ref),
+    end: endOfDay(endOfMonth(ref)),
+    label: format(ref, "LLLL 'de' yyyy", { locale: ptBR }),
+    mode: "CALENDAR",
+  });
+
+  switch (filter) {
+    case "mes":
+      // Mês atual (01 -> hoje) compara com o mês calendário anterior COMPLETO
+      return monthRange(subMonths(nowLocal, 1));
+
+    case "anterior":
+      // Mês anterior compara com o mês retrasado completo
+      return monthRange(subMonths(nowLocal, 2));
+
+    case "ano": {
+      const prevYear = subYears(nowLocal, 1);
+      return {
+        start: startOfYear(prevYear),
+        end: endOfDay(new Date(prevYear.getFullYear(), 11, 31)),
+        label: `${format(prevYear, "yyyy")}`,
+        mode: "CALENDAR",
+      };
+    }
+
+    case "custom": {
+      if (!customRange) return { start: null, end: null, label: null, mode: "NONE" };
+      const start = startOfDay(customRange.start);
+      const end = endOfDay(customRange.end);
+      const durationDays = differenceInCalendarDays(end, start) + 1;
+      const prevEnd = endOfDay(subDays(start, 1));
+      const prevStart = startOfDay(subDays(prevEnd, durationDays - 1));
+      return {
+        start: prevStart,
+        end: prevEnd,
+        label: `${format(prevStart, "dd/MM/yyyy")} → ${format(prevEnd, "dd/MM/yyyy")}`,
+        mode: "ROLLING",
+      };
+    }
+
+    case "tudo":
+    default:
+      return { start: null, end: null, label: null, mode: "NONE" };
+  }
 }
 
 /**
