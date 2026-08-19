@@ -16,6 +16,7 @@ import type {
   WalletPorExchange,
   CaixaDetalhe,
 } from "@/components/financeiro/MapaPatrimonioCard";
+import type { DashboardPreviousRange } from "@/types/dashboardFilters";
 
 interface FinanceiroCalcParams {
   finData: FinanceiroData;
@@ -28,6 +29,8 @@ interface FinanceiroCalcParams {
   convertFromBRL: (valor: number, currency: string) => number;
   /** Função de conversão unificada (mesma do Caixa Operacional) */
   convertUnified?: (valor: number, moedaOrigem: string, moedaDestino: string) => number;
+  /** Período anterior canônico (derivado do preset do dashboard) */
+  prevRange?: DashboardPreviousRange | null;
 }
 
 export function useFinanceiroCalculations({
@@ -40,6 +43,7 @@ export function useFinanceiroCalculations({
   getCryptoUSDValue,
   convertFromBRL,
   convertUnified,
+  prevRange,
 }: FinanceiroCalcParams) {
   const {
     caixaFiat,
@@ -341,16 +345,13 @@ export function useFinanceiroCalculations({
     return detalhes;
   }, [saldos.saldoBRL, saldos.saldoUSD, caixaCrypto, cotacaoUSD, getCryptoUSDValue]);
 
-  // Custos do período ANTERIOR (mesma duração do filtro ativo, terminando em dataInicio-1)
-  // Reusa exatamente a mesma composição de 5 famílias do período atual.
-  // Se não há filtro ("Tudo"), retorna 0 e o badge fica neutro.
+  // Custos do período ANTERIOR — janela canônica vinda de getPreviousDashboardDateRange.
+  // Reusa exatamente a mesma composição de 5 famílias do período atual, garantindo que o
+  // valor seja reproduzível ao selecionar manualmente o período no filtro do dashboard.
   const totalCustosAnterior = useMemo(() => {
-    if (!dataInicio || !dataFim) return 0;
-    const start = startOfDay(parseLocalDate(dataInicio));
-    const end = endOfDay(parseLocalDate(dataFim));
-    const durationDays = differenceInCalendarDays(end, start) + 1;
-    const prevEnd = endOfDay(subDays(start, 1));
-    const prevStart = startOfDay(subDays(prevEnd, durationDays - 1));
+    if (!prevRange?.start || !prevRange?.end) return 0;
+    const prevStart = startOfDay(prevRange.start);
+    const prevEnd = endOfDay(prevRange.end);
 
     const inPrev = (raw?: string) => {
       if (!raw) return false;
@@ -379,7 +380,7 @@ export function useFinanceiroCalculations({
       .reduce((acc: number, p: any) => acc + p.valor, 0);
 
     return cacAnt + comissoesAnt + bonusAnt + infraAnt + rhAnt + opAnt;
-  }, [despesas, despesasAdmin, pagamentosOperador, dataInicio, dataFim]);
+  }, [despesas, despesasAdmin, pagamentosOperador, prevRange?.start, prevRange?.end]);
 
   // Compromissos pendentes
   const compromissosPendentesData = useMemo(() => {
@@ -426,6 +427,8 @@ export function useFinanceiroCalculations({
     walletsPorExchange,
     caixaDetalhes,
     totalCustosAnterior,
+    prevRangeLabel: prevRange?.label ?? null,
+    prevRangeMode: prevRange?.mode ?? "NONE",
     compromissosPendentesData,
     totalLucroParceiros,
     diasMedioAquisicao,
