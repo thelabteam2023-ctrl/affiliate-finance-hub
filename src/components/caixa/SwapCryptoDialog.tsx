@@ -27,6 +27,7 @@ import {
  import { ArrowRightLeft, Loader2, ArrowDown, AlertTriangle, Plus, Wallet } from "lucide-react";
  import { WalletCryptoSelect } from "@/components/wallets/WalletCryptoSelect";
 import { RedeSelect } from "@/components/parceiros/RedeSelect";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const MOEDAS_CRYPTO = [
   { value: "USDT", label: "Tether (USDT)" },
@@ -81,6 +82,8 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
   const [wallets, setWallets] = useState<WalletOption[]>([]);
   const [balances, setBalances] = useState<CoinBalance[]>([]);
   const [parceiroNome, setParceiroNome] = useState<string>("");
+  const [step, setStep] = useState<"form" | "review">("form");
+  const [confirmChecked, setConfirmChecked] = useState(false);
 
   // Form state - Origem
   const [walletOrigemId, setWalletOrigemId] = useState("");
@@ -156,6 +159,8 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
     setWalletDestinoId("");
     setNovaRedeId("");
     setNovaRedeName("");
+    setStep("form");
+    setConfirmChecked(false);
   };
 
   // Calculate USD estimates
