@@ -215,22 +215,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [tabId, retryQuery]);
 
   const resolveWorkspaceId = useCallback(async (userId: string, profileData: { default_workspace_id: string | null }): Promise<string | null> => {
-    // Priority 1: this tab's sessionStorage
-    const tabWsId = getTabWorkspaceId();
-    if (tabWsId && isTabWorkspaceInitialized()) {
-      console.log(`[Auth][${tabId}] Using tab workspace:`, tabWsId);
-      return tabWsId;
-    }
+    // Preferência da aba (sessionStorage) — validada no servidor
+    const tabWsId = isTabWorkspaceInitialized() ? getTabWorkspaceId() : null;
+    const preferred = tabWsId || profileData.default_workspace_id || null;
 
-    // Priority 2: profile default
-    if (profileData.default_workspace_id) {
-      console.log(`[Auth][${tabId}] Using profile default workspace:`, profileData.default_workspace_id);
-      setTabWorkspaceId(profileData.default_workspace_id);
+    // Fonte da verdade: RPC valida membership ativo + workspace ativo
+    // e auto-cura o default do perfil quando estiver obsoleto.
+    try {
+      const { data: resolved } = await retryQuery(async () => {
+        const result = await supabase.rpc('resolve_my_workspace' as any, { _preferred: preferred });
+        if (result.error && result.error.message?.includes('fetch')) throw new Error('Network error');
+        return result;
+      });
+
+      if (resolved) {
+        const wsId = resolved as unknown as string;
+        if (wsId !== tabWsId) setTabWorkspaceId(wsId);
+        markTabAsInitialized();
+        return wsId;
+      }
+
+      // Sem workspace válido: limpar estado obsoleto da aba
+      if (tabWsId) clearTabWorkspaceId();
       markTabAsInitialized();
-      return profileData.default_workspace_id;
+      return null;
+    } catch (error) {
+      console.error(`[Auth][${tabId}] Error resolving workspace after retries:`, error);
     }
 
-    // Priority 3: first membership (with retry for network resilience)
+    // Fallback offline-resiliente: primeiro membership ativo
     try {
       const fetchMembership = async () => {
         const result = await supabase
@@ -390,8 +403,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cachedTabWsId = getTabWorkspaceId();
       const tabInitialized = isTabWorkspaceInitialized();
 
-      // Parallel fetch: profile data AND (potentially) workspace membership
-      const [profileData, membershipData] = await Promise.all([
+      // Parallel fetch: profile data AND server-validated workspace resolution
+      const [profileData, resolvedWsId] = await Promise.all([
         // Fetch profile (mandatory)
         retryQuery(async () => {
           const result = await supabase
@@ -402,34 +415,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (result.error && result.error.message?.includes('fetch')) throw new Error('Network error');
           return result.data;
         }),
-        // Only fetch first membership if we don't have a valid tab workspace AND no profile default
-        (cachedTabWsId && tabInitialized) ? Promise.resolve(null) : retryQuery(async () => {
-          const result = await supabase
-            .from('workspace_members')
-            .select('workspace_id')
-            .eq('user_id', userId)
-            .eq('is_active', true)
-            .order('created_at', { ascending: true })
-            .limit(1)
-            .single();
+        // Resolve no servidor: honra a preferência da aba apenas se houver
+        // membership ativo; senão cai para o primeiro vínculo ativo válido.
+        retryQuery(async () => {
+          const result = await supabase.rpc('resolve_my_workspace' as any, {
+            _preferred: (tabInitialized && cachedTabWsId) ? cachedTabWsId : null,
+          });
           if (result.error && result.error.message?.includes('fetch')) throw new Error('Network error');
-          return result.data;
-        }).catch(() => null) // Suppress error for memberships
+          return (result.data as unknown as string | null) ?? null;
+        }).catch(() => null)
       ]);
 
       // Resolve final wsId
       let wsId: string | null = null;
-      if (cachedTabWsId && tabInitialized) {
-        wsId = cachedTabWsId;
-      } else if (profileData?.default_workspace_id) {
-        wsId = profileData.default_workspace_id;
-        setTabWorkspaceId(wsId);
-        markTabAsInitialized();
-      } else if (membershipData?.workspace_id) {
-        wsId = membershipData.workspace_id;
-        setTabWorkspaceId(wsId);
+      if (resolvedWsId) {
+        wsId = resolvedWsId;
+        if (wsId !== cachedTabWsId) setTabWorkspaceId(wsId);
         markTabAsInitialized();
       } else {
+        // Nenhum vínculo ativo: descartar workspace obsoleto desta aba
+        if (cachedTabWsId) clearTabWorkspaceId();
         markTabAsInitialized();
       }
 
