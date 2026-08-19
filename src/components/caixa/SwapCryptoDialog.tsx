@@ -177,6 +177,20 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
   const effectiveDestinoWalletId = destinoMode === "same" ? walletOrigemId : walletDestinoId;
   const needsNewWallet = destinoMode === "other" && walletDestinoId === "__new__";
 
+  // Carteira efetiva de destino para a tela de revisão
+  const destinoWalletReview = needsNewWallet
+    ? selectedOrigemWallet
+    : destinoMode === "same"
+      ? selectedOrigemWallet
+      : selectedDestinoWallet;
+
+  const isMesmaCarteira =
+    destinoMode === "same" ||
+    needsNewWallet ||
+    (!!selectedDestinoWallet &&
+      !!selectedOrigemWallet &&
+      selectedDestinoWallet.endereco === selectedOrigemWallet.endereco);
+
   const canSubmit = walletOrigemId && coinOrigem && coinDestino
     && qtdEnviadaNum > 0 && qtdRecebidaNum > 0
     && (saldoOrigem ? qtdEnviadaNum <= saldoOrigem.saldo_coin : true)
