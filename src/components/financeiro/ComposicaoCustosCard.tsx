@@ -526,8 +526,12 @@ export function ComposicaoCustosCard({
             <p className="text-lg font-bold">{formatCurrency(totalAtual)}</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-muted-foreground uppercase">Período Anterior</p>
-            <p className="text-lg font-bold text-muted-foreground">{formatCurrency(totalAnterior)}</p>
+            <p className="text-[10px] text-muted-foreground uppercase">
+              {periodoAnteriorLabel ? `Período Anterior · ${periodoAnteriorLabel}` : "Período Anterior"}
+            </p>
+            <p className="text-lg font-bold text-muted-foreground">
+              {comparisonMode === "NONE" ? "—" : formatCurrency(totalAnterior)}
+            </p>
           </div>
         </div>
       </CardContent>
