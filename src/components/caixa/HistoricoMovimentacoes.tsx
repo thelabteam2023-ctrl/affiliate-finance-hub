@@ -9,7 +9,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-  import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X, Pencil, FolderKanban, Users, MoreVertical, Undo2, Trash2, Tag as TagIcon, Check } from "lucide-react";
+  import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X, Pencil, FolderKanban, Users, MoreVertical, Undo2, Trash2, Tag as TagIcon, Check, ChevronDown, ChevronRight, ArrowLeftRight } from "lucide-react";
   import { getTagColor } from "@/components/ui/tag-input";
 import {
   DropdownMenu,
