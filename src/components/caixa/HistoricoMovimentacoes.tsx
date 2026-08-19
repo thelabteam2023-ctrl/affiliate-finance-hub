@@ -1368,7 +1368,92 @@ export function HistoricoMovimentacoes({
           <div className="space-y-0">
             <ScrollArea className="h-[550px]">
               <div className="space-y-0 pr-4">
-                {pagination.paginatedItems.map((tx: any) => {
+                {linhasRenderizadas.map((row: any) => {
+                  if (row.kind === "swap-head") {
+                    const g = row.group;
+                    const out = g.out || g.transacoes[0];
+                    const entrada = g.in || g.transacoes[1];
+                    const expanded = expandedSwaps.has(g.id);
+                    const isRevertedSwap = !!out?.reversed_at || !!entrada?.reversed_at;
+                    const outInfo = getOrigemInfo && out ? getOrigemInfo(out) : null;
+                    const inInfo = getDestinoInfo && entrada ? getDestinoInfo(entrada) : null;
+                    const outLegs = out ? getCryptoLegs(out) : null;
+                    const inLegs = entrada ? getCryptoLegs(entrada) : null;
+                    const fmtQtd = (legs: any) =>
+                      legs && legs.qtdCoin != null
+                        ? `${Number(Math.abs(Number(legs.qtdCoin))).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 8 })} ${(legs.coin || "").toUpperCase()}`
+                        : null;
+                    const dk = extractCivilDateKey(out?.data_transacao || entrada?.data_transacao);
+                    const dataFmt = dk ? `${dk.split("-")[2]}/${dk.split("-")[1]}/${dk.split("-")[0]}` : "-";
+
+                    return (
+                      <div
+                        key={row.key}
+                        className={`grid grid-cols-[auto_1fr_auto] gap-[12px] items-center py-[12px] border-b border-[#131920] last:border-0 group ${isRevertedSwap ? "opacity-60" : ""}`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleSwap(g.id)}
+                          className="h-9 w-9 rounded-[10px] bg-cyan-500/10 border border-cyan-500/25 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/20 transition-colors"
+                          aria-label={expanded ? "Recolher pernas do swap" : "Expandir pernas do swap"}
+                        >
+                          <ArrowLeftRight className="h-4 w-4" />
+                        </button>
+
+                        <div className="min-w-0">
+                          <TransactionBadge type="SWAP_OUT" label="Swap Interno" />
+                          <div className="text-[12px] font-medium text-[var(--text-secondary)] flex items-center gap-1.5 min-w-0">
+                            <span className="truncate">{outInfo?.primary || "Origem"}</span>
+                            <ArrowRight className="h-3 w-3 shrink-0 text-[var(--text-ghost)]" />
+                            <span className="truncate">{inInfo?.primary || "Destino"}</span>
+                          </div>
+                          <div className="text-[11px] text-[var(--text-faint)] mt-px flex items-center gap-1.5">
+                            {fmtQtd(outLegs) && <span>{fmtQtd(outLegs)}</span>}
+                            {fmtQtd(outLegs) && fmtQtd(inLegs) && <ArrowRight className="h-2.5 w-2.5" />}
+                            {fmtQtd(inLegs) && <span>{fmtQtd(inLegs)}</span>}
+                            <span className="opacity-70">· 2 pernas</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => toggleSwap(g.id)}
+                            className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-cyan-400/80 hover:text-cyan-300"
+                          >
+                            {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                            {expanded ? "Ocultar pernas" : "Ver pernas"}
+                          </button>
+                        </div>
+
+                        <div className="text-right flex flex-col items-end min-w-[140px]">
+                          <span className="text-[15px] font-semibold text-[var(--text-primary)] tabular-nums tracking-tight">
+                            {out ? formatCurrencyDynamic(Math.abs(getValorEfetivo(out)), getMoedaEfetiva(out)) : "-"}
+                          </span>
+                          <span className="text-[10px] text-[var(--text-faint)] tabular-nums opacity-80">{dataFmt}</span>
+                          <div className="flex items-center gap-2 mt-2">
+                            {isRevertedSwap ? (
+                              <Badge
+                                variant="outline"
+                                className="h-5 gap-1 border-amber-500/40 bg-amber-500/10 px-1.5 text-[10px] font-semibold text-amber-400"
+                                title="Swap revertido (as duas pernas)"
+                              >
+                                <Undo2 className="h-2.5 w-2.5" />
+                                Revertida
+                              </Badge>
+                            ) : (
+                              getStatusBadge(out?.status)
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 mt-1.5 opacity-40 group-hover:opacity-70 transition-opacity">
+                            <span className="text-[9px] font-medium text-[var(--text-ghost)] uppercase tracking-widest">
+                              por {usuariosMap[out?.user_id] || "SISTEMA"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const tx = row.tx;
+                  const nested = !!row.nested;
                   const txType = tx.tipo_transacao;
                   const isScan = txType === 'PERDA_OPERACIONAL' || txType === 'SCAN';
                   const isReverted = !!tx.reversed_at;
@@ -1381,8 +1466,8 @@ export function HistoricoMovimentacoes({
                   
                   return (
                     <div 
-                      key={tx.id} 
-                      className={`grid grid-cols-[auto_1fr_auto] gap-[12px] items-center py-[12px] border-b border-[#131920] last:border-0 group ${isReverted ? 'opacity-60' : ''}`}
+                      key={row.key}
+                      className={`grid grid-cols-[auto_1fr_auto] gap-[12px] items-center py-[12px] border-b border-[#131920] last:border-0 group ${isReverted ? 'opacity-60' : ''} ${nested ? 'pl-6 ml-3 border-l border-cyan-500/20 bg-cyan-500/[0.03]' : ''}`}
                     >
                       {/* Coluna 1: Ícone */}
                       <TransactionIcon type={txType} transacao={{
