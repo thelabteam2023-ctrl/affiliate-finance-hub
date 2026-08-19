@@ -59,6 +59,10 @@ interface ComposicaoCustosCardProps {
   operadoresDetalhes?: OperadorDetalhe[];
   /** Badge opcional indicando o período aplicado */
   periodBadge?: ReactNode;
+  /** Rótulo do período usado na comparação (ex: "julho de 2026") */
+  periodoAnteriorLabel?: string | null;
+  /** Modo da comparação temporal */
+  comparisonMode?: "CALENDAR" | "ROLLING" | "NONE";
 }
 
 interface DetalheItemProps {
@@ -127,8 +131,14 @@ export function ComposicaoCustosCard({
   infraestruturaDetalhes = [],
   operadoresDetalhes = [],
   periodBadge,
+  periodoAnteriorLabel = null,
+  comparisonMode = "CALENDAR",
 }: ComposicaoCustosCardProps) {
-  const variacaoTotal = totalAnterior > 0 
+  const comparisonLabel = periodoAnteriorLabel ? `vs ${periodoAnteriorLabel}` : "vs anterior";
+  // Estados da comparação: sem base (NONE), base zero (NOVO) ou percentual válido.
+  const hasComparison = comparisonMode !== "NONE";
+  const baseZero = hasComparison && !(totalAnterior > 0);
+  const variacaoTotal = totalAnterior > 0
     ? ((totalAtual - totalAnterior) / totalAnterior) * 100
     : 0;
 
@@ -294,17 +304,23 @@ export function ComposicaoCustosCard({
               </Tooltip>
             </TooltipProvider>
           </CardTitle>
-          <div className={cn(
-            "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
-            variacaoTotal > 5 ? "bg-destructive/10 text-destructive" :
-            variacaoTotal < -5 ? "bg-success/10 text-success" :
-            "bg-muted text-muted-foreground"
-          )}>
-            {variacaoTotal > 0 ? <TrendingUp className="h-3 w-3" /> : 
-             variacaoTotal < 0 ? <TrendingDown className="h-3 w-3" /> : 
-             <Minus className="h-3 w-3" />}
-            {variacaoTotal > 0 ? "+" : ""}{variacaoTotal.toFixed(1)}% vs anterior
-          </div>
+          {hasComparison && (
+            <div className={cn(
+              "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
+              baseZero ? "bg-muted text-muted-foreground" :
+              variacaoTotal > 5 ? "bg-destructive/10 text-destructive" :
+              variacaoTotal < -5 ? "bg-success/10 text-success" :
+              "bg-muted text-muted-foreground"
+            )}>
+              {baseZero ? <Minus className="h-3 w-3" /> :
+               variacaoTotal > 0 ? <TrendingUp className="h-3 w-3" /> :
+               variacaoTotal < 0 ? <TrendingDown className="h-3 w-3" /> :
+               <Minus className="h-3 w-3" />}
+              {baseZero
+                ? (totalAtual > 0 ? `novo ${comparisonLabel}` : `sem variação ${comparisonLabel}`)
+                : `${variacaoTotal > 0 ? "+" : ""}${variacaoTotal.toFixed(1)}% ${comparisonLabel}`}
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4 overflow-hidden">
@@ -510,8 +526,12 @@ export function ComposicaoCustosCard({
             <p className="text-lg font-bold">{formatCurrency(totalAtual)}</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-muted-foreground uppercase">Período Anterior</p>
-            <p className="text-lg font-bold text-muted-foreground">{formatCurrency(totalAnterior)}</p>
+            <p className="text-[10px] text-muted-foreground uppercase">
+              {periodoAnteriorLabel ? `Período Anterior · ${periodoAnteriorLabel}` : "Período Anterior"}
+            </p>
+            <p className="text-lg font-bold text-muted-foreground">
+              {comparisonMode === "NONE" ? "—" : formatCurrency(totalAnterior)}
+            </p>
           </div>
         </div>
       </CardContent>
