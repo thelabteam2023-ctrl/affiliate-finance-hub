@@ -34,28 +34,25 @@ const Index = () => {
           <div className="mx-auto max-w-4xl text-center">
             {/* Heading */}
             <h1 className="mb-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-              Faça um plano completo e detalhado: Contexto
+              Objetivo
             </h1>
 
             <div className="mb-10 text-left text-sm text-muted-foreground sm:text-base max-w-4xl mx-auto space-y-4 bg-card/50 p-6 rounded-lg border border-border/50">
-              <p>Após realizar o lançamento de uma perda promocional de €169,39 através do módulo de Bônus, identifiquei uma inconsistência na propagação desse evento para os indicadores do sistema.</p>
-              <p>O lançamento foi realizado corretamente pela aba Bônus, utilizando a visualização “Por Casa”.</p>
-              <p>Porém, após o lançamento, o valor de €169,39 foi refletido no ajuste/saldo financeiro, mas não foi refletido no gráfico de Evolução do Lucro, dentro de Visão Geral.</p>
-              <p>Isso indica que o evento financeiro foi registrado, mas não percorreu corretamente toda a cadeia de indicadores.</p>
-              
-              <h3 className="text-lg font-bold text-foreground mt-6">Problema identificado</h3>
-              <p>O evento deveria produzir dois efeitos simultâneos:</p>
+              <p>Realizar uma investigação abrangente sobre o tempo de duração das sessões de usuário no sistema, especialmente o comportamento quando o usuário permanece inativo.</p>
+              <p>O objetivo é entender como a sessão atual se comporta em três situações principais:</p>
               <div className="pl-4 space-y-2">
-                <p><strong>1. Impacto financeiro geral</strong></p>
-                <p>A perda promocional de €169,39 deve reduzir o resultado financeiro do projeto e, consequentemente, aparecer corretamente no lucro/prejuízo, KPI de resultado, gráfico de Evolução do Lucro e demais indicadores derivados do resultado financeiro.</p>
-                <p><strong>2. Impacto específico na performance de bônus</strong></p>
-                <p>Como o lançamento foi realizado através do módulo Bônus, a perda também altera a performance dessa estratégia/categoria. Portanto, a mesma perda deve ser refletida na visão Bônus → Por Casa e nos respectivos KPIs, lucro/prejuízo de bônus e performance por bookmaker.</p>
+                <p><strong>1. Usuário ativo continuamente</strong></p>
+                <p>Se o usuário estiver trabalhando normalmente, a sessão deve permanecer válida por tempo prolongado, sem interrupções.</p>
+                <p><strong>2. Usuário inativo temporariamente</strong></p>
+                <p>Se o usuário parar de interagir com o sistema por um período razoável (por exemplo, 60 minutos), a sessão não deve ser encerrada de forma inesperada.</p>
+                <p><strong>3. Usuário inativo por longo período</strong></p>
+                <p>Se o usuário permanecer inativo por um tempo excessivo (por exemplo, 3 horas), a sessão deve ser encerrada automaticamente por segurança.</p>
               </div>
 
-              <h3 className="text-lg font-bold text-foreground mt-6">Regra conceitual</h3>
-              <p>A perda promocional não deve ser tratada apenas como uma alteração de saldo. Ela é simultaneamente um evento financeiro e um evento de resultado da promoção.</p>
+              <h3 className="text-lg font-bold text-foreground mt-6">Foco da investigação</h3>
+              <p>Verificar se a lógica de timeout atual considera corretamente a atividade real do usuário, se o aviso de encerramento aparece de forma adequada e se a expiração ocorre de maneira previsível e consistente.</p>
               <div className="bg-background/50 p-4 rounded text-center font-mono text-xs border border-border/30">
-                Perda promocional → Ajuste financeiro → Saldo da bookmaker → Resultado do projeto → Evolução do lucro → KPI geral → Performance de Bônus
+                Atividade real → Atualização do timer → Aviso preventivo → Expiração segura após longa inatividade
               </div>
             </div>
 

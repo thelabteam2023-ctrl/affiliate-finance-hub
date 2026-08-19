@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 // Configurações de timeout (em milissegundos)
-const INACTIVITY_TIMEOUT_MS = 40 * 60 * 1000; // 40 minutos
+const INACTIVITY_TIMEOUT_MS = 180 * 60 * 1000; // 3 horas
 const WARNING_BEFORE_TIMEOUT_MS = 5 * 60 * 1000; // Aviso 5 minutos antes
 const ACTIVITY_UPDATE_THROTTLE_MS = 60 * 1000; // Atualizar backend a cada 1 minuto
 const CHECK_INTERVAL_MS = 30 * 1000; // Verificar a cada 30 segundos
@@ -162,7 +162,7 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
     try {
       const { data, error } = await supabase.rpc('check_session_inactivity', {
         p_user_id: userId,
-        p_timeout_minutes: 40
+        p_timeout_minutes: 180
       });
       
       if (error) {
