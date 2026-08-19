@@ -1385,6 +1385,12 @@ export function HistoricoMovimentacoes({
                         : null;
                     const dk = extractCivilDateKey(out?.data_transacao || entrada?.data_transacao);
                     const dataFmt = dk ? `${dk.split("-")[2]}/${dk.split("-")[1]}/${dk.split("-")[0]}` : "-";
+                    const usdOut = out?.valor_usd != null ? Math.abs(Number(out.valor_usd)) : null;
+                    const usdIn = entrada?.valor_usd != null ? Math.abs(Number(entrada.valor_usd)) : null;
+                    const spreadUsd = usdOut != null && usdIn != null ? usdIn - usdOut : null;
+                    const spreadPct = spreadUsd != null && usdOut ? (spreadUsd / usdOut) * 100 : null;
+                    const fmtUsd = (v: number) =>
+                      `US$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
                     return (
                       <div
@@ -1413,6 +1419,18 @@ export function HistoricoMovimentacoes({
                             {fmtQtd(inLegs) && <span>{fmtQtd(inLegs)}</span>}
                             <span className="opacity-70">· 2 pernas</span>
                           </div>
+                          {(usdOut != null || usdIn != null) && (
+                            <div className="text-[10px] text-[var(--text-ghost)] mt-px flex flex-wrap items-center gap-x-2">
+                              {usdOut != null && <span>Debitado {fmtUsd(usdOut)}</span>}
+                              {usdIn != null && <span>Creditado {fmtUsd(usdIn)}</span>}
+                              {spreadUsd != null && spreadPct != null && (
+                                <span className={spreadUsd < 0 ? "text-amber-400/80" : "text-emerald-400/80"}>
+                                  Spread {spreadUsd >= 0 ? "+" : "−"}
+                                  {fmtUsd(Math.abs(spreadUsd))} ({spreadPct.toFixed(2)}%)
+                                </span>
+                              )}
+                            </div>
+                          )}
                           <button
                             type="button"
                             onClick={() => toggleSwap(g.id)}

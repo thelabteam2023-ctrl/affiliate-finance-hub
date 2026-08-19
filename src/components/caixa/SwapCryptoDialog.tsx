@@ -198,7 +198,17 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
     && (!needsNewWallet || novaRedeId);
 
   const handleSwap = async () => {
-    if (!canSubmit || !workspaceId || !caixaParceiroId) return;
+    if (!canSubmit) return;
+    if (!workspaceId || !caixaParceiroId) {
+      toast({
+        title: "Contexto indisponível",
+        description: !workspaceId
+          ? "Workspace não identificado nesta aba. Recarregue a página e tente novamente."
+          : "Parceiro do caixa não identificado. Selecione o parceiro antes de registrar o swap.",
+        variant: "destructive",
+      });
+      return;
+    }
     setLoading(true);
 
     try {
@@ -587,10 +597,13 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
                 <div className="text-[11px] font-mono text-muted-foreground">
                   {selectedOrigemWallet?.endereco ? truncAddr(selectedOrigemWallet.endereco) : "—"}
                 </div>
-                <div className="pt-1 text-sm font-semibold text-destructive">
+                <div className="pt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Valor debitado
+                </div>
+                <div className="text-sm font-semibold text-destructive">
                   − {qtdEnviadaNum} {coinOrigem}
                 </div>
-                <div className="text-[11px] text-muted-foreground">≈ ${usdEnviado.toFixed(2)}</div>
+                <div className="text-[11px] text-muted-foreground">≈ US$ {usdEnviado.toFixed(2)}</div>
               </div>
 
               <div className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-1">
@@ -608,17 +621,62 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
                 <div className="text-[11px] font-mono text-muted-foreground">
                   {destinoWalletReview?.endereco ? truncAddr(destinoWalletReview.endereco) : "—"}
                 </div>
-                <div className="pt-1 text-sm font-semibold text-emerald-500">
+                <div className="pt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Valor creditado
+                </div>
+                <div className="text-sm font-semibold text-emerald-500">
                   + {qtdRecebidaNum} {coinDestino}
                 </div>
-                <div className="text-[11px] text-muted-foreground">≈ ${usdEnviado.toFixed(2)}</div>
+                <div className="text-[11px] text-muted-foreground">≈ US$ {usdRecebido.toFixed(2)}</div>
               </div>
             </div>
 
-            <div className="rounded-md border border-border/50 bg-muted/10 p-2 text-[11px] text-muted-foreground">
-              Taxa implícita: 1 {coinOrigem} = {(qtdRecebidaNum / qtdEnviadaNum).toFixed(6)} {coinDestino}
-              {" · "}Valor econômico preservado (${usdEnviado.toFixed(2)})
+            <div className="rounded-md border border-border/50 bg-muted/10 p-2.5 text-[11px] space-y-1">
+              <div className="font-semibold uppercase tracking-wide text-muted-foreground">
+                Detalhes da conversão
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Cotação {coinOrigem}</span>
+                <span className="font-mono">US$ {precoOrigem.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Cotação {coinDestino}</span>
+                <span className="font-mono">US$ {precoDestino.toLocaleString("pt-BR", { maximumFractionDigits: 6 })}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Taxa implícita</span>
+                <span className="font-mono">
+                  1 {coinOrigem} = {(qtdRecebidaNum / qtdEnviadaNum).toFixed(6)} {coinDestino}
+                </span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Valor econômico enviado</span>
+                <span className="font-mono">US$ {usdEnviado.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Valor econômico recebido</span>
+                <span className="font-mono">US$ {usdRecebido.toFixed(2)}</span>
+              </div>
+              <div className={`flex justify-between font-medium ${spreadUsd < 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                <span>Spread / custo da conversão</span>
+                <span className="font-mono">
+                  {spreadUsd >= 0 ? "+" : "−"} US$ {Math.abs(spreadUsd).toFixed(2)} ({spreadPct.toFixed(2)}%)
+                </span>
+              </div>
+              <div className="pt-1 text-[10px] text-muted-foreground">
+                O sistema não cobra taxa própria: a diferença acima é o spread entre o valor enviado e o recebido.
+              </div>
             </div>
+
+            {spreadPct < -2 && (
+              <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-[11px]">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-600" />
+                <span>
+                  Esta conversão reduz o valor econômico em US$ {Math.abs(spreadUsd).toFixed(2)} ({spreadPct.toFixed(2)}%).
+                  Confirme se os valores estão corretos.
+                </span>
+              </div>
+            )}
 
             {/* Banner por cenário */}
             {isMesmaCarteira ? (
