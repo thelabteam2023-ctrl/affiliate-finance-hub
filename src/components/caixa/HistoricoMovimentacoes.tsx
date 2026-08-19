@@ -1477,7 +1477,14 @@ export function HistoricoMovimentacoes({
 
                       {/* Coluna 2: Detalhes */}
                       <div className="min-w-0">
-                        <TransactionBadge type={txType} label={getTipoLabel(txType, tx)} />
+                        <div className="flex items-center gap-1.5">
+                          <TransactionBadge type={txType} label={getTipoLabel(txType, tx)} />
+                          {nested && (
+                            <span className="text-[9px] font-semibold uppercase tracking-wider text-cyan-400/80">
+                              {txType === "SWAP_OUT" ? "Enviado" : "Recebido"}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2">
                           <div className="flex flex-col items-start min-w-0">
                             <span className="text-[12px] font-medium text-[var(--text-secondary)] truncate flex items-center gap-1.5 w-full">
