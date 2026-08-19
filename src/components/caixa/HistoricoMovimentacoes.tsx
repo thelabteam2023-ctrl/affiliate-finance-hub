@@ -495,9 +495,70 @@ export function HistoricoMovimentacoes({
       );
     });
   }, [transacoesFiltradas, termoBusca, bookmakers, parceiros, walletsDetalhes, contasBancarias]);
-  
-  // Client-side pagination
-  const pagination = usePagination(transacoesComBusca, { initialPageSize: PAGE_SIZE });
+
+  // Swaps expandidos (agrupados em uma linha por operação)
+  const [expandedSwaps, setExpandedSwaps] = useState<Set<string>>(new Set());
+  const toggleSwap = (id: string) =>
+    setExpandedSwaps((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  // Agrupa as duas pernas do swap (SWAP_OUT + SWAP_IN) em um único item de exibição.
+  // Aplicado APÓS filtros/busca e ANTES da paginação — métricas seguem usando a lista plana.
+  const itensAgrupados = useMemo(() => {
+    const grupos = new Map<string, any>();
+    const items: any[] = [];
+
+    for (const tx of transacoesComBusca as any[]) {
+      const isSwap = tx.tipo_transacao === "SWAP_OUT" || tx.tipo_transacao === "SWAP_IN";
+      const groupKey = isSwap
+        ? tx.swap_operation_id || tx.referencia_transacao_id || tx.id
+        : null;
+
+      if (!isSwap || !groupKey) {
+        items.push({ kind: "single", key: tx.id, tx });
+        continue;
+      }
+
+      let grupo = grupos.get(groupKey);
+      if (!grupo) {
+        grupo = { kind: "swap-group", key: `swap-${groupKey}`, id: groupKey, out: null, in: null, transacoes: [] as any[] };
+        grupos.set(groupKey, grupo);
+        items.push(grupo);
+      }
+      grupo.transacoes.push(tx);
+      if (tx.tipo_transacao === "SWAP_OUT") grupo.out = tx;
+      else grupo.in = tx;
+    }
+
+    // Swap sem par carregado volta a ser linha simples (fallback seguro)
+    return items.map((item) =>
+      item.kind === "swap-group" && item.transacoes.length < 2
+        ? { kind: "single", key: item.transacoes[0].id, tx: item.transacoes[0] }
+        : item
+    );
+  }, [transacoesComBusca]);
+
+  // Client-side pagination (swap agrupado conta como 1 item)
+  const pagination = usePagination(itensAgrupados, { initialPageSize: PAGE_SIZE });
+
+  // Linhas efetivamente renderizadas: cabeçalho do swap + pernas quando expandido
+  const linhasRenderizadas = useMemo(() => {
+    const rows: any[] = [];
+    for (const item of pagination.paginatedItems as any[]) {
+      if (item.kind === "swap-group") {
+        rows.push({ kind: "swap-head", key: item.key, group: item });
+        if (expandedSwaps.has(item.id)) {
+          for (const perna of item.transacoes) rows.push({ kind: "tx", key: perna.id, tx: perna, nested: true });
+        }
+      } else {
+        rows.push({ kind: "tx", key: item.tx.id, tx: item.tx, nested: false });
+      }
+    }
+    return rows;
+  }, [pagination.paginatedItems, expandedSwaps]);
 
   // Reset para a primeira página sempre que os filtros mudarem
   useEffect(() => {
