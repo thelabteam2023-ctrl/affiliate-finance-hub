@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.fn_registrar_swap_crypto(uuid, uuid, uuid, text, numeric, uuid, text, numeric, numeric, numeric, jsonb) FROM PUBLIC, anon;
