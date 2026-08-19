@@ -304,17 +304,23 @@ export function ComposicaoCustosCard({
               </Tooltip>
             </TooltipProvider>
           </CardTitle>
-          <div className={cn(
-            "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
-            variacaoTotal > 5 ? "bg-destructive/10 text-destructive" :
-            variacaoTotal < -5 ? "bg-success/10 text-success" :
-            "bg-muted text-muted-foreground"
-          )}>
-            {variacaoTotal > 0 ? <TrendingUp className="h-3 w-3" /> : 
-             variacaoTotal < 0 ? <TrendingDown className="h-3 w-3" /> : 
-             <Minus className="h-3 w-3" />}
-            {variacaoTotal > 0 ? "+" : ""}{variacaoTotal.toFixed(1)}% vs anterior
-          </div>
+          {hasComparison && (
+            <div className={cn(
+              "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
+              baseZero ? "bg-muted text-muted-foreground" :
+              variacaoTotal > 5 ? "bg-destructive/10 text-destructive" :
+              variacaoTotal < -5 ? "bg-success/10 text-success" :
+              "bg-muted text-muted-foreground"
+            )}>
+              {baseZero ? <Minus className="h-3 w-3" /> :
+               variacaoTotal > 0 ? <TrendingUp className="h-3 w-3" /> :
+               variacaoTotal < 0 ? <TrendingDown className="h-3 w-3" /> :
+               <Minus className="h-3 w-3" />}
+              {baseZero
+                ? (totalAtual > 0 ? `novo ${comparisonLabel}` : `sem variação ${comparisonLabel}`)
+                : `${variacaoTotal > 0 ? "+" : ""}${variacaoTotal.toFixed(1)}% ${comparisonLabel}`}
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4 overflow-hidden">
