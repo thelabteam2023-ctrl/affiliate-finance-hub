@@ -59,6 +59,10 @@ interface ComposicaoCustosCardProps {
   operadoresDetalhes?: OperadorDetalhe[];
   /** Badge opcional indicando o período aplicado */
   periodBadge?: ReactNode;
+  /** Rótulo do período usado na comparação (ex: "julho de 2026") */
+  periodoAnteriorLabel?: string | null;
+  /** Modo da comparação temporal */
+  comparisonMode?: "CALENDAR" | "ROLLING" | "NONE";
 }
 
 interface DetalheItemProps {
@@ -127,8 +131,14 @@ export function ComposicaoCustosCard({
   infraestruturaDetalhes = [],
   operadoresDetalhes = [],
   periodBadge,
+  periodoAnteriorLabel = null,
+  comparisonMode = "CALENDAR",
 }: ComposicaoCustosCardProps) {
-  const variacaoTotal = totalAnterior > 0 
+  const comparisonLabel = periodoAnteriorLabel ? `vs ${periodoAnteriorLabel}` : "vs anterior";
+  // Estados da comparação: sem base (NONE), base zero (NOVO) ou percentual válido.
+  const hasComparison = comparisonMode !== "NONE";
+  const baseZero = hasComparison && !(totalAnterior > 0);
+  const variacaoTotal = totalAnterior > 0
     ? ((totalAtual - totalAnterior) / totalAnterior) * 100
     : 0;
 
