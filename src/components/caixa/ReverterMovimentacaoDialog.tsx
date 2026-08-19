@@ -98,6 +98,7 @@ export function ReverterMovimentacaoDialog({ open, onOpenChange, transacao, resu
   const ativosNegativos = (deps?.impacto?.ativos_afetados ?? []).filter((a) => a.negativo);
   const quebraCadeia = ativosNegativos.length > 0;
   const bloqueado = quebraCadeia || (tipoSensivel && temDependencias);
+  const isSwap = ["SWAP_IN", "SWAP_OUT"].includes(transacao?.tipo_transacao);
 
   const handleConfirm = async () => {
     if (!transacao || motivo.trim().length < 5 || bloqueado) return;
@@ -145,6 +146,16 @@ export function ReverterMovimentacaoDialog({ open, onOpenChange, transacao, resu
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        {isSwap && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+            <span>
+              <strong>Swap interno:</strong> esta reversão desfará as <strong>duas pernas</strong> da operação
+              (entrada e saída) de uma só vez, com o mesmo motivo. Não é possível reverter apenas metade do swap.
+            </span>
+          </div>
+        )}
 
         {/* Painel de dependências */}
         {loadingDeps && (

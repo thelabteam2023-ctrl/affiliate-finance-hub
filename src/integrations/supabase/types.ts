@@ -2597,6 +2597,7 @@ export type Database = {
           reversed_by_id: string | null
           status: string
           status_valor: string | null
+          swap_operation_id: string | null
           tags: string[] | null
           tipo_moeda: string
           tipo_transacao: string
@@ -2663,6 +2664,7 @@ export type Database = {
           reversed_by_id?: string | null
           status?: string
           status_valor?: string | null
+          swap_operation_id?: string | null
           tags?: string[] | null
           tipo_moeda: string
           tipo_transacao: string
@@ -2729,6 +2731,7 @@ export type Database = {
           reversed_by_id?: string | null
           status?: string
           status_valor?: string | null
+          swap_operation_id?: string | null
           tags?: string[] | null
           tipo_moeda?: string
           tipo_transacao?: string
@@ -18079,6 +18082,22 @@ export type Database = {
           stake_em_risco: number
           status_reconciliacao: string
         }[]
+      }
+      fn_registrar_swap_crypto: {
+        Args: {
+          p_coin_destino: string
+          p_coin_origem: string
+          p_metadata?: Json
+          p_parceiro_id: string
+          p_preco_destino: number
+          p_preco_origem: number
+          p_qtd_destino: number
+          p_qtd_origem: number
+          p_wallet_destino_id: string
+          p_wallet_origem_id: string
+          p_workspace_id: string
+        }
+        Returns: Json
       }
       fn_sync_stake_event_v1: {
         Args: {
