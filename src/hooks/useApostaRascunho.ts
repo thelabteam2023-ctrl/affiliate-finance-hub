@@ -99,13 +99,19 @@ const generateId = (): string => {
   return `rascunho_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-// Verificar se perna está completa
-const isPernaCompleta = (perna: RascunhoPernaData): boolean => {
+// Verificar se uma entrada (principal ou sub-entrada) está completa
+const isEntradaCompleta = (e: { bookmaker_id?: string; odd?: number; stake?: number }): boolean => {
   return !!(
-    perna.bookmaker_id &&
-    perna.odd && perna.odd > 1 &&
-    perna.stake && perna.stake > 0
+    e.bookmaker_id &&
+    e.odd && e.odd > 1 &&
+    e.stake && e.stake > 0
   );
+};
+
+// Verificar se perna está completa (principal OU qualquer sub-entrada válida)
+const isPernaCompleta = (perna: RascunhoPernaData): boolean => {
+  if (isEntradaCompleta(perna)) return true;
+  return (perna.entradas_adicionais || []).some(isEntradaCompleta);
 };
 
 // Verificar se seleção está completa
