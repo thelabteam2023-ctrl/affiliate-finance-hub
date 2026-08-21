@@ -2444,16 +2444,10 @@ export function SurebetModalRoot({
       return;
     }
     
-    // Converter odds para formato de rascunho
-    const pernasRascunho: RascunhoPernaData[] = odds.map(entry => ({
-      bookmaker_id: entry.bookmaker_id || undefined,
-      bookmaker_nome: bookmakerSaldos.find(b => b.id === entry.bookmaker_id)?.nome,
-      selecao: entry.selecao || undefined,
-      selecao_livre: entry.selecaoLivre || undefined,
-      odd: parseFloat(entry.odd) || undefined,
-      stake: parseFloat(entry.stake) || undefined,
-      moeda: entry.moeda,
-    }));
+    // Converter odds para formato de rascunho (inclui TODAS as sub-entradas)
+    const pernasRascunho: RascunhoPernaData[] = oddsToRascunhoPernas(odds, {
+      getBookmakerNome: (id) => bookmakerSaldos.find(b => b.id === id)?.nome,
+    });
     
     const modelo = numPernas === 2 ? "1-2" : numPernas === 3 ? "1-X-2" : `${numPernas}-way`;
     
@@ -2467,6 +2461,7 @@ export function SurebetModalRoot({
       modelo_tipo: modeloTipo,
       quantidade_pernas: numPernas,
       pernas: pernasRascunho,
+      data_aposta: dataAposta || undefined,
     };
 
     let rascunhoSalvo;
