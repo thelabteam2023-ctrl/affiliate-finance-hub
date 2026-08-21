@@ -2068,6 +2068,17 @@ export function SurebetModalRoot({
       invalidateSaldos(projetoId);
       invalidateCanonicalCaches(queryClient, projetoId);
       
+      // ANTI-DUPLICIDADE: o rascunho que originou esta operação deixa de existir
+      // (independentemente de ter vindo por URL ou de ter sido criado neste modal).
+      if (!isEditing && rascunhoIdEfetivo) {
+        try {
+          deletarRascunho(rascunhoIdEfetivo);
+        } catch (e) {
+          console.warn('[SurebetModalRoot] Falha ao remover rascunho pós-registro', e);
+        }
+        setRascunhoIdLocal(null);
+      }
+
       // Limpar refs de estado local — backend é a fonte da verdade
       setOriginalPernasSnapshot([]);
       setOriginalPernaIds([]);
@@ -2075,6 +2086,7 @@ export function SurebetModalRoot({
       
       onSuccess('save');
       if (!embedded) onOpenChange(false);
+
     } catch (error: any) {
       await logDebug({
         modulo: 'Surebet',
