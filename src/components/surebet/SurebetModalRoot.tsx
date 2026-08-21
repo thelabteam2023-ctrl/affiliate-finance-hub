@@ -24,6 +24,7 @@ import { useCurrencySnapshot, type SupportedCurrency } from "@/hooks/useCurrency
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useApostaRascunho, type ApostaRascunho, type RascunhoPernaData } from "@/hooks/useApostaRascunho";
+import { oddsToRascunhoPernas, rascunhoPernasToOdds } from "@/utils/surebetRascunhoMapper";
 import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
 import { useSurebetCalculator, type OddEntry, type OddFormEntry } from "@/hooks/useSurebetCalculator";
 import { pernasToInserts } from "@/types/apostasPernas";
