@@ -54,6 +54,7 @@ import { pernasToInserts } from "@/types/apostasPernas";
 import { type MoedaOperacao } from "@/types/apostasUnificada";
 import { convertCurrency, calcularStakesMultiCurrency, type GetEffectiveRateFn } from "@/utils/convertCurrency";
 import { useApostaRascunho, type ApostaRascunho } from "@/hooks/useApostaRascunho";
+import { rascunhoPernasToOdds } from "@/utils/surebetRascunhoMapper";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
 import {
