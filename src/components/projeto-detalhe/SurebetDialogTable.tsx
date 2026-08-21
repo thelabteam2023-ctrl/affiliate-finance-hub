@@ -314,7 +314,15 @@ export function SurebetDialogTable({
     enabled: open,
     includeZeroBalance: isEditing || isBonusContext,
   });
+  // Lista COMPLETA (inclui casas zeradas/negativas) — usada só para validar saldo.
+  const { data: saldosValidacao = [] } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: open,
+    includeZeroBalance: true,
+  });
+  const saldosProntos = !saldosLoading && saldosValidacao.length > 0;
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+
   
   const { atualizarProgressoRollover, reverterProgressoRollover, hasActiveRolloverBonus } = useBonusBalanceManager();
   const { criarRascunho, listarPorTipo } = useApostaRascunho(projetoId, workspaceId || '');
