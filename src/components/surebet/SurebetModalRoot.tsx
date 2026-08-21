@@ -246,7 +246,16 @@ export function SurebetModalRoot({
     enabled: open,
     includeZeroBalance: isEditing,
   });
+  // Lista COMPLETA (inclui casas zeradas/negativas) usada exclusivamente para
+  // validação de saldo. Sem ela, uma casa fora do filtro escaparia da trava.
+  const { data: saldosValidacao = [] } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: open,
+    includeZeroBalance: true,
+  });
+  const saldosProntos = !saldosLoading && saldosValidacao.length > 0;
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+
 
   // ============================================
   // ESTADOS DO FORMULÁRIO
