@@ -665,22 +665,19 @@ export function SurebetModalRoot({
         }
       }
       
+      if (rascunho.data_aposta) setDataAposta(rascunho.data_aposta);
+
       if (rascunho.pernas && rascunho.pernas.length > 0) {
         const defaultSelecoes = getDefaultSelecoes(numPernasRascunho);
-        const rascunhoOdds: OddEntry[] = rascunho.pernas.map((perna, i) => ({
-          bookmaker_id: perna.bookmaker_id || "",
-          moeda: (perna.moeda as SupportedCurrency) || "BRL",
-          odd: perna.odd?.toString() || "",
-          stake: perna.stake?.toString() || "",
-          selecao: perna.selecao || defaultSelecoes[i] || "",
-          selecaoLivre: perna.selecao_livre || "",
-          isReference: i === 0,
-          isManuallyEdited: !!(perna.odd && perna.stake),
-          stakeOrigem: undefined,
-          additionalEntries: []
-        }));
-        
-        rascunhoOdds.forEach(o => HydrationAudit.mark(o, "draft", { originalValue: parseFloat(o.stake) || 0 }));
+        // Reconstrução canônica: preserva N sub-entradas por perna, tipo, comissão e fonte de saldo
+        const rascunhoOdds: OddEntry[] = rascunhoPernasToOdds(rascunho.pernas, defaultSelecoes);
+
+        rascunhoOdds.forEach(o => {
+          HydrationAudit.mark(o, "draft", { originalValue: parseFloat(o.stake) || 0 });
+          (o.additionalEntries || []).forEach(sub =>
+            HydrationAudit.mark(sub as any, "draft", { originalValue: parseFloat(sub.stake) || 0 })
+          );
+        });
         setOdds(rascunhoOdds);
         setDirectedProfitLegs(Array.from({ length: numPernasRascunho }, (_, i) => i));
       } else {
