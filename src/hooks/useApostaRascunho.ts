@@ -16,6 +16,19 @@ export type TipoRascunho = 'SUREBET' | 'MULTIPLA' | 'SIMPLES' | 'HEDGE';
 // Estado do rascunho
 export type EstadoRascunho = 'INCOMPLETO' | 'PRONTO_PARA_SALVAR';
 
+// Estrutura de uma sub-entrada (casa adicional dentro da MESMA perna)
+export interface RascunhoEntradaData {
+  bookmaker_id?: string;
+  bookmaker_nome?: string;
+  odd?: number;
+  stake?: number;
+  moeda?: string;
+  selecao_livre?: string;
+  fonte_saldo?: 'REAL' | 'FREEBET';
+  tipo?: 'back' | 'lay';
+  comissao?: number;
+}
+
 // Estrutura de uma perna de rascunho
 export interface RascunhoPernaData {
   bookmaker_id?: string;
@@ -25,6 +38,11 @@ export interface RascunhoPernaData {
   odd?: number;
   stake?: number;
   moeda?: string;
+  fonte_saldo?: 'REAL' | 'FREEBET';
+  tipo?: 'back' | 'lay';
+  comissao?: number;
+  /** Casas adicionais compondo a MESMA perna. Ausente em rascunhos legados. */
+  entradas_adicionais?: RascunhoEntradaData[];
 }
 
 // Estrutura de uma seleção de múltipla
