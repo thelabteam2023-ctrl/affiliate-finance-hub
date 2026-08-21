@@ -2488,7 +2488,7 @@ export function SurebetModalRoot({
      // NÃO fechar o formulário automaticamente se estiver completo (deixa usuário decidir registrar)
      // Se estiver incompleto, costuma fechar para "continuar depois"
      if (!embedded && !isEstruturaCompleta) onOpenChange(false);
-  }, [odds, evento, mercado, esporte, estrategia, contexto, modeloTipo, numPernas, workspaceId, bookmakerSaldos, criarRascunho, atualizarRascunho, rascunhoIdEfetivo, onOpenChange]);
+  }, [odds, evento, mercado, esporte, estrategia, contexto, modeloTipo, numPernas, dataAposta, workspaceId, bookmakerSaldos, criarRascunho, atualizarRascunho, rascunhoIdEfetivo, onOpenChange, embedded, isEstruturaCompleta]);
 
   const getBookmakerNome = (id: string) => bookmakerSaldos.find(b => b.id === id)?.nome || "";
 
