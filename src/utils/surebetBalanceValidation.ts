@@ -136,13 +136,19 @@ export function validateBalance(
 
   for (const [bkId, alocado] of alocadoPorBookmaker.entries()) {
     const bookmaker = bookmakerSaldos.find(b => b.id === bkId);
-    if (!bookmaker) continue;
+    // FAIL-CLOSED: casa ausente na lista de saldos é tratada como insuficiente.
+    if (!bookmaker) {
+      if (alocado.real > 0) bookmakerInsuficientes.add(bkId);
+      if (alocado.freebet > 0) bookmakerFBInsuficientes.add(bkId);
+      continue;
+    }
     const credito = isEditing ? (originalCredits.get(bkId) || { real: 0, freebet: 0 }) : { real: 0, freebet: 0 };
     const saldoReal = (bookmaker.saldo_operavel ?? 0) + credito.real;
     const saldoFB = (bookmaker.saldo_freebet ?? 0) + credito.freebet;
     if (alocado.real > saldoReal + 0.01) bookmakerInsuficientes.add(bkId);
     if (alocado.freebet > saldoFB + 0.01) bookmakerFBInsuficientes.add(bkId);
   }
+
 
   // Mark specific entries with issues
   odds.forEach((entry, index) => {
