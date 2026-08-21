@@ -1283,36 +1283,25 @@ export function SurebetDialogTable({
       return;
     }
 
-    // VALIDAÇÃO CRÍTICA DE SALDO (ANTI-REGRESSÃO)
+    // VALIDAÇÃO CRÍTICA DE SALDO (ANTI-REGRESSÃO / FAIL-CLOSED)
     if (!isEditing) {
-      for (let i = 0; i < odds.length; i++) {
-        const entry = odds[i];
-        if (entry.bookmaker_id) {
-          const stakeTotalPerna = getStakeTotalPerna(entry);
-          if (stakeTotalPerna > 0) {
-            const bk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
-            if (bk) {
-              // Obter saldo disponível base (da RPC canônica)
-              const saldoBase = bk.saldo_operavel;
-              
-              // Somar stakes de OUTRAS pernas que usam o mesmo bookmaker (uso compartilhado)
-              let stakesOutrasPernas = 0;
-              odds.forEach((other, otherIdx) => {
-                if (i !== otherIdx && other.bookmaker_id === entry.bookmaker_id) {
-                  stakesOutrasPernas += getStakeTotalPerna(other);
-                }
-              });
-
-              const saldoDisponivelReal = saldoBase - stakesOutrasPernas;
-
-              if (stakeTotalPerna > saldoDisponivelReal + 0.01) {
-                toast.error(`Saldo insuficiente em ${bk.nome}. Disponível: ${formatCurrency(saldoDisponivelReal, bk.moeda)}. Necessário: ${formatCurrency(stakeTotalPerna, bk.moeda)}.`);
-                return;
-              }
-            }
-          }
-        }
+      if (!saldosProntos) {
+        toast.error("Saldos ainda não carregados. Aguarde um instante e tente novamente.");
+        return;
       }
+      const casasBloqueadas = new Set<string>([
+        ...Array.from(balanceCheck.bookmakerInsuficientes ?? []),
+        ...Array.from(balanceCheck.bookmakerFBInsuficientes ?? []),
+      ]) as Set<string>;
+      if (casasBloqueadas.size > 0) {
+        const nomes = Array.from(casasBloqueadas)
+          .map(id => saldosValidacao.find(b => b.id === id)?.nome || "casa")
+          .join(", ");
+        toast.error(`Saldo insuficiente em: ${nomes}. Reduza a stake ou selecione outra casa.`);
+        return;
+      }
+    }
+
     }
 
     try {
