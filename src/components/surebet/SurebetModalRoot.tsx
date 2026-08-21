@@ -445,16 +445,18 @@ export function SurebetModalRoot({
       const validation = calcularSaldoDisponivel(
         index,
         odds,
-        bookmakerSaldos,
+        saldosValidacao,
         isEditing,
-        originalStakesByBookmaker
+        originalStakesByBookmaker,
+        saldosProntos
       );
       if (validation.excedeu) {
         newErros[index] = validation.mensagem;
       }
     });
     setErrosPorPerna(newErros);
-  }, [odds, bookmakerSaldos, isEditing, originalStakesByBookmaker]);
+  }, [odds, saldosValidacao, saldosProntos, isEditing, originalStakesByBookmaker]);
+
 
   const [selectedLegForPrint, setSelectedLegForPrint] = useState<number | null>(null);
   
