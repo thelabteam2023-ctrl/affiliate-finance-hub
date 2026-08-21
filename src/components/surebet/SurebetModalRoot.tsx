@@ -2338,14 +2338,21 @@ export function SurebetModalRoot({
     const bookmakerFBInsuficientes = new Set<string>();
     
     for (const [bkId, alocado] of alocadoPorBookmaker.entries()) {
-      const bookmaker = bookmakerSaldos.find(b => b.id === bkId);
-      if (!bookmaker) continue;
+      const bookmaker = saldosValidacao.find(b => b.id === bkId);
+      // FAIL-CLOSED: casa desconhecida na lista de saldos = bloqueio, nunca liberação.
+      if (!bookmaker) {
+        if (!saldosProntos) continue;
+        if (alocado.real > 0) bookmakerInsuficientes.add(bkId);
+        if (alocado.freebet > 0) bookmakerFBInsuficientes.add(bkId);
+        continue;
+      }
       const credito = isEditing ? (originalStakesByBookmaker.get(bkId) || { real: 0, freebet: 0 }) : { real: 0, freebet: 0 };
       const saldoReal = (bookmaker.saldo_operavel ?? 0) + credito.real;
       const saldoFB = (bookmaker.saldo_freebet ?? 0) + credito.freebet;
       if (alocado.real > saldoReal + 0.01) bookmakerInsuficientes.add(bkId);
       if (alocado.freebet > saldoFB + 0.01) bookmakerFBInsuficientes.add(bkId);
     }
+
     
     // Marcar entradas específicas com problema
     odds.forEach((entry, index) => {
