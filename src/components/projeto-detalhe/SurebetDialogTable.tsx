@@ -1302,7 +1302,7 @@ export function SurebetDialogTable({
       }
     }
 
-    }
+
 
     try {
       setSaving(true);
