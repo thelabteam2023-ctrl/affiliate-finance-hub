@@ -138,21 +138,24 @@ export function useBookmakerSaldosQuery({
         saldo_saque_pendente: Number(row.saldo_saque_pendente) || 0
       }));
 
-      // Filtrar por saldo operável > 0, exceto se for o bookmaker atual ou includeZeroBalance
-      if (includeZeroBalance) {
-        return formatted;
-      }
-
-      return formatted.filter(bk => 
-        bk.saldo_operavel > 0 || bk.id === currentBookmakerId
-      );
+      // IMPORTANTE: a query sempre retorna a lista COMPLETA (fonte de verdade).
+      // O filtro por saldo positivo é aplicado no `select` (por observador),
+      // evitando que uma instância filtrada contamine o cache compartilhado.
+      return formatted;
     },
+    // Filtro por observador: casas zeradas/negativas continuam disponíveis
+    // para quem precisa validar saldo (fail-closed).
+    select: (rows: BookmakerSaldo[]) =>
+      includeZeroBalance
+        ? rows
+        : rows.filter(bk => bk.saldo_operavel > 0 || bk.id === currentBookmakerId),
     enabled: enabled && !!projetoId,
     staleTime: 5 * 1000,
     refetchOnWindowFocus: true,
     refetchOnMount: 'always'
   });
 }
+
 
 /**
  * Hook para invalidar cache de saldos e estado financeiro completo.
