@@ -1771,8 +1771,17 @@ export function SurebetModalRoot({
       return;
     }
 
+    // TRAVA DE SALDO (fail-closed): nunca registrar acima do saldo operável.
+    if (balanceValidation.hasInsufficientBalance) {
+      toast.error("Saldo insuficiente", {
+        description: `Ajuste a(s) perna(s) ${balanceValidation.insufficientLegs.map(i => i + 1).join(", ")} antes de registrar.`,
+      });
+      return;
+    }
+
     try {
       setSaving(true);
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
