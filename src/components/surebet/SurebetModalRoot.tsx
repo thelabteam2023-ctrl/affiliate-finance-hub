@@ -24,6 +24,7 @@ import { useCurrencySnapshot, type SupportedCurrency } from "@/hooks/useCurrency
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useApostaRascunho, type ApostaRascunho, type RascunhoPernaData } from "@/hooks/useApostaRascunho";
+import { oddsToRascunhoPernas, rascunhoPernasToOdds } from "@/utils/surebetRascunhoMapper";
 import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
 import { useSurebetCalculator, type OddEntry, type OddFormEntry } from "@/hooks/useSurebetCalculator";
 import { pernasToInserts } from "@/types/apostasPernas";
@@ -665,22 +666,19 @@ export function SurebetModalRoot({
         }
       }
       
+      if (rascunho.data_aposta) setDataAposta(rascunho.data_aposta);
+
       if (rascunho.pernas && rascunho.pernas.length > 0) {
         const defaultSelecoes = getDefaultSelecoes(numPernasRascunho);
-        const rascunhoOdds: OddEntry[] = rascunho.pernas.map((perna, i) => ({
-          bookmaker_id: perna.bookmaker_id || "",
-          moeda: (perna.moeda as SupportedCurrency) || "BRL",
-          odd: perna.odd?.toString() || "",
-          stake: perna.stake?.toString() || "",
-          selecao: perna.selecao || defaultSelecoes[i] || "",
-          selecaoLivre: perna.selecao_livre || "",
-          isReference: i === 0,
-          isManuallyEdited: !!(perna.odd && perna.stake),
-          stakeOrigem: undefined,
-          additionalEntries: []
-        }));
-        
-        rascunhoOdds.forEach(o => HydrationAudit.mark(o, "draft", { originalValue: parseFloat(o.stake) || 0 }));
+        // Reconstrução canônica: preserva N sub-entradas por perna, tipo, comissão e fonte de saldo
+        const rascunhoOdds: OddEntry[] = rascunhoPernasToOdds(rascunho.pernas, defaultSelecoes);
+
+        rascunhoOdds.forEach(o => {
+          HydrationAudit.mark(o, "draft", { originalValue: parseFloat(o.stake) || 0 });
+          (o.additionalEntries || []).forEach(sub =>
+            HydrationAudit.mark(sub as any, "draft", { originalValue: parseFloat(sub.stake) || 0 })
+          );
+        });
         setOdds(rascunhoOdds);
         setDirectedProfitLegs(Array.from({ length: numPernasRascunho }, (_, i) => i));
       } else {
@@ -2446,16 +2444,10 @@ export function SurebetModalRoot({
       return;
     }
     
-    // Converter odds para formato de rascunho
-    const pernasRascunho: RascunhoPernaData[] = odds.map(entry => ({
-      bookmaker_id: entry.bookmaker_id || undefined,
-      bookmaker_nome: bookmakerSaldos.find(b => b.id === entry.bookmaker_id)?.nome,
-      selecao: entry.selecao || undefined,
-      selecao_livre: entry.selecaoLivre || undefined,
-      odd: parseFloat(entry.odd) || undefined,
-      stake: parseFloat(entry.stake) || undefined,
-      moeda: entry.moeda,
-    }));
+    // Converter odds para formato de rascunho (inclui TODAS as sub-entradas)
+    const pernasRascunho: RascunhoPernaData[] = oddsToRascunhoPernas(odds, {
+      getBookmakerNome: (id) => bookmakerSaldos.find(b => b.id === id)?.nome,
+    });
     
     const modelo = numPernas === 2 ? "1-2" : numPernas === 3 ? "1-X-2" : `${numPernas}-way`;
     
@@ -2469,6 +2461,7 @@ export function SurebetModalRoot({
       modelo_tipo: modeloTipo,
       quantidade_pernas: numPernas,
       pernas: pernasRascunho,
+      data_aposta: dataAposta || undefined,
     };
 
     let rascunhoSalvo;
@@ -2495,7 +2488,7 @@ export function SurebetModalRoot({
      // NÃO fechar o formulário automaticamente se estiver completo (deixa usuário decidir registrar)
      // Se estiver incompleto, costuma fechar para "continuar depois"
      if (!embedded && !isEstruturaCompleta) onOpenChange(false);
-  }, [odds, evento, mercado, esporte, estrategia, contexto, modeloTipo, numPernas, workspaceId, bookmakerSaldos, criarRascunho, atualizarRascunho, rascunhoIdEfetivo, onOpenChange]);
+  }, [odds, evento, mercado, esporte, estrategia, contexto, modeloTipo, numPernas, dataAposta, workspaceId, bookmakerSaldos, criarRascunho, atualizarRascunho, rascunhoIdEfetivo, onOpenChange, embedded, isEstruturaCompleta]);
 
   const getBookmakerNome = (id: string) => bookmakerSaldos.find(b => b.id === id)?.nome || "";
 

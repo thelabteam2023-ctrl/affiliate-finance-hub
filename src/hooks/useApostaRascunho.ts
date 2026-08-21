@@ -16,6 +16,19 @@ export type TipoRascunho = 'SUREBET' | 'MULTIPLA' | 'SIMPLES' | 'HEDGE';
 // Estado do rascunho
 export type EstadoRascunho = 'INCOMPLETO' | 'PRONTO_PARA_SALVAR';
 
+// Estrutura de uma sub-entrada (casa adicional dentro da MESMA perna)
+export interface RascunhoEntradaData {
+  bookmaker_id?: string;
+  bookmaker_nome?: string;
+  odd?: number;
+  stake?: number;
+  moeda?: string;
+  selecao_livre?: string;
+  fonte_saldo?: 'REAL' | 'FREEBET';
+  tipo?: 'back' | 'lay';
+  comissao?: number;
+}
+
 // Estrutura de uma perna de rascunho
 export interface RascunhoPernaData {
   bookmaker_id?: string;
@@ -25,6 +38,11 @@ export interface RascunhoPernaData {
   odd?: number;
   stake?: number;
   moeda?: string;
+  fonte_saldo?: 'REAL' | 'FREEBET';
+  tipo?: 'back' | 'lay';
+  comissao?: number;
+  /** Casas adicionais compondo a MESMA perna. Ausente em rascunhos legados. */
+  entradas_adicionais?: RascunhoEntradaData[];
 }
 
 // Estrutura de uma seleção de múltipla
@@ -58,6 +76,8 @@ export interface ApostaRascunho {
   
   // Para Surebet
   pernas?: RascunhoPernaData[];
+  /** Data/hora da operação (input datetime-local) preservada no rascunho */
+  data_aposta?: string;
   
   // Para Múltipla
   bookmaker_id?: string;
@@ -79,13 +99,19 @@ const generateId = (): string => {
   return `rascunho_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-// Verificar se perna está completa
-const isPernaCompleta = (perna: RascunhoPernaData): boolean => {
+// Verificar se uma entrada (principal ou sub-entrada) está completa
+const isEntradaCompleta = (e: { bookmaker_id?: string; odd?: number; stake?: number }): boolean => {
   return !!(
-    perna.bookmaker_id &&
-    perna.odd && perna.odd > 1 &&
-    perna.stake && perna.stake > 0
+    e.bookmaker_id &&
+    e.odd && e.odd > 1 &&
+    e.stake && e.stake > 0
   );
+};
+
+// Verificar se perna está completa (principal OU qualquer sub-entrada válida)
+const isPernaCompleta = (perna: RascunhoPernaData): boolean => {
+  if (isEntradaCompleta(perna)) return true;
+  return (perna.entradas_adicionais || []).some(isEntradaCompleta);
 };
 
 // Verificar se seleção está completa

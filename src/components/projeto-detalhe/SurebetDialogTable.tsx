@@ -54,6 +54,7 @@ import { pernasToInserts } from "@/types/apostasPernas";
 import { type MoedaOperacao } from "@/types/apostasUnificada";
 import { convertCurrency, calcularStakesMultiCurrency, type GetEffectiveRateFn } from "@/utils/convertCurrency";
 import { useApostaRascunho, type ApostaRascunho } from "@/hooks/useApostaRascunho";
+import { rascunhoPernasToOdds } from "@/utils/surebetRascunhoMapper";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
 import {
@@ -600,21 +601,10 @@ export function SurebetDialogTable({
           }
         }
         
-        // Carregar pernas do rascunho
+        // Carregar pernas do rascunho (com TODAS as sub-entradas)
         if (rascunho.pernas && rascunho.pernas.length > 0) {
           const defaultSelecoes = getDefaultSelecoes(numPernasRascunho);
-          const rascunhoOdds: OddEntry[] = rascunho.pernas.map((perna, i) => ({
-            bookmaker_id: perna.bookmaker_id || "",
-            moeda: (perna.moeda as SupportedCurrency) || "BRL",
-            odd: perna.odd?.toString() || "",
-            stake: perna.stake?.toString() || "",
-            selecao: perna.selecao || defaultSelecoes[i] || "",
-            selecaoLivre: perna.selecao_livre || "",
-            isReference: i === 0,
-            isManuallyEdited: !!(perna.odd && perna.stake),
-            stakeOrigem: undefined,
-            additionalEntries: []
-          }));
+          const rascunhoOdds: OddEntry[] = rascunhoPernasToOdds(rascunho.pernas, defaultSelecoes);
           setOdds(rascunhoOdds);
           setDirectedProfitLegs(Array.from({ length: numPernasRascunho }, (_, i) => i));
         } else {
