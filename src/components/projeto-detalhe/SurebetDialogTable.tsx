@@ -1292,9 +1292,10 @@ export function SurebetDialogTable({
         return;
       }
       const casasBloqueadas = new Set<string>([
-        ...Array.from(balanceCheck.bookmakerInsuficientes ?? []),
-        ...Array.from(balanceCheck.bookmakerFBInsuficientes ?? []),
-      ]) as Set<string>;
+        ...Array.from((balanceCheck.bookmakerInsuficientes ?? new Set()) as Set<string>),
+        ...Array.from((balanceCheck.bookmakerFBInsuficientes ?? new Set()) as Set<string>),
+      ]);
+
       if (casasBloqueadas.size > 0) {
         const nomes = Array.from(casasBloqueadas)
           .map(id => saldosValidacao.find(b => b.id === id)?.nome || "casa")
