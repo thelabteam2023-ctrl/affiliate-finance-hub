@@ -48,6 +48,7 @@ import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
 import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultiplaDialog";
 import { SurebetCard, SurebetData } from "@/components/projeto-detalhe/SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
+import { resolveRealPernaIds } from "@/utils/resolvePernaIds";
 import { SurebetDialog } from "@/components/projeto-detalhe/SurebetDialog";
 import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
 import { ApostaCard, type ApostaCardData } from "@/components/projeto-detalhe/ApostaCard";
