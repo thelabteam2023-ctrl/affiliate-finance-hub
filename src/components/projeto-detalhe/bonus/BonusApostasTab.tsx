@@ -624,7 +624,10 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
               const bmParceiro = bm?.parceiro?.nome ?? null;
               return {
                 id: e.id,
+                // `e.id` é apostas_perna_entradas.id — a liquidação precisa do id da PERNA.
+                perna_id: p.id,
                 bookmaker_id: e.bookmaker_id,
+
                 bookmaker_nome: bm?.nome || "—",
                 parceiro_nome: bmParceiro,
                 instance_identifier: bm?.instance_identifier ?? null,
