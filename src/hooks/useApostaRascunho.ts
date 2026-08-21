@@ -76,6 +76,8 @@ export interface ApostaRascunho {
   
   // Para Surebet
   pernas?: RascunhoPernaData[];
+  /** Data/hora da operação (input datetime-local) preservada no rascunho */
+  data_aposta?: string;
   
   // Para Múltipla
   bookmaker_id?: string;
