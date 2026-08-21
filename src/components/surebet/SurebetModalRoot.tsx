@@ -344,18 +344,29 @@ export function SurebetModalRoot({
  /**
   * Função pura para calcular o saldo disponível e validar stakes em tempo real.
   */
- const calcularSaldoDisponivel = (
-   pernaIndex: number,
-   allOdds: OddEntry[],
-   bookmakerSaldos: any[],
-   isEditing: boolean,
-   originalStakes: Map<string, { real: number; freebet: number }>
- ): { disponivel: number; excedeu: boolean; mensagem: string } => {
-   const entry = allOdds[pernaIndex];
-   if (!entry.bookmaker_id) return { disponivel: 0, excedeu: false, mensagem: "" };
- 
-   const selectedBk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
-   if (!selectedBk) return { disponivel: 0, excedeu: false, mensagem: "" };
+  const calcularSaldoDisponivel = (
+    pernaIndex: number,
+    allOdds: OddEntry[],
+    bookmakerSaldos: any[],
+    isEditing: boolean,
+    originalStakes: Map<string, { real: number; freebet: number }>,
+    saldosProntos: boolean = true
+  ): { disponivel: number; excedeu: boolean; mensagem: string } => {
+    const entry = allOdds[pernaIndex];
+    if (!entry.bookmaker_id) return { disponivel: 0, excedeu: false, mensagem: "" };
+  
+    const selectedBk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
+    // FAIL-CLOSED: casa sem saldo conhecido nunca pode ser liberada silenciosamente.
+    if (!selectedBk) {
+      const stakeAtual = Number(String(entry.stake).replace(/[^0-9.]/g, '')) || 0;
+      if (!saldosProntos || stakeAtual <= 0) return { disponivel: 0, excedeu: false, mensagem: "" };
+      return {
+        disponivel: 0,
+        excedeu: true,
+        mensagem: "Saldo desta casa indisponível. Selecione a casa novamente para validar o saldo.",
+      };
+    }
+
  
    const isFB = entry.fonteSaldo === 'FREEBET';
    const parseStake = (s: any) => Number(String(s).replace(/[^0-9.]/g, '')) || 0;
