@@ -246,7 +246,16 @@ export function SurebetModalRoot({
     enabled: open,
     includeZeroBalance: isEditing,
   });
+  // Lista COMPLETA (inclui casas zeradas/negativas) usada exclusivamente para
+  // validação de saldo. Sem ela, uma casa fora do filtro escaparia da trava.
+  const { data: saldosValidacao = [] } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: open,
+    includeZeroBalance: true,
+  });
+  const saldosProntos = !saldosLoading && saldosValidacao.length > 0;
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+
 
   // ============================================
   // ESTADOS DO FORMULÁRIO
@@ -335,18 +344,29 @@ export function SurebetModalRoot({
  /**
   * Função pura para calcular o saldo disponível e validar stakes em tempo real.
   */
- const calcularSaldoDisponivel = (
-   pernaIndex: number,
-   allOdds: OddEntry[],
-   bookmakerSaldos: any[],
-   isEditing: boolean,
-   originalStakes: Map<string, { real: number; freebet: number }>
- ): { disponivel: number; excedeu: boolean; mensagem: string } => {
-   const entry = allOdds[pernaIndex];
-   if (!entry.bookmaker_id) return { disponivel: 0, excedeu: false, mensagem: "" };
- 
-   const selectedBk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
-   if (!selectedBk) return { disponivel: 0, excedeu: false, mensagem: "" };
+  const calcularSaldoDisponivel = (
+    pernaIndex: number,
+    allOdds: OddEntry[],
+    bookmakerSaldos: any[],
+    isEditing: boolean,
+    originalStakes: Map<string, { real: number; freebet: number }>,
+    saldosProntos: boolean = true
+  ): { disponivel: number; excedeu: boolean; mensagem: string } => {
+    const entry = allOdds[pernaIndex];
+    if (!entry.bookmaker_id) return { disponivel: 0, excedeu: false, mensagem: "" };
+  
+    const selectedBk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
+    // FAIL-CLOSED: casa sem saldo conhecido nunca pode ser liberada silenciosamente.
+    if (!selectedBk) {
+      const stakeAtual = Number(String(entry.stake).replace(/[^0-9.]/g, '')) || 0;
+      if (!saldosProntos || stakeAtual <= 0) return { disponivel: 0, excedeu: false, mensagem: "" };
+      return {
+        disponivel: 0,
+        excedeu: true,
+        mensagem: "Saldo desta casa indisponível. Selecione a casa novamente para validar o saldo.",
+      };
+    }
+
  
    const isFB = entry.fonteSaldo === 'FREEBET';
    const parseStake = (s: any) => Number(String(s).replace(/[^0-9.]/g, '')) || 0;
@@ -425,16 +445,18 @@ export function SurebetModalRoot({
       const validation = calcularSaldoDisponivel(
         index,
         odds,
-        bookmakerSaldos,
+        saldosValidacao,
         isEditing,
-        originalStakesByBookmaker
+        originalStakesByBookmaker,
+        saldosProntos
       );
       if (validation.excedeu) {
         newErros[index] = validation.mensagem;
       }
     });
     setErrosPorPerna(newErros);
-  }, [odds, bookmakerSaldos, isEditing, originalStakesByBookmaker]);
+  }, [odds, saldosValidacao, saldosProntos, isEditing, originalStakesByBookmaker]);
+
 
   const [selectedLegForPrint, setSelectedLegForPrint] = useState<number | null>(null);
   
@@ -1749,8 +1771,17 @@ export function SurebetModalRoot({
       return;
     }
 
+    // TRAVA DE SALDO (fail-closed): nunca registrar acima do saldo operável.
+    if (balanceValidation.hasInsufficientBalance) {
+      toast.error("Saldo insuficiente", {
+        description: `Ajuste a(s) perna(s) ${balanceValidation.insufficientLegs.map(i => i + 1).join(", ")} antes de registrar.`,
+      });
+      return;
+    }
+
     try {
       setSaving(true);
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
@@ -2037,6 +2068,17 @@ export function SurebetModalRoot({
       invalidateSaldos(projetoId);
       invalidateCanonicalCaches(queryClient, projetoId);
       
+      // ANTI-DUPLICIDADE: o rascunho que originou esta operação deixa de existir
+      // (independentemente de ter vindo por URL ou de ter sido criado neste modal).
+      if (!isEditing && rascunhoIdEfetivo) {
+        try {
+          deletarRascunho(rascunhoIdEfetivo);
+        } catch (e) {
+          console.warn('[SurebetModalRoot] Falha ao remover rascunho pós-registro', e);
+        }
+        setRascunhoIdLocal(null);
+      }
+
       // Limpar refs de estado local — backend é a fonte da verdade
       setOriginalPernasSnapshot([]);
       setOriginalPernaIds([]);
@@ -2044,6 +2086,7 @@ export function SurebetModalRoot({
       
       onSuccess('save');
       if (!embedded) onOpenChange(false);
+
     } catch (error: any) {
       await logDebug({
         modulo: 'Surebet',
@@ -2316,14 +2359,21 @@ export function SurebetModalRoot({
     const bookmakerFBInsuficientes = new Set<string>();
     
     for (const [bkId, alocado] of alocadoPorBookmaker.entries()) {
-      const bookmaker = bookmakerSaldos.find(b => b.id === bkId);
-      if (!bookmaker) continue;
+      const bookmaker = saldosValidacao.find(b => b.id === bkId);
+      // FAIL-CLOSED: casa desconhecida na lista de saldos = bloqueio, nunca liberação.
+      if (!bookmaker) {
+        if (!saldosProntos) continue;
+        if (alocado.real > 0) bookmakerInsuficientes.add(bkId);
+        if (alocado.freebet > 0) bookmakerFBInsuficientes.add(bkId);
+        continue;
+      }
       const credito = isEditing ? (originalStakesByBookmaker.get(bkId) || { real: 0, freebet: 0 }) : { real: 0, freebet: 0 };
       const saldoReal = (bookmaker.saldo_operavel ?? 0) + credito.real;
       const saldoFB = (bookmaker.saldo_freebet ?? 0) + credito.freebet;
       if (alocado.real > saldoReal + 0.01) bookmakerInsuficientes.add(bkId);
       if (alocado.freebet > saldoFB + 0.01) bookmakerFBInsuficientes.add(bkId);
     }
+
     
     // Marcar entradas específicas com problema
     odds.forEach((entry, index) => {
@@ -2359,7 +2409,7 @@ export function SurebetModalRoot({
       adjustedBalances,
       bookmakerFBInsuficientes,
     };
-  }, [odds, bookmakerSaldos, isEditing, originalStakesByBookmaker]);
+  }, [odds, saldosValidacao, saldosProntos, isEditing, originalStakesByBookmaker]);
 
   // ============================================
   // RASCUNHO

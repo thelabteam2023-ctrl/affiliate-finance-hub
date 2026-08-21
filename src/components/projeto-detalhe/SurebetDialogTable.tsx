@@ -15,6 +15,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
+import { validateBalance } from "@/utils/surebetBalanceValidation";
+
 import { useCurrencySnapshot, type SupportedCurrency } from "@/hooks/useCurrencySnapshot";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -314,7 +316,15 @@ export function SurebetDialogTable({
     enabled: open,
     includeZeroBalance: isEditing || isBonusContext,
   });
+  // Lista COMPLETA (inclui casas zeradas/negativas) — usada só para validar saldo.
+  const { data: saldosValidacao = [] } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: open,
+    includeZeroBalance: true,
+  });
+  const saldosProntos = !saldosLoading && saldosValidacao.length > 0;
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+
   
   const { atualizarProgressoRollover, reverterProgressoRollover, hasActiveRolloverBonus } = useBonusBalanceManager();
   const { criarRascunho, listarPorTipo } = useApostaRascunho(projetoId, workspaceId || '');
@@ -1211,28 +1221,38 @@ export function SurebetDialogTable({
     return pernasCompletasCount >= 2 && pernasCompletasCount < numPernas;
   }, [pernasCompletasCount, numPernas]);
 
-  // Bloqueio visual do botão de registro se houver saldo insuficiente
-  const hasBalanceInconsistency = useMemo(() => {
-    if (isEditing) return false;
-    
-    for (let i = 0; i < odds.length; i++) {
-      const entry = odds[i];
-      if (entry.bookmaker_id) {
-        const stakeTotal = getStakeTotalPerna(entry);
-        if (stakeTotal > 0) {
-          const bk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
-          if (bk) {
-            let stakesOutras = 0;
-            odds.forEach((o, idx) => {
-              if (i !== idx && o.bookmaker_id === entry.bookmaker_id) stakesOutras += getStakeTotalPerna(o);
-            });
-            if (stakeTotal > (bk.saldo_operavel - stakesOutras) + 0.01) return true;
-          }
-        }
-      }
+  /**
+   * Validação agregada de saldo por casa (inclui sub-entradas e liability de LAY).
+   * FAIL-CLOSED: casa ausente na lista completa de saldos bloqueia o registro.
+   */
+  const balanceCheck = useMemo(() => {
+    if (isEditing || !saldosProntos) {
+      return { hasInsufficientBalance: false, bookmakerInsuficientes: new Set<string>(), bookmakerFBInsuficientes: new Set<string>() } as any;
     }
-    return false;
-  }, [odds, bookmakerSaldos, isEditing]);
+    return validateBalance(
+      odds.map((o: any) => ({
+        bookmaker_id: o.bookmaker_id,
+        stake: o.stake,
+        fonteSaldo: o.fonteSaldo,
+        tipo: o.tipo,
+        odd: o.odd,
+        additionalEntries: (o.additionalEntries || []).map((s: any) => ({
+          bookmaker_id: s.bookmaker_id,
+          stake: s.stake,
+          fonteSaldo: s.fonteSaldo,
+          tipo: s.tipo ?? o.tipo,
+          odd: s.odd ?? o.odd,
+        })),
+      })),
+      saldosValidacao as any,
+      false,
+      new Map()
+    );
+  }, [odds, saldosValidacao, saldosProntos, isEditing]);
+
+  // Bloqueio visual do botão de registro se houver saldo insuficiente
+  const hasBalanceInconsistency = balanceCheck.hasInsufficientBalance;
+
 
   // Pernas válidas para potencial conversão
   const pernasValidas = useMemo(() => {
@@ -1265,37 +1285,27 @@ export function SurebetDialogTable({
       return;
     }
 
-    // VALIDAÇÃO CRÍTICA DE SALDO (ANTI-REGRESSÃO)
+    // VALIDAÇÃO CRÍTICA DE SALDO (ANTI-REGRESSÃO / FAIL-CLOSED)
     if (!isEditing) {
-      for (let i = 0; i < odds.length; i++) {
-        const entry = odds[i];
-        if (entry.bookmaker_id) {
-          const stakeTotalPerna = getStakeTotalPerna(entry);
-          if (stakeTotalPerna > 0) {
-            const bk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
-            if (bk) {
-              // Obter saldo disponível base (da RPC canônica)
-              const saldoBase = bk.saldo_operavel;
-              
-              // Somar stakes de OUTRAS pernas que usam o mesmo bookmaker (uso compartilhado)
-              let stakesOutrasPernas = 0;
-              odds.forEach((other, otherIdx) => {
-                if (i !== otherIdx && other.bookmaker_id === entry.bookmaker_id) {
-                  stakesOutrasPernas += getStakeTotalPerna(other);
-                }
-              });
+      if (!saldosProntos) {
+        toast.error("Saldos ainda não carregados. Aguarde um instante e tente novamente.");
+        return;
+      }
+      const casasBloqueadas = new Set<string>([
+        ...Array.from((balanceCheck.bookmakerInsuficientes ?? new Set()) as Set<string>),
+        ...Array.from((balanceCheck.bookmakerFBInsuficientes ?? new Set()) as Set<string>),
+      ]);
 
-              const saldoDisponivelReal = saldoBase - stakesOutrasPernas;
-
-              if (stakeTotalPerna > saldoDisponivelReal + 0.01) {
-                toast.error(`Saldo insuficiente em ${bk.nome}. Disponível: ${formatCurrency(saldoDisponivelReal, bk.moeda)}. Necessário: ${formatCurrency(stakeTotalPerna, bk.moeda)}.`);
-                return;
-              }
-            }
-          }
-        }
+      if (casasBloqueadas.size > 0) {
+        const nomes = Array.from(casasBloqueadas)
+          .map(id => saldosValidacao.find(b => b.id === id)?.nome || "casa")
+          .join(", ");
+        toast.error(`Saldo insuficiente em: ${nomes}. Reduza a stake ou selecione outra casa.`);
+        return;
       }
     }
+
+
 
     try {
       setSaving(true);
