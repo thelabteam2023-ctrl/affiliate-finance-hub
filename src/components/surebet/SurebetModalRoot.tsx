@@ -2388,7 +2388,7 @@ export function SurebetModalRoot({
       adjustedBalances,
       bookmakerFBInsuficientes,
     };
-  }, [odds, bookmakerSaldos, isEditing, originalStakesByBookmaker]);
+  }, [odds, saldosValidacao, saldosProntos, isEditing, originalStakesByBookmaker]);
 
   // ============================================
   // RASCUNHO
