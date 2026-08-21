@@ -40,7 +40,13 @@ import { exposureOf } from "@/utils/pernaLayHelpers";
 export interface SurebetPernaEntry {
   /** ID da perna no banco (apostas_pernas.id) — necessário para liquidação individual */
   id?: string;
+  /**
+   * ID REAL da perna (apostas_pernas.id) quando `id` acima refere-se a uma
+   * entrada (apostas_perna_entradas.id). Usado pela resolução de liquidação.
+   */
+  perna_id?: string | null;
   bookmaker_id: string;
+
   bookmaker_nome: string;
   moeda: string;
   odd: number;

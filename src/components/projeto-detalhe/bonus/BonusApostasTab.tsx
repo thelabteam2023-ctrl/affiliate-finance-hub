@@ -48,6 +48,7 @@ import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
 import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultiplaDialog";
 import { SurebetCard, SurebetData } from "@/components/projeto-detalhe/SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
+import { resolveRealPernaIds } from "@/utils/resolvePernaIds";
 import { SurebetDialog } from "@/components/projeto-detalhe/SurebetDialog";
 import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
 import { ApostaCard, type ApostaCardData } from "@/components/projeto-detalhe/ApostaCard";
@@ -624,7 +625,10 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
               const bmParceiro = bm?.parceiro?.nome ?? null;
               return {
                 id: e.id,
+                // `e.id` é apostas_perna_entradas.id — a liquidação precisa do id da PERNA.
+                perna_id: p.id,
                 bookmaker_id: e.bookmaker_id,
+
                 bookmaker_nome: bm?.nome || "—",
                 parceiro_nome: bmParceiro,
                 instance_identifier: bm?.instance_identifier ?? null,
@@ -1213,8 +1217,13 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
           bookmaker_id: p.bookmaker_id,
           moeda: p.moeda || 'BRL',
           fonte_saldo: p.fonte_saldo || null,
+          // CRÍTICO: preservar sub-entradas (múltiplas casas na mesma perna).
+          // Sem isso a perna composta perdia bookmaker_id/entries e era descartada.
+          entries: p.entries,
+          odd_media: p.odd_media,
+          stake_total: p.stake_total,
         }))
-      ).filter(p => p.bookmaker_id && p.odd && p.odd > 0);
+      );
 
       // Coletar todas as chamadas de liquidação por perna em paralelo (sem refresh intermediário)
       const liquidacoes: Promise<void>[] = [];
@@ -1223,37 +1232,20 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
         const isWinner = quickResult.winners.includes(i);
         const resultado = quickResult.type === "all_void" ? "VOID" : (isWinner ? "GREEN" : "RED");
 
-        // Se a perna tem sub-entries (múltiplas casas na mesma seleção),
-        // liquidar CADA sub-entry individualmente com o mesmo resultado
-        const hasEntries = perna.entries && perna.entries.length > 1;
+        // A RPC opera no nível de apostas_pernas.id e trata todas as entradas
+        // atomicamente — resolver ids REAIS (deduplicados) cobre 1..N casas.
+        const realPernaIds = resolveRealPernaIds(perna as any);
+        const bookmakerIdFallback =
+          perna.bookmaker_id || perna.entries?.find(e => e.bookmaker_id)?.bookmaker_id || '';
 
-        if (hasEntries) {
-          for (const entry of perna.entries!) {
-            const entryPernaId = entry.id;
-            if (!entryPernaId || !entry.bookmaker_id) continue;
-
-            liquidacoes.push(handleSurebetPernaResolve({
-              pernaId: entryPernaId,
-              surebetId,
-              bookmarkerId: entry.bookmaker_id,
-              resultado,
-              stake: entry.stake,
-              odd: entry.odd,
-              moeda: entry.moeda || 'BRL',
-              resultadoAnterior: perna.resultado,
-              workspaceId: surebet.workspace_id!,
-              silent: true,
-              skipRefresh: true,
-            }));
-          }
-        } else {
+        for (const pernaIdReal of realPernaIds) {
           liquidacoes.push(handleSurebetPernaResolve({
-            pernaId: perna.id,
+            pernaId: pernaIdReal,
             surebetId,
-            bookmarkerId: perna.bookmaker_id!,
+            bookmarkerId: bookmakerIdFallback,
             resultado,
-            stake: perna.stake,
-            odd: perna.odd,
+            stake: perna.stake_total ?? perna.stake,
+            odd: perna.odd_media ?? perna.odd,
             moeda: perna.moeda || 'BRL',
             resultadoAnterior: perna.resultado,
             workspaceId: surebet.workspace_id!,
@@ -1262,6 +1254,7 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
           }));
         }
       }
+
 
       // Executar todas em paralelo
       await Promise.all(liquidacoes);

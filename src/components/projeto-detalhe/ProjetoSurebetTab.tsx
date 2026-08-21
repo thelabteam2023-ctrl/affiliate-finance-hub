@@ -52,6 +52,7 @@ import { toast } from "sonner";
 import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
+import { resolveRealPernaIds } from "@/utils/resolvePernaIds";
 import { publishTabRender } from "@/utils/integrityProbe";
 import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { ApostaDialog } from "./ApostaDialog";
@@ -695,13 +696,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       // A RPC `liquidar_perna_surebet_v1` opera no NÍVEL da perna (apostas_pernas.id)
       // e trata todas as entradas atomicamente — então precisamos deduplicar por
       // perna_id real e chamar a RPC UMA vez por perna.
-      const extractRealPernaId = (rawId?: string | null): string | null => {
-        if (!rawId) return null;
-        const marker = "__entrada_";
-        const idx = rawId.indexOf(marker);
-        return idx > 0 ? rawId.slice(0, idx) : rawId;
-      };
-
       for (let i = 0; i < pernas.length; i++) {
         const perna = pernas[i];
         const isWinner = result.winners.includes(i);
@@ -709,15 +703,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
         // Coleta ids reais de perna (deduplicados) — cobre tanto o caso 1 entrada
         // (perna.id direto) quanto multi-entrada (perna.entries com ids sintéticos).
-        const realPernaIds = new Set<string>();
-        const realPernaId = extractRealPernaId(perna.id);
-        if (realPernaId) realPernaIds.add(realPernaId);
-        if (perna.entries && perna.entries.length > 0) {
-          for (const entry of perna.entries) {
-            const pid = extractRealPernaId(entry.id);
-            if (pid) realPernaIds.add(pid);
-          }
-        }
+        const realPernaIds = resolveRealPernaIds(perna as any);
 
         for (const pernaIdReal of realPernaIds) {
           await handleSurebetPernaResolve({
