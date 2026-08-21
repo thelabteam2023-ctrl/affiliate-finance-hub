@@ -1061,28 +1061,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         }))
       ).filter(p => p.bookmaker_id && p.odd && p.odd > 0);
 
-      // Ids sintéticos `${pernaId}__entrada_${entradaId}` podem chegar via entries[].
-      // A RPC opera por perna (apostas_pernas.id) — deduplicar por perna real.
-      const extractRealPernaId = (rawId?: string | null): string | null => {
-        if (!rawId) return null;
-        const idx = rawId.indexOf("__entrada_");
-        return idx > 0 ? rawId.slice(0, idx) : rawId;
-      };
-
       for (let i = 0; i < pernasAgrupadas.length; i++) {
         const perna = pernasAgrupadas[i];
         const isWinner = quickResult.winners.includes(i);
         const resultado = quickResult.type === "all_void" ? "VOID" : (isWinner ? "GREEN" : "RED");
 
-        const realPernaIds = new Set<string>();
-        const realPernaId = extractRealPernaId(perna.id);
-        if (realPernaId) realPernaIds.add(realPernaId);
-        if (perna.entries && perna.entries.length > 0) {
-          for (const entry of perna.entries) {
-            const pid = extractRealPernaId(entry.id);
-            if (pid) realPernaIds.add(pid);
-          }
-        }
+        const realPernaIds = resolveRealPernaIds(perna as any);
 
         for (const pernaIdReal of realPernaIds) {
           await handleSurebetPernaResolve({
