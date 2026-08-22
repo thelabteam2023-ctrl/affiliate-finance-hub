@@ -1960,6 +1960,24 @@ export function SurebetModalRoot({
             throw new Error(`Erro ao salvar: ${rpcError.message}`);
           }
 
+          // A RPC captura exceções internamente e devolve { success:false, error }.
+          // Sem esta checagem o frontend declarava sucesso enquanto o banco fazia
+          // ROLLBACK completo (reliquidação silenciosamente não aplicada).
+          const rpcOk = (rpcResult as any)?.success;
+          if (rpcOk === false) {
+            const msg = (rpcResult as any)?.error || 'Falha desconhecida ao recalcular a operação';
+            await logDebug({
+              modulo: 'Surebet',
+              evento: 'UPDATE_ERROR',
+              payload: payloadEdit,
+              erro: rpcResult
+            });
+            console.error('[SurebetModalRoot] ❌ RPC v3 retornou success=false:', rpcResult);
+            throw new Error(msg);
+          }
+
+
+
           await logDebug({
             modulo: 'Surebet',
             evento: 'UPDATE_SUCCESS',
