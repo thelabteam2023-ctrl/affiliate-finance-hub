@@ -8,8 +8,15 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useTopBar } from "@/contexts/TopBarContext";
-import { Users, ArrowLeft, Download, Upload } from "lucide-react";
+import { Users, ArrowLeft, Download, Upload, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+
 import {
   AlertDialog,
   AlertDialogAction,
