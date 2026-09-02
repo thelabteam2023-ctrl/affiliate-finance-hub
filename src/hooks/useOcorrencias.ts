@@ -14,6 +14,7 @@ import type {
   OcorrenciaTipo,
   OcorrenciaAnexo,
 } from '@/types/ocorrencias';
+import { resolverVinculoOcorrencia } from '@/lib/ocorrencias/vinculoOcorrencia';
 
 // Helper typed clients para as novas tabelas não geradas pelo auto-gen
 const ocorrenciasTable = () => (supabase as any).from('ocorrencias');
@@ -304,6 +305,18 @@ export function useCriarOcorrencia() {
 
   return useMutation({
     mutationFn: async (payload: CriarOcorrenciaPayload) => {
+      // 0. Snapshot do projeto: se a ocorrência nasce fora de um projeto mas a casa
+      // está vinculada, congelamos esse vínculo agora (evita o falso "desvinculada").
+      let projetoSnapshot = payload.projeto_id || null;
+      if (!projetoSnapshot && payload.bookmaker_id) {
+        const { data: bkProj } = await (supabase as any)
+          .from('bookmakers')
+          .select('projeto_id')
+          .eq('id', payload.bookmaker_id)
+          .maybeSingle();
+        projetoSnapshot = bkProj?.projeto_id || null;
+      }
+
       // 1. Criar ocorrência
       const { data: ocorrencia, error } = await ocorrenciasTable()
         .insert({
@@ -317,7 +330,7 @@ export function useCriarOcorrencia() {
           executor_id: payload.executor_id,
           bookmaker_id: payload.bookmaker_id || null,
           conta_bancaria_id: payload.conta_bancaria_id || null,
-          projeto_id: payload.projeto_id || null,
+          projeto_id: projetoSnapshot,
           parceiro_id: payload.parceiro_id || null,
           aposta_id: payload.aposta_id || null,
           wallet_id: payload.wallet_id || null,
@@ -414,14 +427,13 @@ export function useAtualizarStatusOcorrencia() {
              }
           }
 
-          // Remover de projeto_perdas usando ocorrencia_id (link confiável)
-          if (ocorrencia.projeto_id) {
-            await (supabase as any)
-              .from('projeto_perdas')
-              .delete()
-              .eq('ocorrencia_id', id)
-              .eq('projeto_id', ocorrencia.projeto_id);
-          }
+          // Remover de projeto_perdas usando ocorrencia_id (link confiável e suficiente).
+          // Não filtrar por projeto_id: ocorrências sem snapshot registram a perda no
+          // projeto atual da casa e ficariam órfãs aqui.
+          await (supabase as any)
+            .from('projeto_perdas')
+            .delete()
+            .eq('ocorrencia_id', id);
 
           // Verificar se bookmaker ainda está no projeto antes de estornar saldo
           if (ocorrencia.bookmaker_id) {
@@ -432,7 +444,11 @@ export function useAtualizarStatusOcorrencia() {
               .single();
 
             if (bkInfo) {
-              const bookmakerStillLinked = bkInfo.projeto_id === ocorrencia.projeto_id;
+              // SSOT do vínculo (evita assimetria débito/estorno quando projeto_id é nulo)
+              const { vinculada: bookmakerStillLinked, projetoEfetivo } = resolverVinculoOcorrencia({
+                ocorrenciaProjetoId: ocorrencia.projeto_id,
+                bookmakerProjetoId: bkInfo.projeto_id,
+              });
 
               // Só estornar saldo se a bookmaker ainda está no projeto
               // (se desvinculada, o saldo já saiu via SAQUE_VIRTUAL)
@@ -446,7 +462,7 @@ export function useAtualizarStatusOcorrencia() {
                   userId: user!.id,
                   descricao: `Estorno de perda (cancelamento): ${ocorrencia.titulo}`,
                   perdaId: id,
-                  projetoIdSnapshot: ocorrencia.projeto_id || undefined,
+                  projetoIdSnapshot: projetoEfetivo,
                 });
               }
 
@@ -711,16 +727,15 @@ export function useResolverOcorrenciaComFinanceiro() {
             if (bkInfo) {
               bkMoeda = bkInfo.moeda || bkMoeda;
               bkWorkspaceId = bkInfo.workspace_id || bkWorkspaceId;
-              // Prioridade: projeto_id da ocorrência (snapshot) > projeto_id atual da bookmaker
-              bkProjetoId = ocorrencia.projeto_id || bkInfo.projeto_id || undefined;
               bkSaldoIrrecuperavel = Number(bkInfo.saldo_irrecuperavel || 0);
-              
-              // Detectar se a bookmaker ainda está vinculada ao projeto da ocorrência
-              // MELHORIA: Se a ocorrência não tinha snapshot de projeto_id, mas a bookmaker está em um projeto,
-              // assumimos que ela ainda está vinculada para permitir o débito de saldo.
-              bookmakerStillLinked = ocorrencia.projeto_id 
-                ? bkInfo.projeto_id === ocorrencia.projeto_id
-                : !!bkInfo.projeto_id;
+
+              // SSOT do vínculo (snapshot > projeto atual da casa)
+              const vinculo = resolverVinculoOcorrencia({
+                ocorrenciaProjetoId: ocorrencia.projeto_id,
+                bookmakerProjetoId: bkInfo.projeto_id,
+              });
+              bkProjetoId = vinculo.projetoEfetivo;
+              bookmakerStillLinked = vinculo.vinculada;
             }
           }
 
@@ -837,14 +852,13 @@ export function useReabrirOcorrencia() {
 
       // 2. Se houve perda registrada, estornar do ledger e projeto_perdas
       if (valorPerda > 0 && perdaRegistrada) {
-        // Remover entrada de projeto_perdas vinculada a esta ocorrência (via ocorrencia_id)
-        if (ocorrencia.projeto_id) {
-          await (supabase as any)
-            .from('projeto_perdas')
-            .delete()
-            .eq('ocorrencia_id', id)
-            .eq('projeto_id', ocorrencia.projeto_id);
-        }
+        // Remover entrada de projeto_perdas vinculada a esta ocorrência (via ocorrencia_id).
+        // ocorrencia_id é chave suficiente — filtrar por projeto_id deixaria órfãs as
+        // perdas registradas no projeto atual da casa (ocorrência sem snapshot).
+        await (supabase as any)
+          .from('projeto_perdas')
+          .delete()
+          .eq('ocorrencia_id', id);
 
         // Registrar estorno no ledger (PERDA_REVERSAO)
         let bkMoeda = ocorrencia.moeda || 'BRL';
@@ -862,8 +876,13 @@ export function useReabrirOcorrencia() {
           if (bkInfo) {
             bkMoeda = bkInfo.moeda || bkMoeda;
             bkWorkspaceId = bkInfo.workspace_id || bkWorkspaceId;
-            bkProjetoId = ocorrencia.projeto_id || bkInfo.projeto_id || undefined;
-            bookmakerStillLinked = bkInfo.projeto_id === ocorrencia.projeto_id;
+            // SSOT do vínculo — simétrico ao débito feito na resolução
+            const vinculo = resolverVinculoOcorrencia({
+              ocorrenciaProjetoId: ocorrencia.projeto_id,
+              bookmakerProjetoId: bkInfo.projeto_id,
+            });
+            bkProjetoId = vinculo.projetoEfetivo;
+            bookmakerStillLinked = vinculo.vinculada;
 
             // Acumulador `saldo_irrecuperavel` DESCONTINUADO — nada a reverter aqui.
           }

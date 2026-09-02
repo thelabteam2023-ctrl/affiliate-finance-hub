@@ -18,6 +18,7 @@ import { Loader2, CheckCircle, XCircle, AlertTriangle, CalendarIcon, Info } from
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { resolverVinculoOcorrencia } from '@/lib/ocorrencias/vinculoOcorrencia';
 
 export type ResultadoFinanceiro = 'sem_impacto' | 'perda_confirmada' | 'perda_parcial';
 
@@ -69,7 +70,13 @@ export function ResolucaoFinanceiraDialog({
 
       if (bk) {
         setSaldoBookmaker(bk.saldo_atual);
-        setBookmakerDesvinculada(bk.projeto_id !== projeto_id);
+        // SSOT: sem snapshot de projeto na ocorrência, vale o projeto atual da casa.
+        setBookmakerDesvinculada(
+          resolverVinculoOcorrencia({
+            ocorrenciaProjetoId: projeto_id,
+            bookmakerProjetoId: bk.projeto_id,
+          }).desvinculada
+        );
       }
 
       // 2. Perdas já registradas em outras ocorrências abertas da mesma bookmaker
