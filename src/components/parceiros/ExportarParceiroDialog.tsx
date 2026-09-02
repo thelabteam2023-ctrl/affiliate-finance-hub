@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Download, ShieldAlert, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Download, ShieldAlert, Loader2, Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,8 +14,14 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { buildPartnerExport, downloadExportFile } from "@/lib/partnerPortability/buildExport";
+import {
+  BATCH_LIMIT_PLAIN,
+  BATCH_LIMIT_WITH_CREDENTIALS,
+  buildPartnerBundle,
+  downloadBundleFile,
+} from "@/lib/partnerPortability/buildExport";
 import {
   CATEGORY_LABELS,
   DEFAULT_CATEGORIES,
@@ -26,7 +32,9 @@ import {
 interface ExportarParceiroDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  parceiroId: string | null;
+  /** IDs dos parceiros a exportar (1 ou N). */
+  parceiroIds: string[];
+  /** Nome usado no arquivo quando houver apenas um parceiro. */
   parceiroNome: string;
   workspaceId: string | null;
 }
@@ -40,7 +48,7 @@ const GROUPS: { title: string; keys: CategoryKey[] }[] = [
 export function ExportarParceiroDialog({
   open,
   onOpenChange,
-  parceiroId,
+  parceiroIds,
   parceiroNome,
   workspaceId,
 }: ExportarParceiroDialogProps) {
@@ -49,6 +57,14 @@ export function ExportarParceiroDialog({
   const [passphrase, setPassphrase] = useState("");
   const [passphraseConfirm, setPassphraseConfirm] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [progress, setProgress] = useState({ done: 0, total: 0, current: null as string | null });
+
+  useEffect(() => {
+    if (open) setProgress({ done: 0, total: 0, current: null });
+  }, [open]);
+
+  const total = parceiroIds.length;
+  const isBatch = total > 1;
 
   const toggle = (key: CategoryKey) => {
     setCategories((prev) => {
@@ -63,19 +79,34 @@ export function ExportarParceiroDialog({
   const passphraseValid =
     !needsPassphrase || (passphrase.length >= 8 && passphrase === passphraseConfirm);
 
+  const limit = needsPassphrase ? BATCH_LIMIT_WITH_CREDENTIALS : BATCH_LIMIT_PLAIN;
+  const overLimit = total > limit;
+
+  const progressPct = useMemo(
+    () => (progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0),
+    [progress],
+  );
+
   const handleExport = async () => {
-    if (!parceiroId || !workspaceId) return;
+    if (total === 0 || !workspaceId) return;
     setExporting(true);
+    setProgress({ done: 0, total, current: null });
     try {
-      const envelope = await buildPartnerExport(
-        { parceiroId, workspaceId },
+      const { bundle, failures } = await buildPartnerBundle(
+        parceiroIds,
+        workspaceId,
         categories,
         needsPassphrase ? passphrase : undefined,
+        (p) => setProgress(p),
       );
-      downloadExportFile(envelope, parceiroNome);
+      downloadBundleFile(bundle, parceiroNome);
       toast({
-        title: "Pacote exportado",
-        description: "Arquivo .labbet gerado. Guarde-o com segurança.",
+        title: failures.length > 0 ? "Exportado com avisos" : "Pacote exportado",
+        description:
+          failures.length > 0
+            ? `${bundle.partners.length} parceiro(s) exportado(s); ${failures.length} falharam.`
+            : `${bundle.partners.length} parceiro(s) no arquivo .labbet. Guarde-o com segurança.`,
+        variant: failures.length > 0 ? "default" : undefined,
       });
       onOpenChange(false);
       setPassphrase("");
@@ -95,10 +126,18 @@ export function ExportarParceiroDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Exportar parceiro</DialogTitle>
+          <DialogTitle>{isBatch ? "Exportar parceiros" : "Exportar parceiro"}</DialogTitle>
           <DialogDescription>
-            {parceiroNome} — selecione exatamente o que deseja transportar. Nenhum dado
-            operacional ou financeiro (saldos, apostas, lançamentos) é exportado.
+            {isBatch ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5" />
+                {total} parceiros selecionados
+              </span>
+            ) : (
+              parceiroNome
+            )}{" "}
+            — selecione exatamente o que deseja transportar. Nenhum dado operacional ou financeiro
+            (saldos, apostas, lançamentos) é exportado.
           </DialogDescription>
         </DialogHeader>
 
@@ -120,6 +159,17 @@ export function ExportarParceiroDialog({
               ))}
             </div>
           ))}
+
+          {overLimit && (
+            <Alert variant="destructive">
+              <ShieldAlert className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Limite de {limit} parceiros por exportação
+                {needsPassphrase ? " com credenciais" : ""}. Reduza a seleção
+                {needsPassphrase ? " ou desmarque as credenciais" : ""} para continuar.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {needsPassphrase && (
             <>
@@ -161,15 +211,29 @@ export function ExportarParceiroDialog({
               </div>
             </>
           )}
+
+          {exporting && progress.total > 0 && (
+            <div className="space-y-1.5">
+              <Progress value={progressPct} className="h-1.5" />
+              <p className="text-[11px] text-muted-foreground">
+                {progress.done}/{progress.total} processados
+                {progress.current ? ` — ${progress.current}` : ""}
+              </p>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={exporting}>
             Cancelar
           </Button>
-          <Button onClick={handleExport} disabled={exporting || !passphraseValid || !parceiroId} className="gap-2">
+          <Button
+            onClick={handleExport}
+            disabled={exporting || !passphraseValid || total === 0 || overLimit}
+            className="gap-2"
+          >
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            Exportar
+            {isBatch ? `Exportar ${total}` : "Exportar"}
           </Button>
         </DialogFooter>
       </DialogContent>
