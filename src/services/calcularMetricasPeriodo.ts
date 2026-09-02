@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getOperationalDateRangeForQuery, getCivilDateRangeForQuery } from "@/utils/dateUtils";
 import { derivarCotacoesFromConvertFn } from "@/services/fetchProjetosLucroOperacionalKpi";
 import { parseISO } from "date-fns";
+import { valorEfetivoSaque } from "@/lib/ledger/valorEfetivoSaque";
 
 /** Função de conversão de moeda (valor, moedaOrigem) => valorConvertido */
 export type ConvertToConsolidationFn = (valor: number, moedaOrigem: string) => number;
@@ -150,7 +151,7 @@ export async function calcularMetricasPeriodo({
     // Saques confirmados no período (cash_ledger usa UTC midnight)
     supabase
       .from("cash_ledger")
-      .select("valor, valor_confirmado, moeda")
+      .select("valor, valor_confirmado, tipo_moeda, moeda")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
@@ -230,7 +231,7 @@ export async function calcularMetricasPeriodo({
   const normalizeMoeda = (moeda: string) => ['USDT', 'USDC'].includes(moeda) ? 'USD' : moeda;
 
   const totalSaques = (saquesResult.data || []).reduce((acc, s: any) => {
-    const valor = Number(s.valor_confirmado ?? s.valor ?? 0);
+    const valor = valorEfetivoSaque(s);
     return acc + convert(valor, normalizeMoeda(s.moeda || 'BRL'));
   }, 0);
 

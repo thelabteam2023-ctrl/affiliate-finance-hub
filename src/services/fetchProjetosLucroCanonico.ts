@@ -18,6 +18,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { calcularLucroCanonicoFromRpc } from "@/hooks/useKpiBreakdowns";
 import type { ProjetoDashboardRawData } from "@/hooks/useProjetoDashboardData";
+import { valorEfetivoSaque } from "@/lib/ledger/valorEfetivoSaque";
 
 export interface LucroCanonicoResultado {
   /** Lucro consolidado na MOEDA do projeto (ex: BRL para projeto BRL, USD para projeto USD) */
@@ -263,7 +264,7 @@ export async function fetchProjetosLucroCanonico({
     .limit(50000);
   let saquesQuery = supabase
     .from("cash_ledger")
-    .select("valor, valor_confirmado, moeda, projeto_id_snapshot")
+    .select("valor, valor_confirmado, tipo_moeda, moeda, projeto_id_snapshot")
     .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
     .eq("status", "CONFIRMADO")
     .in("projeto_id_snapshot", projetoIds)
@@ -299,7 +300,7 @@ export async function fetchProjetosLucroCanonico({
   (saquesRes.data || []).forEach((s: any) => {
     const pid = s.projeto_id_snapshot;
     if (!pid) return;
-    const v = Number(s.valor_confirmado ?? s.valor) || 0;
+    const v = valorEfetivoSaque(s as any);
     (saquesByProjeto[pid] ||= []).push({ valor: v, moeda: (s.moeda || "BRL").toUpperCase() });
   });
 

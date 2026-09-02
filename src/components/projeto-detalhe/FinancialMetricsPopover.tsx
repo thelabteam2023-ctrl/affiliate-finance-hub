@@ -30,6 +30,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Progress } from "@/components/ui/progress";
 import { Lightbulb, PiggyBank, Banknote, Target } from "lucide-react";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { valorEfetivoSaque, ganhoConfirmacaoSaque } from "@/lib/ledger/valorEfetivoSaque";
 
 
 interface FinancialMetricsPopoverProps {
@@ -130,7 +131,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
   const timelineQ = applyDateFilter(
     supabase
       .from("cash_ledger")
-      .select("valor, valor_confirmado, moeda, data_transacao, tipo_transacao, destino_bookmaker_id, origem_bookmaker_id")
+      .select("valor, valor_confirmado, tipo_moeda, moeda, data_transacao, tipo_transacao, destino_bookmaker_id, origem_bookmaker_id")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL", "SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
@@ -190,7 +191,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
       perdaCambial: (perdasFx.data || []) as { valor: number; moeda: string }[],
       ganhoCambial: (ganhosFx.data || []) as { valor: number; moeda: string }[],
     },
-    breakEvenTimeline: (timelineData || []) as { valor: number; valor_confirmado?: number | null; moeda: string; data_transacao: string; tipo_transacao: string; destino_bookmaker_id?: string | null; origem_bookmaker_id?: string | null }[],
+    breakEvenTimeline: (timelineData || []) as { valor: number; valor_confirmado?: number | null; tipo_moeda?: string | null; moeda: string; data_transacao: string; tipo_transacao: string; destino_bookmaker_id?: string | null; origem_bookmaker_id?: string | null }[],
     bonusGanhos: (bonusGanhosData || []) as { bonus_amount: number; currency: string }[],
     apostasPorEstrategia: apostasArr,
     apostasPernasMap: pernasMap,
@@ -602,7 +603,7 @@ function DepositosCollapsible({ metrics, formatCurrency, onDrillDown }: { metric
 
 /** Helper to compute break-even from a timeline */
 function computeBreakEven(
-  timeline: { valor: number; valor_confirmado?: number | null; moeda: string; data_transacao: string; tipo_transacao: string }[],
+  timeline: { valor: number; valor_confirmado?: number | null; tipo_moeda?: string | null; moeda: string; data_transacao: string; tipo_transacao: string }[],
   convertToConsolidationOficial: (valor: number, moeda: string) => number,
 ) {
   let cumulativeFlow = 0;
@@ -612,7 +613,7 @@ function computeBreakEven(
     if (!firstTransactionDate) firstTransactionDate = entry.data_transacao;
     const isSaque = entry.tipo_transacao === "SAQUE" || entry.tipo_transacao === "SAQUE_VIRTUAL";
     const valor = isSaque
-      ? convertToConsolidationOficial(entry.valor_confirmado ?? entry.valor, entry.moeda)
+      ? convertToConsolidationOficial(valorEfetivoSaque(entry), entry.moeda)
       : convertToConsolidationOficial(entry.valor, entry.moeda);
     cumulativeFlow += isSaque ? valor : -valor;
     if (cumulativeFlow >= 0 && !breakEvenDate) breakEvenDate = entry.data_transacao;
@@ -683,11 +684,11 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
 
     // ─── Saques confirmados: total + breakdown ───
     const saquesRecebidos = rawMetrics.saques.reduce(
-      (acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0
+      (acc, s) => acc + convertToConsolidationOficial(valorEfetivoSaque(s), s.moeda), 0
     );
     const saquesInvestidor = rawMetrics.saques
       .filter(s => s.origem_bookmaker_id && rawMetrics.investorBookmakerIds.includes(s.origem_bookmaker_id))
-      .reduce((acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0);
+      .reduce((acc, s) => acc + convertToConsolidationOficial(valorEfetivoSaque(s), s.moeda), 0);
     const saquesInterno = saquesRecebidos - saquesInvestidor;
 
     // ─── Saques pendentes: total + breakdown ───
@@ -700,12 +701,9 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const saquesPendentesInterno = saquesPendentes - saquesPendentesInvestidor;
 
     const ganhoConfirmacao = rawMetrics.saques.reduce((acc, s) => {
-      // Exclude crypto saques: valor_confirmado stores raw crypto amount, not fiat equivalent
-      if (s.tipo_moeda === 'CRYPTO') return acc;
-      if (s.valor_confirmado != null && Math.abs(s.valor_confirmado - s.valor) >= 0.01) {
-        return acc + convertToConsolidationOficial(s.valor_confirmado - s.valor, s.moeda);
-      }
-      return acc;
+      const delta = ganhoConfirmacaoSaque(s);
+      if (!delta) return acc;
+      return acc + convertToConsolidationOficial(delta, s.moeda);
     }, 0);
 
     const r = rawMetrics.reconciliation;

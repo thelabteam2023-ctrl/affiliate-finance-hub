@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { valorEfetivoSaque, ganhoConfirmacaoSaque } from "@/lib/ledger/valorEfetivoSaque";
 
 interface ProjetoFinancialMetricsCardProps {
   projetoId: string;
@@ -94,7 +95,7 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
   // Timeline: all deposits and withdrawals with dates for break-even calculation
   const { data: timelineData } = await supabase
     .from("cash_ledger")
-    .select("valor, valor_confirmado, moeda, data_transacao, tipo_transacao")
+    .select("valor, valor_confirmado, tipo_moeda, moeda, data_transacao, tipo_transacao")
     .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL", "SAQUE", "SAQUE_VIRTUAL"])
     .eq("status", "CONFIRMADO")
     .eq("projeto_id_snapshot", projetoId)
@@ -142,7 +143,7 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       .filter(d => d.tipo_transacao === 'DEPOSITO')
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
     const saquesRecebidos = rawMetrics.saques.reduce(
-      (acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0
+      (acc, s) => acc + convertToConsolidationOficial(valorEfetivoSaque(s), s.moeda), 0
     );
     const saquesPendentes = rawMetrics.saquesPendentes.reduce(
       (acc, s) => acc + convertToConsolidationOficial(s.valor, s.moeda), 0
@@ -151,11 +152,9 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     // Ganho de confirmação: diferença entre valor_confirmado e valor nos saques
     // Exclude crypto: valor_confirmado stores raw crypto amount, not fiat equivalent
     const ganhoConfirmacao = rawMetrics.saques.reduce((acc, s) => {
-      if (s.tipo_moeda === 'CRYPTO') return acc;
-      if (s.valor_confirmado != null && Math.abs(s.valor_confirmado - s.valor) >= 0.01) {
-        return acc + convertToConsolidationOficial(s.valor_confirmado - s.valor, s.moeda);
-      }
-      return acc;
+      const delta = ganhoConfirmacaoSaque(s);
+      if (!delta) return acc;
+      return acc + convertToConsolidationOficial(delta, s.moeda);
     }, 0);
 
     // Reconciliation
@@ -197,7 +196,7 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       if (!firstTransactionDate) firstTransactionDate = entry.data_transacao;
       const isSaque = entry.tipo_transacao === "SAQUE" || entry.tipo_transacao === "SAQUE_VIRTUAL";
       const valor = isSaque
-        ? convertToConsolidationOficial(entry.valor_confirmado ?? entry.valor, entry.moeda)
+        ? convertToConsolidationOficial(valorEfetivoSaque(entry), entry.moeda)
         : convertToConsolidationOficial(entry.valor, entry.moeda);
       
       cumulativeFlow += isSaque ? valor : -valor;

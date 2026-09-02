@@ -33,6 +33,7 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getCurrencySymbol } from "@/types/currency";
+import { valorEfetivoSaque } from "@/lib/ledger/valorEfetivoSaque";
 
 /**
  * Indicator configuration: maps each financial metric to its ledger query
@@ -411,7 +412,7 @@ export function FinancialDrillDownModal({
       if (config?.isConfirmationGain) {
         valorNativo = (t.valor_confirmado ?? t.valor) - t.valor;
       } else if (indicatorKey === "saquesRecebidos") {
-        valorNativo = t.valor_confirmado ?? t.valor;
+        valorNativo = valorEfetivoSaque(t);
       } else {
         valorNativo = t.valor;
       }

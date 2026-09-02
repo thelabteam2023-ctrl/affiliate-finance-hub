@@ -6,6 +6,7 @@ import type { FinanceiroData } from "@/hooks/useFinanceiroData";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchProjetosLucroCanonico } from "@/services/fetchProjetosLucroCanonico";
+import { valorEfetivoSaque } from "@/lib/ledger/valorEfetivoSaque";
 
 export interface MesFinanceiro {
   mesKey: string;           // "2025-03"
@@ -258,7 +259,7 @@ export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBasel
       const k = toKey(l.data_transacao);
       const moeda = (l.moeda || "BRL").toUpperCase();
       if (tt === "SAQUE" || tt === "SAQUE_VIRTUAL") {
-        const raw = Number(l.valor_confirmado ?? l.valor) || 0;
+        const raw = valorEfetivoSaque(l);
         const valorBRL = conv(raw, moeda);
         bump(k, m => { m.fluxoLiquido += valorBRL; });
       } else if (tt === "DEPOSITO" || (tt === "DEPOSITO_VIRTUAL" && l.origem_tipo === "MIGRACAO")) {

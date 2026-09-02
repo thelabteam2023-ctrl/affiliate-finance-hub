@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Skeleton } from "@/components/ui/skeleton";
 import { calcularMetricasPeriodo } from "@/services/calcularMetricasPeriodo";
 import { format } from "date-fns";
+import { valorEfetivoSaque } from "@/lib/ledger/valorEfetivoSaque";
 
 interface DateRangeResult {
   start: Date;
@@ -57,7 +58,7 @@ export function FinancialSummaryCompact({ projetoId, dateRange }: FinancialSumma
         (acc, d) => acc + convertToConsolidationOficial(Number(d.valor || 0), d.moeda || 'BRL'), 0
       );
     const saquesRecebidos = rawData.saques.reduce(
-      (acc, s) => acc + convertToConsolidationOficial(Number(s.valor_confirmado ?? s.valor), s.moeda || 'BRL'), 0
+      (acc, s) => acc + convertToConsolidationOficial(valorEfetivoSaque(s as any), s.moeda || 'BRL'), 0
     );
 
     const lucro = saquesRecebidos - depositosEfetivos;
