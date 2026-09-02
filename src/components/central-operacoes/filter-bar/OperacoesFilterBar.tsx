@@ -218,6 +218,24 @@ export function OperacoesFilterBar<T>({
         )}
       </div>
 
+      {/* Aviso explícito quando filtros persistidos escondem itens.
+          Sem isso, um saque novo some da lista sem nenhum sinal visual. */}
+      {f.hiddenByFilters > 0 && (
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-2.5 py-1.5">
+          <span className="text-[11px] text-amber-500">
+            {f.hiddenByFilters} {f.hiddenByFilters === 1 ? "item oculto" : "itens ocultos"} pelos filtros
+            {" "}({f.filtered.length} de {f.totalItems})
+          </span>
+          <button
+            type="button"
+            onClick={f.clearAll}
+            className="text-[10px] font-semibold text-amber-500 hover:text-amber-400 underline underline-offset-2"
+          >
+            Limpar filtros
+          </button>
+        </div>
+      )}
+
       {children(f.filtered)}
     </div>
   );

@@ -64,7 +64,9 @@ const saqueAdapter: ItemAdapter<SaquePendenteItem> = {
   getMoeda: (s) => s.moeda_origem || s.moeda || "BRL",
   getProjeto: (s) => s.projeto_nome || null,
   getValor: (s) => s.valor_origem || s.valor || 0,
-  getCreatedAt: (s) => s.data_transacao,
+  // created_at é o timestamp real; data_transacao é data civil (00:00 UTC) e
+  // distorce bucket de idade e ordenação.
+  getCreatedAt: (s) => s.created_at || s.data_transacao,
   getSearchText: (s) =>
     [s.bookmaker_nome, s.parceiro_nome, s.wallet_nome, s.wallet_exchange, s.banco_nome, s.projeto_nome, s.coin, s.descricao]
       .filter(Boolean)
