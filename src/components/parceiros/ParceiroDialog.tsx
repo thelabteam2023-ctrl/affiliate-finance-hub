@@ -68,6 +68,7 @@ interface ParceiroDialogProps {
 
 export default function ParceiroDialog({ open, onClose, parceiro, viewMode = false, initialTab = "dados" }: ParceiroDialogProps) {
   const { workspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
