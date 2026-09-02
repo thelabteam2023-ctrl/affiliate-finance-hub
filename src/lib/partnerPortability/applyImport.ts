@@ -310,6 +310,27 @@ export async function applyPartnerImport(options: ImportOptions): Promise<Import
       } else {
         bookmakersImported++;
         existingKeys.add(key);
+
+        const catalogoId = catalogByName.get(normalizeName(house.catalogo_nome || house.nome));
+        if (!catalogoId) {
+          lines.push({
+            label: `Casa ${house.nome}`,
+            ok: false,
+            detail: `não encontrada no catálogo do destino — criada avulsa com estado "${labelBookmakerStatus(state.status)}"`,
+          });
+        } else if (state.downgradedFrom) {
+          lines.push({
+            label: `Casa ${house.nome}`,
+            ok: true,
+            detail: `estado "${labelBookmakerStatus(state.downgradedFrom)}" é transitório na origem — importada como "${labelBookmakerStatus(state.status)}"`,
+          });
+        } else if (state.status !== "ativo") {
+          lines.push({
+            label: `Casa ${house.nome}`,
+            ok: true,
+            detail: `estado preservado: ${labelBookmakerStatus(state.status)}`,
+          });
+        }
       }
     }
   }
