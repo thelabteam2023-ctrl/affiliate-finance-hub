@@ -288,7 +288,14 @@ export function ImportarParceiroDialog({
                         {entry.envelope.banking.length} banco(s) · {entry.envelope.crypto.length}{" "}
                         wallet(s) · {entry.envelope.bookmakers.length} casa(s)
                       </p>
+                      {entry.envelope.bookmakers.length > 0 && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Estados:{" "}
+                          {summarizeStates(entry.envelope.bookmakers)}
+                        </p>
+                      )}
                     </div>
+
                     <Button
                       size="sm"
                       variant={entry.include ? "outline" : "ghost"}
