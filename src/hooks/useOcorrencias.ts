@@ -863,8 +863,13 @@ export function useReabrirOcorrencia() {
           if (bkInfo) {
             bkMoeda = bkInfo.moeda || bkMoeda;
             bkWorkspaceId = bkInfo.workspace_id || bkWorkspaceId;
-            bkProjetoId = ocorrencia.projeto_id || bkInfo.projeto_id || undefined;
-            bookmakerStillLinked = bkInfo.projeto_id === ocorrencia.projeto_id;
+            // SSOT do vínculo — simétrico ao débito feito na resolução
+            const vinculo = resolverVinculoOcorrencia({
+              ocorrenciaProjetoId: ocorrencia.projeto_id,
+              bookmakerProjetoId: bkInfo.projeto_id,
+            });
+            bkProjetoId = vinculo.projetoEfetivo;
+            bookmakerStillLinked = vinculo.vinculada;
 
             // Acumulador `saldo_irrecuperavel` DESCONTINUADO — nada a reverter aqui.
           }
