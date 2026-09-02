@@ -8,6 +8,13 @@
       "when": 1788324623300,
       "tag": "0000_enable_realtime_parceiros",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788327478510,
+      "tag": "0001_bookmakers_portability_ext_id",
+      "breakpoints": true
     }
   ]
 }

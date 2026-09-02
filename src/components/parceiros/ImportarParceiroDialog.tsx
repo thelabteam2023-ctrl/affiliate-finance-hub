@@ -20,7 +20,13 @@ import { labelBookmakerStatus, resolveImportState } from "@/lib/partnerPortabili
 import { maskCPFPartial } from "@/lib/validators";
 import { parseImportFile, type ExportEnvelope } from "@/lib/partnerPortability/schema";
 import { findPartnerMatch, MATCH_LABEL, type PartnerMatch } from "@/lib/partnerPortability/matchPartner";
-import { applyPartnerImport, type ImportReport, type ImportResolution } from "@/lib/partnerPortability/applyImport";
+import {
+  applyPartnerImport,
+  planBookmakerImport,
+  type BookmakerPlan,
+  type ImportReport,
+  type ImportResolution,
+} from "@/lib/partnerPortability/applyImport";
 
 interface ImportarParceiroDialogProps {
   open: boolean;
@@ -36,6 +42,8 @@ interface PartnerEntry {
   match: PartnerMatch | null;
   resolution: ImportResolution;
   include: boolean;
+  /** Preview das casas contra o parceiro encontrado no destino. */
+  housePlan: BookmakerPlan;
 }
 
 interface PartnerOutcome {
@@ -104,11 +112,13 @@ export function ImportarParceiroDialog({
       const built: PartnerEntry[] = [];
       for (const envelope of parsed.partners) {
         const match = await findPartnerMatch(envelope, workspaceId);
+        const housePlan = await planBookmakerImport(envelope, workspaceId, match?.id ?? null);
         built.push({
           envelope,
           match,
           resolution: match ? "update" : "create",
           include: true,
+          housePlan,
         });
       }
       setEntries(built);
@@ -210,10 +220,11 @@ export function ImportarParceiroDialog({
           bancos: acc.bancos + (o.report?.banksImported ?? 0),
           wallets: acc.wallets + (o.report?.walletsImported ?? 0),
           casas: acc.casas + (o.report?.bookmakersImported ?? 0),
+          casasExistentes: acc.casasExistentes + (o.report?.bookmakersExisting ?? 0),
           erros: acc.erros,
         };
       },
-      { criados: 0, atualizados: 0, bancos: 0, wallets: 0, casas: 0, erros: 0 },
+      { criados: 0, atualizados: 0, bancos: 0, wallets: 0, casas: 0, casasExistentes: 0, erros: 0 },
     );
   }, [outcomes]);
 
@@ -307,6 +318,25 @@ export function ImportarParceiroDialog({
                           {summarizeStates(entry.envelope.bookmakers)}
                         </p>
                       )}
+                      {entry.envelope.bookmakers.length > 0 && (
+                        <div className="mt-1 space-y-0.5">
+                          <p className="text-[11px] text-muted-foreground">
+                            Casas:{" "}
+                            {entry.resolution === "create"
+                              ? `${entry.envelope.bookmakers.length} nova(s) — parceiro novo`
+                              : `${entry.housePlan.existentes} já existente(s) · ${entry.housePlan.novas} nova(s)`}
+                          </p>
+                          {entry.resolution === "update" &&
+                            entry.housePlan.items.map((item, i) => (
+                              <p key={i} className="text-[11px] pl-2">
+                                <span className="text-muted-foreground">{item.nome}</span>{" "}
+                                <span className={item.exists ? "text-warning" : "text-success"}>
+                                  {item.exists ? "— já existe, não será duplicada" : "— nova, será criada"}
+                                </span>
+                              </p>
+                            ))}
+                        </div>
+                      )}
                     </div>
 
                     <Button
@@ -344,6 +374,13 @@ export function ImportarParceiroDialog({
                     </div>
                   ) : (
                     <p className="text-[11px] text-success">Será criado neste workspace</p>
+                  )}
+
+                  {entry.match && entry.resolution === "create" && (
+                    <p className="text-[11px] text-warning">
+                      Atenção: um novo registro de parceiro será criado e todas as casas do arquivo
+                      serão recriadas nele, mesmo que já existam em {entry.match.nome}.
+                    </p>
                   )}
                 </div>
               ))}
@@ -393,7 +430,13 @@ export function ImportarParceiroDialog({
             />
             <Line ok={aggregate.bancos > 0} text={`${aggregate.bancos} conta(s) bancária(s)`} />
             <Line ok={aggregate.wallets > 0} text={`${aggregate.wallets} carteira(s) cripto`} />
-            <Line ok={aggregate.casas > 0} text={`${aggregate.casas} casa(s)`} />
+            <Line ok={aggregate.casas > 0} text={`${aggregate.casas} casa(s) criada(s)`} />
+            {aggregate.casasExistentes > 0 && (
+              <Line
+                ok
+                text={`${aggregate.casasExistentes} casa(s) já existente(s) — não duplicada(s)`}
+              />
+            )}
             {aggregate.erros > 0 && <Line ok={false} text={`${aggregate.erros} parceiro(s) com erro`} />}
 
             <Separator />

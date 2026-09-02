@@ -3,12 +3,13 @@ import { encryptPassword } from "@/utils/cryptoPassword";
 import { openSecurePayload } from "./secureBlob";
 import type { ExportEnvelope } from "./schema";
 import { labelBookmakerStatus, resolveImportState } from "./bookmakerState";
+import {
+  buildBookmakerIdentityKey,
+  canonicalText,
+  normalizeBookmakerCurrency,
+} from "./bookmakerIdentity";
 
 const BANK_CURRENCIES = ["BRL", "USD", "EUR", "GBP", "MXN", "MYR", "ARS", "COP"];
-const BOOKMAKER_CURRENCIES = [
-  "BRL", "USD", "EUR", "GBP", "MYR", "MXN", "ARS", "COP", "CAD", "AUD",
-  "JPY", "CLP", "PEN", "TRY", "INR", "USDT", "USDC", "BTC", "ETH",
-];
 
 export type ImportResolution = "create" | "update";
 
@@ -38,6 +39,8 @@ export interface ImportReport {
   walletsSkipped: number;
   bookmakersImported: number;
   bookmakersSkipped: number;
+  /** Casas que já existiam para o parceiro no destino (não duplicadas). */
+  bookmakersExisting: number;
 }
 
 function normalizeName(value: string | null | undefined): string {
@@ -222,30 +225,14 @@ export async function applyPartnerImport(options: ImportOptions): Promise<Import
   }
 
   // ---------- Casas ----------
+  // IDEMPOTÊNCIA: a relação parceiro↔casa é identificada pela chave canônica
+  // (catálogo do destino | nome canônico) + instância + moeda efetiva.
   let bookmakersImported = 0;
   let bookmakersSkipped = 0;
+  let bookmakersExisting = 0;
 
   if (envelope.categories.bookmakers && envelope.bookmakers.length > 0) {
-    const [{ data: catalogo }, { data: existing }] = await Promise.all([
-      supabase.from("bookmakers_catalogo").select("id, nome"),
-      supabase
-        .from("bookmakers")
-        .select("nome, instance_identifier, moeda")
-        .eq("parceiro_id", parceiroId)
-        .eq("workspace_id", workspaceId),
-    ]);
-
-    const catalogByName = new Map<string, string>();
-    ((catalogo ?? []) as any[]).forEach((c) => {
-      const key = normalizeName(c.nome);
-      if (!catalogByName.has(key)) catalogByName.set(key, c.id);
-    });
-
-    const existingKeys = new Set(
-      ((existing ?? []) as any[]).map((b) =>
-        [normalizeName(b.nome), normalizeName(b.instance_identifier), b.moeda].join("|"),
-      ),
-    );
+    const context = await loadBookmakerContext(workspaceId, parceiroId);
 
     // Credenciais (opcional): abre o blob cifrado uma única vez.
     let credentialsByExtId = new Map<string, { login_username: string | null; password: string | null }>();
@@ -259,12 +246,29 @@ export async function applyPartnerImport(options: ImportOptions): Promise<Import
       );
     }
 
+    const seenInFile = new Set<string>();
+
     for (const house of envelope.bookmakers) {
-      const key = [normalizeName(house.nome), normalizeName(house.instance_identifier), house.moeda].join("|");
-      if (skipped.has(house.ext_id) || existingKeys.has(key)) {
+      if (skipped.has(house.ext_id)) {
         bookmakersSkipped++;
         continue;
       }
+
+      const catalogoId = resolveCatalogId(context, house);
+      const moeda = normalizeBookmakerCurrency(house.moeda);
+      const key = buildBookmakerIdentityKey({
+        catalogoId,
+        nome: house.nome,
+        instanceIdentifier: house.instance_identifier,
+        moeda,
+      });
+
+      // 1) já existe no destino  2) repetida dentro do próprio arquivo
+      if (context.existingKeys.has(key) || seenInFile.has(key)) {
+        bookmakersExisting++;
+        continue;
+      }
+      seenInFile.add(key);
 
       const cred = credentialsByExtId.get(house.ext_id);
       const username = cred?.login_username ?? house.login_username ?? "";
@@ -278,7 +282,6 @@ export async function applyPartnerImport(options: ImportOptions): Promise<Import
         }
       }
 
-      const moeda = BOOKMAKER_CURRENCIES.includes(house.moeda) ? house.moeda : "BRL";
       // Estado do vínculo preservado da origem (arquivos antigos → "ativo").
       const state = resolveImportState(house.status, house.estado_conta);
 
@@ -292,7 +295,7 @@ export async function applyPartnerImport(options: ImportOptions): Promise<Import
         saldo_freebet: 0,
         saldo_usd: 0,
         saldo_irrecuperavel: 0,
-        bookmaker_catalogo_id: catalogByName.get(normalizeName(house.catalogo_nome || house.nome)) ?? null,
+        bookmaker_catalogo_id: catalogoId,
         nome: house.nome,
         url: house.url ?? null,
         moeda,
@@ -302,16 +305,24 @@ export async function applyPartnerImport(options: ImportOptions): Promise<Import
         login_password_encrypted: encrypted,
         instance_identifier: house.instance_identifier ?? null,
         observacoes: house.observacoes ?? null,
+        // Trava de concorrência: índice único parcial
+        // (workspace_id, parceiro_id, portability_ext_id).
+        portability_ext_id: key,
       } as any);
 
       if (error) {
+        if ((error as any).code === "23505") {
+          // Corrida entre duas importações simultâneas: a outra já criou.
+          bookmakersExisting++;
+          context.existingKeys.add(key);
+          continue;
+        }
         bookmakersSkipped++;
         lines.push({ label: `Casa ${house.nome}`, ok: false, detail: error.message });
       } else {
         bookmakersImported++;
-        existingKeys.add(key);
+        context.existingKeys.add(key);
 
-        const catalogoId = catalogByName.get(normalizeName(house.catalogo_nome || house.nome));
         if (!catalogoId) {
           lines.push({
             label: `Casa ${house.nome}`,
@@ -333,6 +344,14 @@ export async function applyPartnerImport(options: ImportOptions): Promise<Import
         }
       }
     }
+
+    if (bookmakersExisting > 0) {
+      lines.push({
+        label: "Casas já existentes",
+        ok: true,
+        detail: `${bookmakersExisting} casa(s) já vinculada(s) a este parceiro no destino — não duplicadas`,
+      });
+    }
   }
 
   return {
@@ -345,5 +364,125 @@ export async function applyPartnerImport(options: ImportOptions): Promise<Import
     walletsSkipped,
     bookmakersImported,
     bookmakersSkipped,
+    bookmakersExisting,
   };
 }
+
+/* ------------------------------------------------------------------ */
+/* Identidade das casas: contexto compartilhado entre preview e import */
+/* ------------------------------------------------------------------ */
+
+interface BookmakerContext {
+  catalogByName: Map<string, string>;
+  existingKeys: Set<string>;
+}
+
+async function loadBookmakerContext(
+  workspaceId: string,
+  parceiroId: string | null,
+): Promise<BookmakerContext> {
+  const [{ data: catalogo }, existingRes] = await Promise.all([
+    supabase.from("bookmakers_catalogo").select("id, nome"),
+    parceiroId
+      ? supabase
+          .from("bookmakers")
+          .select("nome, instance_identifier, moeda, bookmaker_catalogo_id, portability_ext_id")
+          .eq("parceiro_id", parceiroId)
+          .eq("workspace_id", workspaceId)
+      : Promise.resolve({ data: [] as any[] } as any),
+  ]);
+
+  const catalogByName = new Map<string, string>();
+  ((catalogo ?? []) as any[]).forEach((c) => {
+    const key = canonicalText(c.nome);
+    if (!catalogByName.has(key)) catalogByName.set(key, c.id);
+  });
+
+  const existingKeys = new Set<string>();
+  ((existingRes?.data ?? []) as any[]).forEach((b) => {
+    existingKeys.add(
+      buildBookmakerIdentityKey({
+        catalogoId: b.bookmaker_catalogo_id,
+        nome: b.nome,
+        instanceIdentifier: b.instance_identifier,
+        moeda: b.moeda,
+      }),
+    );
+    // Casas antigas sem catálogo resolvido também batem pelo nome.
+    if (b.bookmaker_catalogo_id) {
+      existingKeys.add(
+        buildBookmakerIdentityKey({
+          catalogoId: null,
+          nome: b.nome,
+          instanceIdentifier: b.instance_identifier,
+          moeda: b.moeda,
+        }),
+      );
+    }
+    if (b.portability_ext_id) existingKeys.add(b.portability_ext_id);
+  });
+
+  return { catalogByName, existingKeys };
+}
+
+function resolveCatalogId(
+  context: BookmakerContext,
+  house: { nome?: string | null; catalogo_nome?: string | null },
+): string | null {
+  return (
+    context.catalogByName.get(canonicalText(house.catalogo_nome || house.nome)) ??
+    context.catalogByName.get(canonicalText(house.nome)) ??
+    null
+  );
+}
+
+export interface BookmakerPlanItem {
+  nome: string;
+  exists: boolean;
+}
+
+export interface BookmakerPlan {
+  items: BookmakerPlanItem[];
+  novas: number;
+  existentes: number;
+}
+
+/**
+ * Preview: o que acontecerá com cada casa do envelope no workspace de destino.
+ * Não escreve nada. `parceiroId` nulo (parceiro novo) ⇒ todas são novas.
+ */
+export async function planBookmakerImport(
+  envelope: ExportEnvelope,
+  workspaceId: string,
+  parceiroId: string | null,
+): Promise<BookmakerPlan> {
+  if (!envelope.categories.bookmakers || envelope.bookmakers.length === 0) {
+    return { items: [], novas: 0, existentes: 0 };
+  }
+
+  const context = await loadBookmakerContext(workspaceId, parceiroId);
+  const seen = new Set<string>();
+  const items: BookmakerPlanItem[] = [];
+
+  for (const house of envelope.bookmakers) {
+    const key = buildBookmakerIdentityKey({
+      catalogoId: resolveCatalogId(context, house),
+      nome: house.nome,
+      instanceIdentifier: house.instance_identifier,
+      moeda: house.moeda,
+    });
+    const exists = context.existingKeys.has(key) || seen.has(key);
+    seen.add(key);
+    items.push({
+      nome: house.instance_identifier ? `${house.nome} (${house.instance_identifier})` : house.nome,
+      exists,
+    });
+  }
+
+  return {
+    items,
+    novas: items.filter((i) => !i.exists).length,
+    existentes: items.filter((i) => i.exists).length,
+  };
+}
+
