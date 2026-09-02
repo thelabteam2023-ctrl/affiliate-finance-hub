@@ -17,6 +17,7 @@ import { PersonalDataTab } from "./tabs/PersonalDataTab";
 import { BankAccountsTab } from "./tabs/BankAccountsTab";
 import { CryptoWalletsTab } from "./tabs/CryptoWalletsTab";
 import { validateCPF, formatCPF, formatCEP } from "@/lib/validators";
+import { canonicalBankName } from "@/lib/partnerPortability/bankIdentity";
 import { ParceiroProfileView } from "./ParceiroProfileView";
 
 interface PixKey {
