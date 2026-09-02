@@ -2223,6 +2223,7 @@ export type Database = {
           nome: string
           observacoes: string | null
           parceiro_id: string | null
+          portability_ext_id: string | null
           projeto_id: string | null
           reconciled_at: string | null
           saldo_atual: number
@@ -2254,6 +2255,7 @@ export type Database = {
           nome: string
           observacoes?: string | null
           parceiro_id?: string | null
+          portability_ext_id?: string | null
           projeto_id?: string | null
           reconciled_at?: string | null
           saldo_atual?: number
@@ -2285,6 +2287,7 @@ export type Database = {
           nome?: string
           observacoes?: string | null
           parceiro_id?: string | null
+          portability_ext_id?: string | null
           projeto_id?: string | null
           reconciled_at?: string | null
           saldo_atual?: number
