@@ -721,8 +721,9 @@ export default function GestaoParceiros() {
         <ExportarParceiroDialog
           open={exportDialogOpen}
           onOpenChange={setExportDialogOpen}
-          parceiroId={selectedParceiroDetalhes}
-          parceiroNome={selectedParceiroNome}
+          parceiroIds={exportIds}
+          parceiroNome={exportNome}
+
           workspaceId={workspaceId ?? null}
         />
 
