@@ -317,6 +317,25 @@ export function ImportarParceiroDialog({
                           {summarizeStates(entry.envelope.bookmakers)}
                         </p>
                       )}
+                      {entry.envelope.bookmakers.length > 0 && (
+                        <div className="mt-1 space-y-0.5">
+                          <p className="text-[11px] text-muted-foreground">
+                            Casas:{" "}
+                            {entry.resolution === "create"
+                              ? `${entry.envelope.bookmakers.length} nova(s) — parceiro novo`
+                              : `${entry.housePlan.existentes} já existente(s) · ${entry.housePlan.novas} nova(s)`}
+                          </p>
+                          {entry.resolution === "update" &&
+                            entry.housePlan.items.map((item, i) => (
+                              <p key={i} className="text-[11px] pl-2">
+                                <span className="text-muted-foreground">{item.nome}</span>{" "}
+                                <span className={item.exists ? "text-warning" : "text-success"}>
+                                  {item.exists ? "— já existe, não será duplicada" : "— nova, será criada"}
+                                </span>
+                              </p>
+                            ))}
+                        </div>
+                      )}
                     </div>
 
                     <Button
