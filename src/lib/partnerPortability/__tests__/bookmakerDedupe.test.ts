@@ -328,7 +328,7 @@ describe("importação de casas — idempotência", () => {
   it("nome divergente no destino ainda é reconhecido pelo catálogo", async () => {
     const p = seedPartner(WS_B, "João");
     // No destino a casa foi renomeada, mas aponta para o mesmo catálogo.
-    seedHouse(WS_B, p, "Betano - conta principal");
+    seedHouse(WS_B, p, "Betano - conta principal", { bookmaker_catalogo_id: "cat-Betano" });
 
     const report = await importInto(WS_B, p, envelope("João", [house("Betano")]));
 
