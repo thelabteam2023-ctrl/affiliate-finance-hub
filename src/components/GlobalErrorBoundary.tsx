@@ -1,9 +1,11 @@
 import React from "react";
 import { logError } from "@/lib/errorLogger";
+import { hardReload, isChunkLoadError } from "@/lib/lazyWithRetry";
 
 interface State {
   hasError: boolean;
   message?: string;
+  isChunkError?: boolean;
 }
 
 export class GlobalErrorBoundary extends React.Component<
@@ -13,7 +15,7 @@ export class GlobalErrorBoundary extends React.Component<
   state: State = { hasError: false };
 
   static getDerivedStateFromError(err: Error): State {
-    return { hasError: true, message: err?.message };
+    return { hasError: true, message: err?.message, isChunkError: isChunkLoadError(err) };
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
@@ -23,10 +25,32 @@ export class GlobalErrorBoundary extends React.Component<
     }, "ReactRenderError");
   }
 
-  reset = () => this.setState({ hasError: false, message: undefined });
+  reset = () => this.setState({ hasError: false, message: undefined, isChunkError: false });
 
   render() {
     if (this.state.hasError) {
+      if (this.state.isChunkError) {
+        return (
+          <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+            <div className="max-w-md w-full border border-border bg-card rounded-lg p-6 space-y-3">
+              <h2 className="text-lg font-semibold">O sistema foi atualizado</h2>
+              <p className="text-sm text-muted-foreground">
+                Esta aba estava executando uma versão anterior do sistema. Clique em Atualizar para
+                carregar a versão mais recente e continuar de onde parou.
+              </p>
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={hardReload}
+                  className="px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:opacity-90"
+                >
+                  Atualizar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="min-h-screen flex items-center justify-center p-6 bg-background">
           <div className="max-w-md w-full border border-destructive/40 bg-destructive/5 rounded-lg p-6 space-y-3">
