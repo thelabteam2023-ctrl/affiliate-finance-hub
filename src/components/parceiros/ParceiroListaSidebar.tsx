@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
-import { Search, User, Plus, ArrowUpDown, ArrowUp, ArrowDown, Edit, ArrowLeftRight, ArrowDownToLine, ArrowUpFromLine, Eye } from "lucide-react";
+import { Search, User, Plus, ArrowUpDown, ArrowUp, ArrowDown, Edit, ArrowLeftRight, ArrowDownToLine, ArrowUpFromLine, Eye, Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ContextMenu,
@@ -41,7 +42,13 @@ interface ParceiroListaSidebarProps {
   onDeposito?: (id: string) => void;
   onSaque?: (id: string) => void;
   onTransferencia?: (id: string) => void;
+  /** Seleção múltipla para exportação em lote */
+  selectedIds?: string[];
+  onToggleSelected?: (id: string) => void;
+  onSetSelection?: (ids: string[]) => void;
+  onExportSelected?: () => void;
 }
+
 
 /*
  * ARQUITETURA: SidebarParceiros
