@@ -228,44 +228,69 @@ export function ParceiroListaSidebar({
           {filteredParceiros.map((parceiro) => {
             const entries = buildCurrencyEntries(parceiro.resultado_por_moeda, parceiro.moedas_utilizadas);
             
+            const isChecked = selectedSet.has(parceiro.id);
+
             return (
               <ContextMenu key={parceiro.id}>
                 <ContextMenuTrigger asChild>
-                  <button
-                    onClick={() => onSelect(parceiro.id)}
+                  <div
                     className={cn(
-                      "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
+                      "group w-full flex items-center gap-2 rounded-lg transition-colors",
                       selectedId === parceiro.id
                         ? "bg-primary/10 border border-primary/30"
-                        : "hover:bg-muted/50 border border-transparent"
+                        : "hover:bg-muted/50 border border-transparent",
+                      isChecked && "ring-1 ring-primary/40"
                     )}
                   >
-                    <div className={cn(
-                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-                      parceiro.status === "ativo" ? "bg-primary/10" : "bg-warning/10"
-                    )}>
-                      <User className={cn(
-                        "h-4 w-4",
-                        parceiro.status === "ativo" ? "text-primary" : "text-warning"
-                      )} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm leading-tight">{parceiro.nome}</p>
-                      <div className="flex items-center justify-between gap-2 mt-0.5">
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {maskCPFPartial(parceiro.cpf)}
-                        </span>
-                        <NativeCurrencyKpi
-                          entries={entries}
-                          size="xs"
-                          variant="auto"
-                          masked={!showSensitiveData}
-                          showDashOnZero
+                    {selectionEnabled && (
+                      <div
+                        className={cn(
+                          "pl-2 shrink-0 transition-opacity",
+                          isChecked || selectedSet.size > 0
+                            ? "opacity-100"
+                            : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"
+                        )}
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={() => onToggleSelected?.(parceiro.id)}
+                          aria-label={`Selecionar ${parceiro.nome}`}
+                          className="h-4 w-4"
                         />
                       </div>
-                    </div>
-                  </button>
+                    )}
+                    <button
+                      onClick={() => onSelect(parceiro.id)}
+                      className="flex-1 min-w-0 flex items-center gap-3 p-3 text-left"
+                    >
+                      <div className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                        parceiro.status === "ativo" ? "bg-primary/10" : "bg-warning/10"
+                      )}>
+                        <User className={cn(
+                          "h-4 w-4",
+                          parceiro.status === "ativo" ? "text-primary" : "text-warning"
+                        )} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm leading-tight">{parceiro.nome}</p>
+                        <div className="flex items-center justify-between gap-2 mt-0.5">
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {maskCPFPartial(parceiro.cpf)}
+                          </span>
+                          <NativeCurrencyKpi
+                            entries={entries}
+                            size="xs"
+                            variant="auto"
+                            masked={!showSensitiveData}
+                            showDashOnZero
+                          />
+                        </div>
+                      </div>
+                    </button>
+                  </div>
                 </ContextMenuTrigger>
+
                 <ContextMenuContent className="w-52">
                   {onViewParceiro && (
                     <ContextMenuItem onClick={() => onViewParceiro(parceiro.id)} className="gap-2">
