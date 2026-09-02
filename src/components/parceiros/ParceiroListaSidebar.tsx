@@ -262,11 +262,11 @@ export function ParceiroListaSidebar({
                     >
                       <div className={cn(
                         "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-                        parceiro.status === "ativo" ? "bg-primary/10" : "bg-warning/10"
+                        normalizeParceiroStatus(parceiro.status) === "ativo" ? "bg-primary/10" : "bg-warning/10"
                       )}>
                         <User className={cn(
                           "h-4 w-4",
-                          parceiro.status === "ativo" ? "text-primary" : "text-warning"
+                          normalizeParceiroStatus(parceiro.status) === "ativo" ? "text-primary" : "text-warning"
                         )} />
                       </div>
                       <div className="flex-1 min-w-0">
