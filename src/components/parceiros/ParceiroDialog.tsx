@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { PARCEIROS_DATA_QUERY_KEY } from "@/hooks/useParceirosData";
 import {
   Dialog,
   DialogContent,
@@ -66,6 +68,7 @@ interface ParceiroDialogProps {
 
 export default function ParceiroDialog({ open, onClose, parceiro, viewMode = false, initialTab = "dados" }: ParceiroDialogProps) {
   const { workspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
@@ -926,6 +929,9 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         title: parceiro ? "Parceiro atualizado" : "Parceiro criado",
         description: "Os dados foram salvos com sucesso.",
       });
+
+      // Invalida a listagem no próprio salvamento (não depende de como o diálogo é fechado)
+      queryClient.invalidateQueries({ queryKey: [PARCEIROS_DATA_QUERY_KEY, workspaceId] });
 
       onClose({ saved: true });
     } catch (error: any) {
