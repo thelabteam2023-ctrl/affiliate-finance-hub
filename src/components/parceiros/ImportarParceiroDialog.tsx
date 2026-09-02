@@ -220,10 +220,11 @@ export function ImportarParceiroDialog({
           bancos: acc.bancos + (o.report?.banksImported ?? 0),
           wallets: acc.wallets + (o.report?.walletsImported ?? 0),
           casas: acc.casas + (o.report?.bookmakersImported ?? 0),
+          casasExistentes: acc.casasExistentes + (o.report?.bookmakersExisting ?? 0),
           erros: acc.erros,
         };
       },
-      { criados: 0, atualizados: 0, bancos: 0, wallets: 0, casas: 0, erros: 0 },
+      { criados: 0, atualizados: 0, bancos: 0, wallets: 0, casas: 0, casasExistentes: 0, erros: 0 },
     );
   }, [outcomes]);
 
@@ -373,6 +374,13 @@ export function ImportarParceiroDialog({
                     </div>
                   ) : (
                     <p className="text-[11px] text-success">Será criado neste workspace</p>
+                  )}
+
+                  {entry.match && entry.resolution === "create" && (
+                    <p className="text-[11px] text-warning">
+                      Atenção: um novo registro de parceiro será criado e todas as casas do arquivo
+                      serão recriadas nele, mesmo que já existam em {entry.match.nome}.
+                    </p>
                   )}
                 </div>
               ))}
