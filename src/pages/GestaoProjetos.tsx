@@ -160,6 +160,7 @@ export default function GestaoProjetos() {
     
     try {
       setLoading(true);
+      setLoadError(null);
       
       let projetoIds: string[] = [];
       
@@ -376,7 +377,10 @@ export default function GestaoProjetos() {
       
       setProjetos(mapped);
     } catch (error: any) {
-      toast.error("Erro ao carregar projetos: " + error.message);
+      const detalhe = error?.message || error?.details || "Erro desconhecido";
+      console.error("[GestaoProjetos] Falha ao carregar projetos", error);
+      setLoadError(detalhe);
+      toast.error("Erro ao carregar projetos: " + detalhe);
     } finally {
       setLoading(false);
     }
