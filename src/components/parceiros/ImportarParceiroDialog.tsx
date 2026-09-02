@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { labelBookmakerStatus, resolveImportState } from "@/lib/partnerPortability/bookmakerState";
 import { maskCPFPartial } from "@/lib/validators";
 import { parseImportFile, type ExportEnvelope } from "@/lib/partnerPortability/schema";
 import { findPartnerMatch, MATCH_LABEL, type PartnerMatch } from "@/lib/partnerPortability/matchPartner";
@@ -43,6 +44,18 @@ interface PartnerOutcome {
   created?: boolean;
   detail?: string;
   report?: ImportReport;
+}
+
+/** Resumo "2 Ativa · 1 Limitada" dos estados das casas do envelope. */
+function summarizeStates(bookmakers: { status?: string | null }[]): string {
+  const counts = new Map<string, number>();
+  bookmakers.forEach((b) => {
+    const state = resolveImportState(b.status).status;
+    counts.set(state, (counts.get(state) ?? 0) + 1);
+  });
+  return Array.from(counts.entries())
+    .map(([state, count]) => `${count} ${labelBookmakerStatus(state)}`)
+    .join(" · ");
 }
 
 export function ImportarParceiroDialog({
@@ -288,7 +301,14 @@ export function ImportarParceiroDialog({
                         {entry.envelope.banking.length} banco(s) · {entry.envelope.crypto.length}{" "}
                         wallet(s) · {entry.envelope.bookmakers.length} casa(s)
                       </p>
+                      {entry.envelope.bookmakers.length > 0 && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Estados:{" "}
+                          {summarizeStates(entry.envelope.bookmakers)}
+                        </p>
+                      )}
                     </div>
+
                     <Button
                       size="sm"
                       variant={entry.include ? "outline" : "ghost"}

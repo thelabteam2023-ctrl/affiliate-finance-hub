@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { decryptPassword } from "@/utils/cryptoPassword";
 import { sealSecurePayload } from "./secureBlob";
+import { normalizeExportedEstadoConta, normalizeExportedStatus } from "./bookmakerState";
 import {
   BUNDLE_FORMAT,
   BUNDLE_VERSION,
@@ -70,7 +71,7 @@ async function buildOnePartner(
       ? supabase
           .from("bookmakers")
           .select(
-            "id, nome, url, moeda, login_username, login_password_encrypted, instance_identifier, observacoes, bookmakers_catalogo(nome)",
+            "id, nome, url, moeda, status, estado_conta, login_username, login_password_encrypted, instance_identifier, observacoes, bookmakers_catalogo(nome)",
           )
           .eq("parceiro_id", parceiroId)
           .eq("workspace_id", workspaceId)
@@ -122,6 +123,9 @@ async function buildOnePartner(
       login_username: includeCredentials ? null : (b.login_username ?? null),
       instance_identifier: b.instance_identifier ?? null,
       observacoes: b.observacoes ?? null,
+      // Estado do vínculo viaja com a casa (nunca saldo/projeto/investidor).
+      status: normalizeExportedStatus(b.status),
+      estado_conta: normalizeExportedEstadoConta(b.estado_conta),
       has_credentials: includeCredentials ? true : undefined,
     })),
   );
