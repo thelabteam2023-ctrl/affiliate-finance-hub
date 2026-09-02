@@ -373,6 +373,24 @@ export default function GestaoParceiros() {
     return parceiros.find(p => p.id === selectedParceiroDetalhes)?.nome ?? "Parceiro";
   }, [parceiros, selectedParceiroDetalhes]);
 
+  /** IDs efetivos da exportação: seleção múltipla ou, na ausência dela, o parceiro aberto. */
+  const exportIds = useMemo(() => {
+    if (selectedIds.length > 0) return selectedIds;
+    return selectedParceiroDetalhes ? [selectedParceiroDetalhes] : [];
+  }, [selectedIds, selectedParceiroDetalhes]);
+
+  const exportNome = useMemo(() => {
+    if (exportIds.length === 1) {
+      return parceiros.find(p => p.id === exportIds[0])?.nome ?? "Parceiro";
+    }
+    return selectedParceiroNome;
+  }, [exportIds, parceiros, selectedParceiroNome]);
+
+  const handleToggleSelected = useCallback((id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }, []);
+
+
   const handlePartnerImported = useCallback((parceiroId: string) => {
     refetchParceiros();
     parceiroCache.invalidateCache(parceiroId);
