@@ -1,14 +1,18 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CAIXA_DATA_CHANGED_EVENT } from "@/hooks/useInvalidateCaixaData";
+import { valorEfetivoSaque } from "@/lib/ledger/valorEfetivoSaque";
 
 const APORTE_TIPOS = ["APORTE", "APORTE_FINANCEIRO", "APORTE_DIRETO"];
 const LIQUIDACAO_TIPOS = ["LIQUIDACAO"];
+const isSaqueRow = (r: { tipo_transacao?: string | null }) =>
+  String(r?.tipo_transacao ?? "").startsWith("SAQUE");
 
 interface Row {
   tipo_transacao: string;
   valor: number | null;
   valor_confirmado: number | null;
+  tipo_moeda?: string | null;
   moeda: string | null;
   data_transacao: string;
   cotacao_origem_usd: number | null;
@@ -80,7 +84,7 @@ export function usePosicaoCapital({
       const { data, error } = await supabase
         .from("cash_ledger")
         .select(
-          "tipo_transacao, valor, valor_confirmado, moeda, data_transacao, cotacao_origem_usd"
+          "tipo_transacao, valor, valor_confirmado, tipo_moeda, moeda, data_transacao, cotacao_origem_usd"
         )
         .eq("workspace_id", workspaceId)
         .eq("status", "CONFIRMADO")
@@ -147,7 +151,7 @@ export function usePosicaoCapital({
   };
 
   const toConsolidado = (r: Row) => {
-    const valor = Number(r.valor_confirmado ?? r.valor ?? 0);
+    const valor = isSaqueRow(r) ? valorEfetivoSaque(r) : Number(r.valor ?? 0);
     const moeda = (r.moeda || "BRL").toUpperCase();
     if (!valor) return 0;
     return convert(valor, moeda, moedaConsolidacao);
@@ -172,7 +176,7 @@ export function usePosicaoCapital({
    * pro mark-to-market via `convert`.
    */
   const toHistoricoBRL = (r: Row): number => {
-    const valor = Number(r.valor_confirmado ?? r.valor ?? 0);
+    const valor = isSaqueRow(r) ? valorEfetivoSaque(r) : Number(r.valor ?? 0);
     const moeda = (r.moeda || "BRL").toUpperCase();
     if (!valor) return 0;
     if (moeda === "BRL") return valor;

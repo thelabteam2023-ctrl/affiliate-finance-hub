@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { valorEfetivoSaque } from "@/lib/ledger/valorEfetivoSaque";
 
 /**
  * Recuperação de Capital — paridade 1:1 com "Depósitos" e "Saques" do Extrato.
@@ -128,7 +129,7 @@ export function useProjetoRecuperacaoCapital(projetoId: string | undefined) {
     // Saques efetivos: exclui SAQUE_VIRTUAL não-MIGRACAO (raros, apenas histórico).
     const recuperado = data.saques.reduce((acc, s) => {
       if (s.tipo_transacao === "SAQUE_VIRTUAL" && s.origem_tipo !== "MIGRACAO") return acc;
-      const valorBase = Number(s.valor_confirmado ?? s.valor ?? 0);
+      const valorBase = valorEfetivoSaque(s);
       return acc + resolveSnap(valorBase, s.valor_usd_referencia, s.moeda || "BRL");
     }, 0);
 

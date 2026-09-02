@@ -117,6 +117,7 @@ export interface RawSaque {
   id: string;
   valor: number;
   valor_confirmado: number | null;
+  tipo_moeda?: string | null;
   moeda: string;
   origem_bookmaker_id: string | null;
   data_transacao: string;

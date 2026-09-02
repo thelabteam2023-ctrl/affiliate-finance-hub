@@ -1,4 +1,5 @@
 import { ProjetoDashboardRawData, buildBookmakerMoedaMap } from "@/hooks/useProjetoDashboardData";
+import { valorEfetivoSaque } from "@/lib/ledger/valorEfetivoSaque";
 
 /**
  * SERVIÇO CENTRALIZADO DE MÉTRICAS FINANCEIRAS (SSOT)
@@ -64,7 +65,7 @@ export class FinancialMetricsService {
 
     // 2. Saques Confirmados
     const totalSaques = rawData.saques.reduce((acc, s) => 
-      acc + convert(Number(s.valor_confirmado ?? s.valor), s.moeda || 'BRL'), 0);
+      acc + convert(valorEfetivoSaque(s as any), s.moeda || 'BRL'), 0);
 
     // 3. Saques Pendentes (Em Trânsito)
     const saquesPendentes = (rawData as any).saquesPendentes 
