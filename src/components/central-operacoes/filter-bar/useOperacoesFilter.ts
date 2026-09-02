@@ -129,6 +129,46 @@ export function useOperacoesFilter<T>(
     [adapter],
   );
 
+  /**
+   * AUTO-CURA DO FILTRO PERSISTIDO.
+   *
+   * O estado fica em localStorage por usuário/card e nunca expira. Um filtro
+   * antigo preso a um valor que não existe mais (uma casa, um parceiro, uma
+   * moeda, um bucket de idade) escondia silenciosamente itens novos — foi
+   * exatamente assim que um saque recém-criado sumiu da Central mesmo estando
+   * PENDENTE no banco e sendo devolvido pela RPC.
+   *
+   * Aqui removemos, do estado, qualquer valor de faceta que não exista mais no
+   * universo atual de itens. Só disparamos setState quando há mudança real.
+   */
+  useEffect(() => {
+    if (items.length === 0) return;
+    const activeKeys = Object.keys(state.facets) as FacetKey[];
+    if (activeKeys.length === 0) return;
+
+    let changed = false;
+    const nextFacets: FilterState["facets"] = { ...state.facets };
+
+    activeKeys.forEach((key) => {
+      const selected = state.facets[key];
+      if (!selected || selected.length === 0) return;
+      const universe = new Set<string>();
+      items.forEach((item) => {
+        const v = dimensionOf(item, key);
+        if (v) universe.add(v);
+      });
+      const kept = selected.filter((v) => universe.has(v));
+      if (kept.length === selected.length) return;
+      changed = true;
+      if (kept.length === 0) delete nextFacets[key];
+      else nextFacets[key] = kept;
+    });
+
+    if (changed) setState((p) => ({ ...p, facets: nextFacets }));
+  }, [items, state.facets, dimensionOf]);
+
+
+
   /** Aplica TODAS as facetas exceto `except`. Usado para options agnósticas. */
   const applyFacetsExcept = useCallback(
     (list: T[], except: FacetKey | null): T[] => {
