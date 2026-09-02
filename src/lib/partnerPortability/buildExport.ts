@@ -87,7 +87,9 @@ async function buildOnePartner(
   const banking: ExportBanking[] = await Promise.all(
     ((contasRes.data ?? []) as any[]).map(async (c) => ({
       ext_id: await stableExtId([cpfKey, "bank", c.banco, c.agencia, c.conta, c.moeda]),
-      banco: c.banco,
+      banco: c.banco || c.bancos?.nome || "",
+      banco_codigo: c.bancos?.codigo ?? null,
+      banco_is_system: c.bancos?.is_system ?? null,
       agencia: c.agencia ?? null,
       conta: c.conta ?? null,
       tipo_conta: (c.tipo_conta ?? "corrente") as ExportBanking["tipo_conta"],
