@@ -20,7 +20,13 @@ import { labelBookmakerStatus, resolveImportState } from "@/lib/partnerPortabili
 import { maskCPFPartial } from "@/lib/validators";
 import { parseImportFile, type ExportEnvelope } from "@/lib/partnerPortability/schema";
 import { findPartnerMatch, MATCH_LABEL, type PartnerMatch } from "@/lib/partnerPortability/matchPartner";
-import { applyPartnerImport, type ImportReport, type ImportResolution } from "@/lib/partnerPortability/applyImport";
+import {
+  applyPartnerImport,
+  planBookmakerImport,
+  type BookmakerPlan,
+  type ImportReport,
+  type ImportResolution,
+} from "@/lib/partnerPortability/applyImport";
 
 interface ImportarParceiroDialogProps {
   open: boolean;
@@ -36,6 +42,8 @@ interface PartnerEntry {
   match: PartnerMatch | null;
   resolution: ImportResolution;
   include: boolean;
+  /** Preview das casas contra o parceiro encontrado no destino. */
+  housePlan: BookmakerPlan;
 }
 
 interface PartnerOutcome {
@@ -104,11 +112,13 @@ export function ImportarParceiroDialog({
       const built: PartnerEntry[] = [];
       for (const envelope of parsed.partners) {
         const match = await findPartnerMatch(envelope, workspaceId);
+        const housePlan = await planBookmakerImport(envelope, workspaceId, match?.id ?? null);
         built.push({
           envelope,
           match,
           resolution: match ? "update" : "create",
           include: true,
+          housePlan,
         });
       }
       setEntries(built);
