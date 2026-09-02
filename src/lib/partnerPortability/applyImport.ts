@@ -3,12 +3,13 @@ import { encryptPassword } from "@/utils/cryptoPassword";
 import { openSecurePayload } from "./secureBlob";
 import type { ExportEnvelope } from "./schema";
 import { labelBookmakerStatus, resolveImportState } from "./bookmakerState";
+import {
+  buildBookmakerIdentityKey,
+  canonicalText,
+  normalizeBookmakerCurrency,
+} from "./bookmakerIdentity";
 
 const BANK_CURRENCIES = ["BRL", "USD", "EUR", "GBP", "MXN", "MYR", "ARS", "COP"];
-const BOOKMAKER_CURRENCIES = [
-  "BRL", "USD", "EUR", "GBP", "MYR", "MXN", "ARS", "COP", "CAD", "AUD",
-  "JPY", "CLP", "PEN", "TRY", "INR", "USDT", "USDC", "BTC", "ETH",
-];
 
 export type ImportResolution = "create" | "update";
 
@@ -38,6 +39,8 @@ export interface ImportReport {
   walletsSkipped: number;
   bookmakersImported: number;
   bookmakersSkipped: number;
+  /** Casas que já existiam para o parceiro no destino (não duplicadas). */
+  bookmakersExisting: number;
 }
 
 function normalizeName(value: string | null | undefined): string {
