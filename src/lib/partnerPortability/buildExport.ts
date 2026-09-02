@@ -2,12 +2,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { decryptPassword } from "@/utils/cryptoPassword";
 import { sealSecurePayload } from "./secureBlob";
 import {
+  BUNDLE_FORMAT,
+  BUNDLE_VERSION,
   EXPORT_FORMAT,
   EXPORT_VERSION,
   stableExtId,
   type Categories,
   type ExportBanking,
   type ExportBookmaker,
+  type ExportBundle,
   type ExportCrypto,
   type ExportEnvelope,
   type SecurePayload,
@@ -18,15 +21,22 @@ export interface PartnerExportSource {
   workspaceId: string;
 }
 
+type PlainCredential = SecurePayload["credentials"][number];
+
+/** Limites práticos de lote (ver documento de portabilidade). */
+export const BATCH_LIMIT_PLAIN = 200;
+export const BATCH_LIMIT_WITH_CREDENTIALS = 50;
+
 /**
  * Monta o pacote de exportação lendo APENAS dados cadastrais.
  * Nenhum saldo, projeto, ciclo, aposta ou lançamento financeiro é lido.
  */
-export async function buildPartnerExport(
+async function buildOnePartner(
   { parceiroId, workspaceId }: PartnerExportSource,
   categories: Categories,
-  credentialsPassphrase?: string,
-): Promise<ExportEnvelope> {
+  wantsCredentials: boolean,
+): Promise<{ envelope: ExportEnvelope; credentials: PlainCredential[] }> {
+
   const { data: parceiro, error: parceiroError } = await supabase
     .from("parceiros")
     .select(
