@@ -65,6 +65,8 @@ export const partnerSchema = z.object({
 export const bankingSchema = z.object({
   ext_id: z.string().min(4).max(128),
   banco: z.string().min(1).max(200),
+  banco_codigo: nullableString,
+  banco_is_system: z.boolean().nullable().optional(),
   agencia: nullableString,
   conta: nullableString,
   tipo_conta: z.enum(["corrente", "poupanca", "pagamento"]),
