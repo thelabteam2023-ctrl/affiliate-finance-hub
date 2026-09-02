@@ -427,7 +427,7 @@ async function loadBookmakerContext(
 
 function resolveCatalogId(
   context: BookmakerContext,
-  house: { nome: string; catalogo_nome?: string | null },
+  house: { nome?: string | null; catalogo_nome?: string | null },
 ): string | null {
   return (
     context.catalogByName.get(canonicalText(house.catalogo_nome || house.nome)) ??
