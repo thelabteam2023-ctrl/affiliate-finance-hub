@@ -8,7 +8,7 @@
  * 3. Design Profissional: Estética executiva de BI, tipografia refinada e hierarquia clara.
  * 4. Identidade Visual: Integração da marca oficial LABBET.
  */
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
