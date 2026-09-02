@@ -714,16 +714,15 @@ export function useResolverOcorrenciaComFinanceiro() {
             if (bkInfo) {
               bkMoeda = bkInfo.moeda || bkMoeda;
               bkWorkspaceId = bkInfo.workspace_id || bkWorkspaceId;
-              // Prioridade: projeto_id da ocorrência (snapshot) > projeto_id atual da bookmaker
-              bkProjetoId = ocorrencia.projeto_id || bkInfo.projeto_id || undefined;
               bkSaldoIrrecuperavel = Number(bkInfo.saldo_irrecuperavel || 0);
-              
-              // Detectar se a bookmaker ainda está vinculada ao projeto da ocorrência
-              // MELHORIA: Se a ocorrência não tinha snapshot de projeto_id, mas a bookmaker está em um projeto,
-              // assumimos que ela ainda está vinculada para permitir o débito de saldo.
-              bookmakerStillLinked = ocorrencia.projeto_id 
-                ? bkInfo.projeto_id === ocorrencia.projeto_id
-                : !!bkInfo.projeto_id;
+
+              // SSOT do vínculo (snapshot > projeto atual da casa)
+              const vinculo = resolverVinculoOcorrencia({
+                ocorrenciaProjetoId: ocorrencia.projeto_id,
+                bookmakerProjetoId: bkInfo.projeto_id,
+              });
+              bkProjetoId = vinculo.projetoEfetivo;
+              bookmakerStillLinked = vinculo.vinculada;
             }
           }
 
@@ -840,14 +839,13 @@ export function useReabrirOcorrencia() {
 
       // 2. Se houve perda registrada, estornar do ledger e projeto_perdas
       if (valorPerda > 0 && perdaRegistrada) {
-        // Remover entrada de projeto_perdas vinculada a esta ocorrência (via ocorrencia_id)
-        if (ocorrencia.projeto_id) {
-          await (supabase as any)
-            .from('projeto_perdas')
-            .delete()
-            .eq('ocorrencia_id', id)
-            .eq('projeto_id', ocorrencia.projeto_id);
-        }
+        // Remover entrada de projeto_perdas vinculada a esta ocorrência (via ocorrencia_id).
+        // ocorrencia_id é chave suficiente — filtrar por projeto_id deixaria órfãs as
+        // perdas registradas no projeto atual da casa (ocorrência sem snapshot).
+        await (supabase as any)
+          .from('projeto_perdas')
+          .delete()
+          .eq('ocorrencia_id', id);
 
         // Registrar estorno no ledger (PERDA_REVERSAO)
         let bkMoeda = ocorrencia.moeda || 'BRL';
