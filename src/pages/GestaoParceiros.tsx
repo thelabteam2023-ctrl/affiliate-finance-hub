@@ -27,6 +27,8 @@ import { VinculoCriadoConfirmDialog } from "@/components/bookmakers/VinculoCriad
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { ParceiroListaSidebar } from "@/components/parceiros/ParceiroListaSidebar";
 import { ParceiroDetalhesPanel } from "@/components/parceiros/ParceiroDetalhesPanel";
+import { ExportarParceiroDialog } from "@/components/parceiros/ExportarParceiroDialog";
+import { ImportarParceiroDialog } from "@/components/parceiros/ImportarParceiroDialog";
 import { formatCPF, maskCPFPartial } from "@/lib/validators";
 import { useParceiroFinanceiroCache } from "@/hooks/useParceiroFinanceiroCache";
 import { getGlobalBookmakersCache } from "@/hooks/useParceiroTabsCache";
@@ -54,6 +56,8 @@ export default function GestaoParceiros() {
   
   const [showSensitiveData, setShowSensitiveData] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);
   const [viewMode, setViewMode] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
