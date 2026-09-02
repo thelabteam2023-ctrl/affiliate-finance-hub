@@ -17,6 +17,7 @@ import { PersonalDataTab } from "./tabs/PersonalDataTab";
 import { BankAccountsTab } from "./tabs/BankAccountsTab";
 import { CryptoWalletsTab } from "./tabs/CryptoWalletsTab";
 import { validateCPF, formatCPF, formatCEP } from "@/lib/validators";
+import { canonicalBankName } from "@/lib/partnerPortability/bankIdentity";
 import { ParceiroProfileView } from "./ParceiroProfileView";
 
 interface PixKey {
@@ -247,6 +248,26 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       }
     }
   }, [open, initialTab, parceiro]);
+
+  // Auto-cura: contas importadas podem ter apenas o nome do banco (banco_id nulo).
+  // Resolve o banco_id pelo nome normalizado assim que a lista de bancos carrega.
+  useEffect(() => {
+    if (!open || bancos.length === 0) return;
+    setBankAccounts((prev) => {
+      let changed = false;
+      const next = prev.map((acc: any) => {
+        if (acc.banco_id || !acc.banco) return acc;
+        const alvo = canonicalBankName(acc.banco);
+        const hit = bancos.find((b: any) => canonicalBankName(b.nome) === alvo);
+        if (!hit) return acc;
+        changed = true;
+        return { ...acc, banco_id: hit.id };
+      });
+      return changed ? next : prev;
+    });
+  }, [open, bancos]);
+
+
 
   useEffect(() => {
     if (parceiro) {

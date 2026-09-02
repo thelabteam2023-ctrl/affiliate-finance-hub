@@ -8,6 +8,7 @@ import {
   canonicalText,
   normalizeBookmakerCurrency,
 } from "./bookmakerIdentity";
+import { fetchBancosVisiveis, resolveOrCreateBanco } from "./bankIdentity";
 
 const BANK_CURRENCIES = ["BRL", "USD", "EUR", "GBP", "MXN", "MYR", "ARS", "COP"];
 
@@ -142,6 +143,8 @@ export async function applyPartnerImport(options: ImportOptions): Promise<Import
       ),
     );
 
+    const bancosCache = await fetchBancosVisiveis(workspaceId);
+
     for (const bank of envelope.banking) {
       const key = [
         normalizeName(bank.banco),
@@ -155,9 +158,18 @@ export async function applyPartnerImport(options: ImportOptions): Promise<Import
         continue;
       }
 
+      // Reconcilia o banco no workspace de destino (código > nome > workspace > criação).
+      const bankRes = await resolveOrCreateBanco(
+        bancosCache,
+        { banco: bank.banco, banco_codigo: bank.banco_codigo ?? null },
+        workspaceId,
+        userId,
+      );
+
       const { error } = await supabase.from("contas_bancarias").insert({
         parceiro_id: parceiroId,
-        banco: bank.banco,
+        banco_id: bankRes.bancoId,
+        banco: bankRes.bancoNome || bank.banco,
         agencia: bank.agencia ?? null,
         conta: bank.conta ?? null,
         tipo_conta: bank.tipo_conta,
@@ -178,6 +190,13 @@ export async function applyPartnerImport(options: ImportOptions): Promise<Import
       } else {
         banksImported++;
         existingKeys.add(key);
+        if (!bankRes.bancoId) {
+          lines.push({
+            label: `Conta ${bank.banco}`,
+            ok: true,
+            detail: "banco não reconciliado — selecione o banco ao editar o parceiro",
+          });
+        }
       }
     }
   }
