@@ -432,7 +432,11 @@ export function useAtualizarStatusOcorrencia() {
               .single();
 
             if (bkInfo) {
-              const bookmakerStillLinked = bkInfo.projeto_id === ocorrencia.projeto_id;
+              // SSOT do vínculo (evita assimetria débito/estorno quando projeto_id é nulo)
+              const { vinculada: bookmakerStillLinked, projetoEfetivo } = resolverVinculoOcorrencia({
+                ocorrenciaProjetoId: ocorrencia.projeto_id,
+                bookmakerProjetoId: bkInfo.projeto_id,
+              });
 
               // Só estornar saldo se a bookmaker ainda está no projeto
               // (se desvinculada, o saldo já saiu via SAQUE_VIRTUAL)
