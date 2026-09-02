@@ -48,6 +48,8 @@ export interface UseOperacoesFilterResult<T> {
   facetOptions: Record<FacetKey, FacetOption[]>;
   hasActiveFilters: boolean;
   totalItems: number;
+  /** Quantos itens estão sendo escondidos pelos filtros ativos. */
+  hiddenByFilters: number;
 }
 
 export interface FacetOption {
