@@ -414,14 +414,13 @@ export function useAtualizarStatusOcorrencia() {
              }
           }
 
-          // Remover de projeto_perdas usando ocorrencia_id (link confiável)
-          if (ocorrencia.projeto_id) {
-            await (supabase as any)
-              .from('projeto_perdas')
-              .delete()
-              .eq('ocorrencia_id', id)
-              .eq('projeto_id', ocorrencia.projeto_id);
-          }
+          // Remover de projeto_perdas usando ocorrencia_id (link confiável e suficiente).
+          // Não filtrar por projeto_id: ocorrências sem snapshot registram a perda no
+          // projeto atual da casa e ficariam órfãs aqui.
+          await (supabase as any)
+            .from('projeto_perdas')
+            .delete()
+            .eq('ocorrencia_id', id);
 
           // Verificar se bookmaker ainda está no projeto antes de estornar saldo
           if (ocorrencia.bookmaker_id) {
