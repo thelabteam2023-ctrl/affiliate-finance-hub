@@ -58,7 +58,7 @@ async function buildOnePartner(
     wantsBanking
       ? supabase
           .from("contas_bancarias")
-          .select("banco, agencia, conta, tipo_conta, titular, moeda, pix_key, pix_keys, observacoes")
+          .select("banco, banco_id, agencia, conta, tipo_conta, titular, moeda, pix_key, pix_keys, observacoes, bancos(codigo, nome, is_system)")
           .eq("parceiro_id", parceiroId)
       : Promise.resolve({ data: [], error: null } as const),
     wantsCrypto
