@@ -449,7 +449,7 @@ export function useAtualizarStatusOcorrencia() {
                   userId: user!.id,
                   descricao: `Estorno de perda (cancelamento): ${ocorrencia.titulo}`,
                   perdaId: id,
-                  projetoIdSnapshot: ocorrencia.projeto_id || undefined,
+                  projetoIdSnapshot: projetoEfetivo,
                 });
               }
 
