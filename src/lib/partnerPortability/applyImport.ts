@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { encryptPassword } from "@/utils/cryptoPassword";
 import { openSecurePayload } from "./secureBlob";
 import type { ExportEnvelope } from "./schema";
+import { labelBookmakerStatus, resolveImportState } from "./bookmakerState";
 
 const BANK_CURRENCIES = ["BRL", "USD", "EUR", "GBP", "MXN", "MYR", "ARS", "COP"];
 const BOOKMAKER_CURRENCIES = [
@@ -278,6 +279,8 @@ export async function applyPartnerImport(options: ImportOptions): Promise<Import
       }
 
       const moeda = BOOKMAKER_CURRENCIES.includes(house.moeda) ? house.moeda : "BRL";
+      // Estado do vínculo preservado da origem (arquivos antigos → "ativo").
+      const state = resolveImportState(house.status, house.estado_conta);
 
       const { error } = await supabase.from("bookmakers").insert({
         workspace_id: workspaceId,
@@ -293,7 +296,8 @@ export async function applyPartnerImport(options: ImportOptions): Promise<Import
         nome: house.nome,
         url: house.url ?? null,
         moeda,
-        status: "ativo",
+        status: state.status,
+        estado_conta: state.estado_conta,
         login_username: username,
         login_password_encrypted: encrypted,
         instance_identifier: house.instance_identifier ?? null,

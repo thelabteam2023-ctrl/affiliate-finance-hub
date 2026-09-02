@@ -93,6 +93,13 @@ export const bookmakerSchema = z.object({
   login_username: nullableString,
   instance_identifier: nullableString,
   observacoes: nullableString,
+  /**
+   * Estado do vínculo casa↔parceiro na origem (bookmakers.status).
+   * Opcional para manter compatibilidade com arquivos v1 anteriores.
+   */
+  status: nullableString,
+  /** Estado de conta correlato (bookmakers.estado_conta), quando existir. */
+  estado_conta: nullableString,
   /** Presente apenas quando a categoria "credentials" foi exportada sem passphrase-blob. */
   has_credentials: z.boolean().optional(),
 });
