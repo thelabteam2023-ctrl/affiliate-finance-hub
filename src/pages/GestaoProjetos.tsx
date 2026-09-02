@@ -33,7 +33,9 @@ import {
   Kanban,
   Briefcase,
   MoreHorizontal,
-  Check
+  Check,
+  AlertTriangle,
+  RefreshCw
 } from "lucide-react";
 import {
   Popover,
@@ -115,6 +117,7 @@ export default function GestaoProjetos() {
   
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string[]>(["EM_ANDAMENTO"]);
   const [tipoFilter, setTipoFilter] = useState<string>("all");
