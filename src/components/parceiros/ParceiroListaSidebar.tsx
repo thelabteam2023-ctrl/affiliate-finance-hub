@@ -70,11 +70,18 @@ export function ParceiroListaSidebar({
   onDeposito,
   onSaque,
   onTransferencia,
+  selectedIds,
+  onToggleSelected,
+  onSetSelection,
+  onExportSelected,
 }: ParceiroListaSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ativo");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc"); // desc = mais recente primeiro
   const { canCreate } = useActionAccess();
+
+  const selectionEnabled = !!onToggleSelected && !!onSetSelection;
+  const selectedSet = useMemo(() => new Set(selectedIds ?? []), [selectedIds]);
 
   const filteredParceiros = useMemo(() => {
     const filtered = parceiros.filter((p) => {
@@ -90,6 +97,21 @@ export function ParceiroListaSidebar({
       return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
     });
   }, [parceiros, searchTerm, statusFilter, sortOrder]);
+
+  const allFilteredSelected =
+    filteredParceiros.length > 0 && filteredParceiros.every((p) => selectedSet.has(p.id));
+
+  const toggleAllFiltered = () => {
+    if (!onSetSelection) return;
+    if (allFilteredSelected) {
+      onSetSelection((selectedIds ?? []).filter((id) => !filteredParceiros.some((p) => p.id === id)));
+    } else {
+      const merged = new Set(selectedIds ?? []);
+      filteredParceiros.forEach((p) => merged.add(p.id));
+      onSetSelection(Array.from(merged));
+    }
+  };
+
 
   // Convert SaldosPorMoeda to CurrencyEntry array
   const buildCurrencyEntries = (resultado: SaldosPorMoeda, moedasUtilizadas: string[]): CurrencyEntry[] => {
