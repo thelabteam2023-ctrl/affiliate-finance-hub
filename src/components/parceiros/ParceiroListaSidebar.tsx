@@ -1,9 +1,8 @@
 import { useState, useMemo } from "react";
-import { Search, User, Plus, ArrowUpDown, ArrowUp, ArrowDown, Edit, ArrowLeftRight, ArrowDownToLine, ArrowUpFromLine, Eye, Download, X } from "lucide-react";
+import { Search, User, Plus, ArrowUpDown, ArrowUp, ArrowDown, Edit, ArrowLeftRight, ArrowDownToLine, ArrowUpFromLine, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ContextMenu,
@@ -43,11 +42,6 @@ interface ParceiroListaSidebarProps {
   onDeposito?: (id: string) => void;
   onSaque?: (id: string) => void;
   onTransferencia?: (id: string) => void;
-  /** Seleção múltipla para exportação em lote */
-  selectedIds?: string[];
-  onToggleSelected?: (id: string) => void;
-  onSetSelection?: (ids: string[]) => void;
-  onExportSelected?: () => void;
 }
 
 
@@ -71,18 +65,11 @@ export function ParceiroListaSidebar({
   onDeposito,
   onSaque,
   onTransferencia,
-  selectedIds,
-  onToggleSelected,
-  onSetSelection,
-  onExportSelected,
 }: ParceiroListaSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ativo");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc"); // desc = mais recente primeiro
   const { canCreate } = useActionAccess();
-
-  const selectionEnabled = !!onToggleSelected && !!onSetSelection;
-  const selectedSet = useMemo(() => new Set(selectedIds ?? []), [selectedIds]);
 
   const filteredParceiros = useMemo(() => {
     const filtered = filterParceiros(parceiros, searchTerm, statusFilter);
@@ -94,20 +81,6 @@ export function ParceiroListaSidebar({
       return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
     });
   }, [parceiros, searchTerm, statusFilter, sortOrder]);
-
-  const allFilteredSelected =
-    filteredParceiros.length > 0 && filteredParceiros.every((p) => selectedSet.has(p.id));
-
-  const toggleAllFiltered = () => {
-    if (!onSetSelection) return;
-    if (allFilteredSelected) {
-      onSetSelection((selectedIds ?? []).filter((id) => !filteredParceiros.some((p) => p.id === id)));
-    } else {
-      const merged = new Set(selectedIds ?? []);
-      filteredParceiros.forEach((p) => merged.add(p.id));
-      onSetSelection(Array.from(merged));
-    }
-  };
 
 
   // Convert SaldosPorMoeda to CurrencyEntry array
@@ -169,53 +142,6 @@ export function ParceiroListaSidebar({
             <span className="font-medium text-sm">Novo Parceiro</span>
           </button>
         )}
-        {selectionEnabled && (
-          <div className="flex items-center justify-between gap-2 pt-0.5">
-            <label className="flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer select-none">
-              <Checkbox
-                checked={allFilteredSelected}
-                onCheckedChange={toggleAllFiltered}
-                className="h-3.5 w-3.5"
-              />
-              Selecionar todos ({filteredParceiros.length})
-            </label>
-            {selectedSet.size > 0 && (
-              <div className="flex items-center gap-1">
-                <span className="text-[11px] font-medium text-primary">
-                  {selectedSet.size} selecionado{selectedSet.size > 1 ? "s" : ""}
-                </span>
-                {onExportSelected && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6 text-primary"
-                        onClick={onExportSelected}
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">Exportar selecionados</TooltipContent>
-                  </Tooltip>
-                )}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6 text-muted-foreground"
-                      onClick={() => onSetSelection?.([])}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">Limpar seleção</TooltipContent>
-                </Tooltip>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
 
@@ -224,9 +150,6 @@ export function ParceiroListaSidebar({
         <div className="p-2 space-y-1 pb-4">
           {filteredParceiros.map((parceiro) => {
             const entries = buildCurrencyEntries(parceiro.resultado_por_moeda, parceiro.moedas_utilizadas);
-            
-            const isChecked = selectedSet.has(parceiro.id);
-
             return (
               <ContextMenu key={parceiro.id}>
                 <ContextMenuTrigger asChild>
@@ -235,27 +158,9 @@ export function ParceiroListaSidebar({
                       "group w-full flex items-center gap-2 rounded-lg transition-colors",
                       selectedId === parceiro.id
                         ? "bg-primary/10 border border-primary/30"
-                        : "hover:bg-muted/50 border border-transparent",
-                      isChecked && "ring-1 ring-primary/40"
+                        : "hover:bg-muted/50 border border-transparent"
                     )}
                   >
-                    {selectionEnabled && (
-                      <div
-                        className={cn(
-                          "pl-2 shrink-0 transition-opacity",
-                          isChecked || selectedSet.size > 0
-                            ? "opacity-100"
-                            : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"
-                        )}
-                      >
-                        <Checkbox
-                          checked={isChecked}
-                          onCheckedChange={() => onToggleSelected?.(parceiro.id)}
-                          aria-label={`Selecionar ${parceiro.nome}`}
-                          className="h-4 w-4"
-                        />
-                      </div>
-                    )}
                     <button
                       onClick={() => onSelect(parceiro.id)}
                       className="flex-1 min-w-0 flex items-center gap-3 p-3 text-left"
