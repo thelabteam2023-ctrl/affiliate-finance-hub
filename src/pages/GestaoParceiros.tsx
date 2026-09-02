@@ -603,6 +603,11 @@ export default function GestaoParceiros() {
                     onSelect={handleSelectParceiroDetalhes}
                     showSensitiveData={showSensitiveData}
                     onAddParceiro={() => setDialogOpen(true)}
+                    selectedIds={selectedIds}
+                    onToggleSelected={handleToggleSelected}
+                    onSetSelection={setSelectedIds}
+                    onExportSelected={() => setExportDialogOpen(true)}
+
                     onViewParceiro={(id) => {
                       const parceiro = parceiros.find(p => p.id === id);
                       if (parceiro) {
