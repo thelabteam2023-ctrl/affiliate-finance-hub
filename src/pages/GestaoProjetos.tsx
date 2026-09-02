@@ -772,6 +772,20 @@ export default function GestaoProjetos() {
               </Card>
             ))}
           </div>
+        ) : loadError ? (
+          <Card className="overflow-hidden border-destructive/40">
+            <CardContent className="pt-6">
+              <div className="text-center py-10 flex flex-col items-center gap-3">
+                <AlertTriangle className="h-10 w-10 text-destructive" />
+                <h3 className="text-lg font-semibold">Não foi possível carregar os projetos</h3>
+                <p className="text-sm text-muted-foreground max-w-md break-words">{loadError}</p>
+                <Button variant="outline" onClick={() => fetchProjetos()} className="gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Tentar novamente
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : filteredProjetos.length === 0 ? (
           <Card className="overflow-hidden">
             <CardContent className="pt-6">
