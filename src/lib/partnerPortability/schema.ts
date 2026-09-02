@@ -181,6 +181,90 @@ export function parseExportFile(raw: string): ParsedFileResult {
   return { ok: true, envelope: parsed.data };
 }
 
+/* ------------------------------------------------------------------ */
+/* BUNDLE — múltiplos parceiros em um único arquivo                    */
+/* ------------------------------------------------------------------ */
+
+export const BUNDLE_FORMAT = "LABBET_PARTNER_BUNDLE" as const;
+export const BUNDLE_VERSION = 1 as const;
+
+export const bundleSchema = z.object({
+  format: z.literal(BUNDLE_FORMAT),
+  version: z.literal(BUNDLE_VERSION),
+  exported_at: z.string(),
+  count: z.number().int().nonnegative().optional(),
+  categories: z.object(
+    CATEGORY_KEYS.reduce(
+      (acc, key) => ({ ...acc, [key]: z.boolean() }),
+      {} as Record<CategoryKey, z.ZodBoolean>,
+    ),
+  ),
+  /** Blob único com as credenciais de TODOS os parceiros (ext_id é global). */
+  secure: secureBlobSchema.nullable().optional(),
+  partners: z.array(exportEnvelopeSchema).min(1).max(1000),
+});
+
+export type ExportBundle = z.infer<typeof bundleSchema>;
+
+export interface ParsedBundleResult {
+  ok: boolean;
+  partners?: ExportEnvelope[];
+  secure?: SecureBlob | null;
+  error?: string;
+}
+
+/**
+ * Aceita tanto o formato antigo (um parceiro) quanto o bundle (vários).
+ * Sempre devolve uma lista de envelopes já com o blob seguro associado.
+ */
+export function parseImportFile(raw: string): ParsedBundleResult {
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    return { ok: false, error: "Arquivo inválido: não é um JSON válido." };
+  }
+
+  const shallow = json as Record<string, unknown> | null;
+  if (!shallow) return { ok: false, error: "Arquivo vazio." };
+
+  if (shallow.format === EXPORT_FORMAT) {
+    const single = parseExportFile(raw);
+    if (!single.ok || !single.envelope) return { ok: false, error: single.error };
+    return { ok: true, partners: [single.envelope], secure: single.envelope.secure ?? null };
+  }
+
+  if (shallow.format !== BUNDLE_FORMAT) {
+    return { ok: false, error: "Arquivo não é um pacote de portabilidade LABBET." };
+  }
+
+  if (typeof shallow.version === "number" && shallow.version > BUNDLE_VERSION) {
+    return {
+      ok: false,
+      error: `Versão do arquivo (${shallow.version}) é mais nova que a suportada (${BUNDLE_VERSION}). Atualize o sistema.`,
+    };
+  }
+
+  const parsed = bundleSchema.safeParse(json);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    return {
+      ok: false,
+      error: `Arquivo malformado ou adulterado: ${first?.path.join(".") || "bundle"} — ${first?.message ?? "estrutura inválida"}.`,
+    };
+  }
+
+  const secure = parsed.data.secure ?? null;
+  const partners = parsed.data.partners.map((env) => ({
+    ...env,
+    // O blob do bundle vale para todos: ext_id é único por parceiro.
+    secure: env.secure ?? secure,
+  }));
+
+  return { ok: true, partners, secure };
+}
+
+
 /** Identificador estável derivado de chaves naturais (sem UUID de origem). */
 export async function stableExtId(parts: (string | null | undefined)[]): Promise<string> {
   const base = parts.map((p) => (p ?? "").toString().trim().toLowerCase()).join("|");

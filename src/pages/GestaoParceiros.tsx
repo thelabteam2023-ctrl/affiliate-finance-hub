@@ -8,8 +8,15 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useTopBar } from "@/contexts/TopBarContext";
-import { Users, ArrowLeft, Download, Upload } from "lucide-react";
+import { Users, ArrowLeft, Download, Upload, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +64,8 @@ export default function GestaoParceiros() {
   const [showSensitiveData, setShowSensitiveData] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);
   const [viewMode, setViewMode] = useState(false);
@@ -364,6 +373,24 @@ export default function GestaoParceiros() {
     return parceiros.find(p => p.id === selectedParceiroDetalhes)?.nome ?? "Parceiro";
   }, [parceiros, selectedParceiroDetalhes]);
 
+  /** IDs efetivos da exportação: seleção múltipla ou, na ausência dela, o parceiro aberto. */
+  const exportIds = useMemo(() => {
+    if (selectedIds.length > 0) return selectedIds;
+    return selectedParceiroDetalhes ? [selectedParceiroDetalhes] : [];
+  }, [selectedIds, selectedParceiroDetalhes]);
+
+  const exportNome = useMemo(() => {
+    if (exportIds.length === 1) {
+      return parceiros.find(p => p.id === exportIds[0])?.nome ?? "Parceiro";
+    }
+    return selectedParceiroNome;
+  }, [exportIds, parceiros, selectedParceiroNome]);
+
+  const handleToggleSelected = useCallback((id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }, []);
+
+
   const handlePartnerImported = useCallback((parceiroId: string) => {
     refetchParceiros();
     parceiroCache.invalidateCache(parceiroId);
@@ -435,10 +462,11 @@ export default function GestaoParceiros() {
     });
   }, [parceiros, roiData, parceriasData]);
 
-  // Inject title into global TopBar
+  // Injeta título + menu compacto de ações na TopBar global
   useEffect(() => {
+    const selectionCount = selectedIds.length;
     setTopBarContent(
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="flex items-center gap-2 cursor-default">
@@ -452,31 +480,53 @@ export default function GestaoParceiros() {
             Gerencie seus parceiros e analise performance financeira
           </TooltipContent>
         </Tooltip>
-        <div className="flex items-center gap-1.5">
+
+        {selectionCount > 0 && (
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="h-7 gap-1.5 text-xs"
-            disabled={!selectedParceiroDetalhes}
             onClick={() => setExportDialogOpen(true)}
           >
             <Download className="h-3.5 w-3.5" />
-            Exportar parceiro
+            Exportar {selectionCount} selecionado{selectionCount > 1 ? "s" : ""}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 gap-1.5 text-xs"
-            onClick={() => setImportDialogOpen(true)}
-          >
-            <Upload className="h-3.5 w-3.5" />
-            Importar parceiro
-          </Button>
-        </div>
+        )}
+
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Ações de portabilidade</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuItem onClick={() => setImportDialogOpen(true)} className="gap-2">
+              <Upload className="h-4 w-4" />
+              Importar parceiros
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setExportDialogOpen(true)}
+              disabled={selectionCount === 0 && !selectedParceiroDetalhes}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Exportar parceiros
+              {selectionCount > 0 && (
+                <span className="ml-auto text-[11px] text-muted-foreground">{selectionCount}</span>
+              )}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     );
     return () => setTopBarContent(null);
-  }, [setTopBarContent, selectedParceiroDetalhes]);
+  }, [setTopBarContent, selectedParceiroDetalhes, selectedIds]);
+
 
 
   if (loading) {
@@ -553,6 +603,11 @@ export default function GestaoParceiros() {
                     onSelect={handleSelectParceiroDetalhes}
                     showSensitiveData={showSensitiveData}
                     onAddParceiro={() => setDialogOpen(true)}
+                    selectedIds={selectedIds}
+                    onToggleSelected={handleToggleSelected}
+                    onSetSelection={setSelectedIds}
+                    onExportSelected={() => setExportDialogOpen(true)}
+
                     onViewParceiro={(id) => {
                       const parceiro = parceiros.find(p => p.id === id);
                       if (parceiro) {
@@ -604,6 +659,11 @@ export default function GestaoParceiros() {
                   onSelect={handleSelectParceiroDetalhes}
                   showSensitiveData={showSensitiveData}
                   onAddParceiro={() => setDialogOpen(true)}
+                  selectedIds={selectedIds}
+                  onToggleSelected={handleToggleSelected}
+                  onSetSelection={setSelectedIds}
+                  onExportSelected={() => setExportDialogOpen(true)}
+
                   onViewParceiro={(id) => {
                     const parceiro = parceiros.find(p => p.id === id);
                     if (parceiro) {
@@ -671,8 +731,9 @@ export default function GestaoParceiros() {
         <ExportarParceiroDialog
           open={exportDialogOpen}
           onOpenChange={setExportDialogOpen}
-          parceiroId={selectedParceiroDetalhes}
-          parceiroNome={selectedParceiroNome}
+          parceiroIds={exportIds}
+          parceiroNome={exportNome}
+
           workspaceId={workspaceId ?? null}
         />
 

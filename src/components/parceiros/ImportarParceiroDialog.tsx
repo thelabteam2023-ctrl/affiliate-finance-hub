@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Upload, AlertTriangle, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Upload, AlertTriangle, CheckCircle2, XCircle, Loader2, Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,9 +14,10 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { maskCPFPartial } from "@/lib/validators";
-import { parseExportFile, type ExportEnvelope } from "@/lib/partnerPortability/schema";
+import { parseImportFile, type ExportEnvelope } from "@/lib/partnerPortability/schema";
 import { findPartnerMatch, MATCH_LABEL, type PartnerMatch } from "@/lib/partnerPortability/matchPartner";
 import { applyPartnerImport, type ImportReport, type ImportResolution } from "@/lib/partnerPortability/applyImport";
 
@@ -29,6 +30,21 @@ interface ImportarParceiroDialogProps {
 
 type Step = "select" | "preview" | "running" | "report";
 
+interface PartnerEntry {
+  envelope: ExportEnvelope;
+  match: PartnerMatch | null;
+  resolution: ImportResolution;
+  include: boolean;
+}
+
+interface PartnerOutcome {
+  nome: string;
+  ok: boolean;
+  created?: boolean;
+  detail?: string;
+  report?: ImportReport;
+}
+
 export function ImportarParceiroDialog({
   open,
   onOpenChange,
@@ -37,21 +53,19 @@ export function ImportarParceiroDialog({
 }: ImportarParceiroDialogProps) {
   const { toast } = useToast();
   const [step, setStep] = useState<Step>("select");
-  const [envelope, setEnvelope] = useState<ExportEnvelope | null>(null);
-  const [match, setMatch] = useState<PartnerMatch | null>(null);
-  const [resolution, setResolution] = useState<ImportResolution>("create");
+  const [entries, setEntries] = useState<PartnerEntry[]>([]);
   const [passphrase, setPassphrase] = useState("");
-  const [report, setReport] = useState<ImportReport | null>(null);
+  const [outcomes, setOutcomes] = useState<PartnerOutcome[]>([]);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const reset = () => {
     setStep("select");
-    setEnvelope(null);
-    setMatch(null);
-    setResolution("create");
+    setEntries([]);
     setPassphrase("");
-    setReport(null);
+    setOutcomes([]);
+    setProgress({ done: 0, total: 0 });
     setError(null);
     setBusy(false);
   };
@@ -67,15 +81,24 @@ export function ImportarParceiroDialog({
     setError(null);
     try {
       const raw = await file.text();
-      const parsed = parseExportFile(raw);
-      if (!parsed.ok || !parsed.envelope) {
+      const parsed = parseImportFile(raw);
+      if (!parsed.ok || !parsed.partners) {
         setError(parsed.error ?? "Arquivo inválido.");
         return;
       }
-      const found = await findPartnerMatch(parsed.envelope, workspaceId);
-      setEnvelope(parsed.envelope);
-      setMatch(found);
-      setResolution(found?.strength === "cpf" ? "update" : "create");
+
+      // Duplicidade avaliada EXCLUSIVAMENTE no workspace de destino.
+      const built: PartnerEntry[] = [];
+      for (const envelope of parsed.partners) {
+        const match = await findPartnerMatch(envelope, workspaceId);
+        built.push({
+          envelope,
+          match,
+          resolution: match ? "update" : "create",
+          include: true,
+        });
+      }
+      setEntries(built);
       setStep("preview");
     } catch (e: any) {
       setError(e?.message ?? "Falha ao ler o arquivo.");
@@ -84,34 +107,108 @@ export function ImportarParceiroDialog({
     }
   };
 
+  const stats = useMemo(() => {
+    const novos = entries.filter((e) => !e.match).length;
+    const existentes = entries.filter((e) => !!e.match).length;
+    const conflitos = entries.filter((e) => e.match && e.match.strength !== "cpf").length;
+    return { total: entries.length, novos, existentes, conflitos };
+  }, [entries]);
+
+  const setResolution = (index: number, resolution: ImportResolution) => {
+    setEntries((prev) => prev.map((e, i) => (i === index ? { ...e, resolution } : e)));
+  };
+
+  const applyToAll = (resolution: ImportResolution) => {
+    setEntries((prev) =>
+      prev.map((e) =>
+        e.match && !(resolution === "create" && e.match.strength === "cpf")
+          ? { ...e, resolution }
+          : e,
+      ),
+    );
+  };
+
+  const toggleInclude = (index: number) => {
+    setEntries((prev) => prev.map((e, i) => (i === index ? { ...e, include: !e.include } : e)));
+  };
+
   const handleConfirm = async () => {
-    if (!envelope || !workspaceId) return;
+    if (!workspaceId) return;
+    const selected = entries.filter((e) => e.include);
+    if (selected.length === 0) return;
+
     setStep("running");
-    try {
-      const result = await applyPartnerImport({
-        envelope,
-        workspaceId,
-        resolution,
-        existingPartnerId: match?.id ?? null,
-        credentialsPassphrase: passphrase || undefined,
+    setProgress({ done: 0, total: selected.length });
+    const results: PartnerOutcome[] = [];
+    let lastCreatedId: string | null = null;
+
+    // Sequencial e com erro isolado: um parceiro inválido não interrompe os demais.
+    for (const entry of selected) {
+      try {
+        const result = await applyPartnerImport({
+          envelope: entry.envelope,
+          workspaceId,
+          resolution: entry.resolution,
+          existingPartnerId: entry.match?.id ?? null,
+          credentialsPassphrase: passphrase || undefined,
+        });
+        lastCreatedId = result.parceiroId;
+        results.push({
+          nome: entry.envelope.partner.nome,
+          ok: true,
+          created: result.created,
+          report: result,
+        });
+      } catch (e: any) {
+        results.push({
+          nome: entry.envelope.partner.nome,
+          ok: false,
+          detail: e?.message ?? "Falha na importação",
+        });
+      }
+      setProgress((p) => ({ ...p, done: p.done + 1 }));
+      setOutcomes([...results]);
+    }
+
+    setOutcomes(results);
+    setStep("report");
+    if (lastCreatedId) onImported(lastCreatedId);
+
+    const failed = results.filter((r) => !r.ok).length;
+    if (failed > 0) {
+      toast({
+        title: "Importação concluída com falhas",
+        description: `${results.length - failed} importado(s), ${failed} com erro.`,
+        variant: "destructive",
       });
-      setReport(result);
-      setStep("report");
-      onImported(result.parceiroId);
-    } catch (e: any) {
-      setError(e?.message ?? "Falha na importação.");
-      setStep("preview");
-      toast({ title: "Erro na importação", description: e?.message, variant: "destructive" });
     }
   };
 
-  const needsPassphrase = !!envelope?.secure;
+  const needsPassphrase = entries.some((e) => !!e.envelope.secure);
+  const includedCount = entries.filter((e) => e.include).length;
+
+  const aggregate = useMemo(() => {
+    return outcomes.reduce(
+      (acc, o) => {
+        if (!o.ok) return { ...acc, erros: acc.erros + 1 };
+        return {
+          criados: acc.criados + (o.created ? 1 : 0),
+          atualizados: acc.atualizados + (o.created ? 0 : 1),
+          bancos: acc.bancos + (o.report?.banksImported ?? 0),
+          wallets: acc.wallets + (o.report?.walletsImported ?? 0),
+          casas: acc.casas + (o.report?.bookmakersImported ?? 0),
+          erros: acc.erros,
+        };
+      },
+      { criados: 0, atualizados: 0, bancos: 0, wallets: 0, casas: 0, erros: 0 },
+    );
+  }, [outcomes]);
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Importar parceiro</DialogTitle>
+          <DialogTitle>Importar parceiros</DialogTitle>
           <DialogDescription>
             Apenas dados cadastrais são importados. Nenhum saldo, aposta ou lançamento financeiro
             do workspace de origem é transportado.
@@ -139,51 +236,98 @@ export function ImportarParceiroDialog({
             />
             {busy && (
               <p className="text-xs text-muted-foreground flex items-center gap-2">
-                <Loader2 className="h-3 w-3 animate-spin" /> Validando arquivo...
+                <Loader2 className="h-3 w-3 animate-spin" /> Validando arquivo e checando
+                duplicidades...
               </p>
             )}
           </div>
         )}
 
-        {step === "preview" && envelope && (
+        {step === "preview" && entries.length > 0 && (
           <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
-            <div>
-              <p className="text-sm font-semibold">{envelope.partner.nome}</p>
-              <p className="text-xs text-muted-foreground font-mono">
-                {envelope.partner.cpf ? maskCPFPartial(envelope.partner.cpf) : "sem CPF"}
-              </p>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <Badge variant="secondary" className="gap-1">
+                <Users className="h-3 w-3" />
+                {stats.total} encontrado(s)
+              </Badge>
+              <Badge variant="outline">{stats.novos} novo(s)</Badge>
+              <Badge variant="outline">{stats.existentes} já existente(s)</Badge>
+              {stats.conflitos > 0 && (
+                <Badge variant="destructive">{stats.conflitos} com conflito</Badge>
+              )}
             </div>
 
-            <div className="space-y-1 text-sm">
-              <p className="text-xs font-semibold uppercase text-muted-foreground">Serão importados</p>
-              <Line ok={envelope.categories.personal} text="Dados pessoais" />
-              <Line ok={envelope.categories.contact} text="Contatos" />
-              <Line ok={envelope.categories.address} text="Endereço" />
-              <Line ok={envelope.categories.notes} text="Observações" />
-              <Line
-                ok={envelope.categories.banking && envelope.banking.length > 0}
-                text={`${envelope.banking.length} conta(s) bancária(s)`}
-              />
-              <Line
-                ok={envelope.categories.crypto && envelope.crypto.length > 0}
-                text={`${envelope.crypto.length} carteira(s) cripto`}
-              />
-              <Line
-                ok={envelope.categories.bookmakers && envelope.bookmakers.length > 0}
-                text={`${envelope.bookmakers.length} casa(s)`}
-              />
-              <Line ok={false} text="Histórico operacional e financeiro" />
-            </div>
-
-            {envelope.categories.bookmakers && envelope.bookmakers.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {envelope.bookmakers.map((b) => (
-                  <Badge key={b.ext_id} variant="secondary" className="text-[11px]">
-                    {b.nome}
-                  </Badge>
-                ))}
+            {stats.existentes > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-muted-foreground">Aplicar a todos:</span>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyToAll("update")}>
+                  Atualizar existentes
+                </Button>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyToAll("create")}>
+                  Criar novos
+                </Button>
               </div>
             )}
+
+            <Separator />
+
+            <div className="space-y-2">
+              {entries.map((entry, index) => (
+                <div
+                  key={`${entry.envelope.source_fingerprint}-${index}`}
+                  className="rounded-lg border border-border p-2.5 space-y-1.5"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{entry.envelope.partner.nome}</p>
+                      <p className="text-[11px] text-muted-foreground font-mono">
+                        {entry.envelope.partner.cpf
+                          ? maskCPFPartial(entry.envelope.partner.cpf)
+                          : "sem CPF"}
+                        {" · "}
+                        {entry.envelope.banking.length} banco(s) · {entry.envelope.crypto.length}{" "}
+                        wallet(s) · {entry.envelope.bookmakers.length} casa(s)
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={entry.include ? "outline" : "ghost"}
+                      className="h-7 text-[11px] shrink-0"
+                      onClick={() => toggleInclude(index)}
+                    >
+                      {entry.include ? "Incluído" : "Ignorado"}
+                    </Button>
+                  </div>
+
+                  {entry.match ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[11px] text-warning">
+                        Já existe: {entry.match.nome} ({MATCH_LABEL[entry.match.strength]})
+                      </span>
+                      <Button
+                        size="sm"
+                        variant={entry.resolution === "update" ? "default" : "outline"}
+                        className="h-6 text-[11px]"
+                        onClick={() => setResolution(index, "update")}
+                      >
+                        Atualizar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={entry.resolution === "create" ? "default" : "outline"}
+                        className="h-6 text-[11px]"
+                        disabled={entry.match.strength === "cpf"}
+                        onClick={() => setResolution(index, "create")}
+                      >
+                        Criar novo
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-success">Será criado neste workspace</p>
+                  )}
+                </div>
+              ))}
+            </div>
 
             {needsPassphrase && (
               <>
@@ -205,71 +349,48 @@ export function ImportarParceiroDialog({
                 </div>
               </>
             )}
-
-            {match && (
-              <>
-                <Separator />
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="text-xs">
-                    Possível parceiro já existente neste workspace: <b>{match.nome}</b> (
-                    {MATCH_LABEL[match.strength]}).
-                  </AlertDescription>
-                </Alert>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant={resolution === "update" ? "default" : "outline"}
-                    onClick={() => setResolution("update")}
-                  >
-                    Atualizar existente
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={resolution === "create" ? "default" : "outline"}
-                    disabled={match.strength === "cpf"}
-                    onClick={() => setResolution("create")}
-                  >
-                    Criar novo
-                  </Button>
-                </div>
-                {match.strength === "cpf" && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Criar novo está bloqueado: o CPF é único por workspace.
-                  </p>
-                )}
-              </>
-            )}
           </div>
         )}
 
         {step === "running" && (
-          <div className="py-8 flex flex-col items-center gap-2 text-sm text-muted-foreground">
+          <div className="py-8 flex flex-col items-center gap-3 text-sm text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
-            Importando...
+            Importando {progress.done}/{progress.total}...
+            <Progress
+              value={progress.total ? Math.round((progress.done / progress.total) * 100) : 0}
+              className="h-1.5 w-full"
+            />
           </div>
         )}
 
-        {step === "report" && report && (
+        {step === "report" && (
           <div className="space-y-2 text-sm max-h-[55vh] overflow-y-auto pr-1">
             <p className="font-semibold">Importação concluída.</p>
-            <Line ok text={report.created ? "Parceiro criado" : "Parceiro atualizado"} />
-            <Line ok={report.banksImported > 0} text={`${report.banksImported} banco(s) importado(s)`} />
-            <Line ok={report.walletsImported > 0} text={`${report.walletsImported} carteira(s) importada(s)`} />
-            <Line ok={report.bookmakersImported > 0} text={`${report.bookmakersImported} casa(s) importada(s)`} />
-            {report.banksSkipped + report.walletsSkipped + report.bookmakersSkipped > 0 && (
-              <Line
-                ok={false}
-                text={`${report.banksSkipped + report.walletsSkipped + report.bookmakersSkipped} item(ns) ignorado(s) por duplicidade ou conflito`}
-              />
-            )}
-            {report.lines
-              .filter((l) => !l.ok)
-              .map((l, i) => (
-                <p key={i} className="text-[11px] text-muted-foreground">
-                  • {l.label}: {l.detail}
+            <Line ok={aggregate.criados > 0} text={`${aggregate.criados} parceiro(s) criado(s)`} />
+            <Line
+              ok={aggregate.atualizados > 0}
+              text={`${aggregate.atualizados} parceiro(s) atualizado(s)`}
+            />
+            <Line ok={aggregate.bancos > 0} text={`${aggregate.bancos} conta(s) bancária(s)`} />
+            <Line ok={aggregate.wallets > 0} text={`${aggregate.wallets} carteira(s) cripto`} />
+            <Line ok={aggregate.casas > 0} text={`${aggregate.casas} casa(s)`} />
+            {aggregate.erros > 0 && <Line ok={false} text={`${aggregate.erros} parceiro(s) com erro`} />}
+
+            <Separator />
+            {outcomes.map((o, i) => (
+              <div key={i} className="text-[11px]">
+                <p className={o.ok ? "text-muted-foreground" : "text-destructive"}>
+                  • {o.nome}: {o.ok ? (o.created ? "criado" : "atualizado") : o.detail}
                 </p>
-              ))}
+                {o.report?.lines
+                  .filter((l) => !l.ok)
+                  .map((l, j) => (
+                    <p key={j} className="pl-3 text-muted-foreground">
+                      – {l.label}: {l.detail}
+                    </p>
+                  ))}
+              </div>
+            ))}
           </div>
         )}
 
@@ -279,9 +400,9 @@ export function ImportarParceiroDialog({
               <Button variant="outline" onClick={() => close(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleConfirm} className="gap-2">
+              <Button onClick={handleConfirm} className="gap-2" disabled={includedCount === 0}>
                 <Upload className="h-4 w-4" />
-                Confirmar importação
+                Importar {includedCount}
               </Button>
             </>
           )}
