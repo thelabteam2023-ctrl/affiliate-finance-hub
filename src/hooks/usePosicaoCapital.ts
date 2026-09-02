@@ -5,6 +5,8 @@ import { valorEfetivoSaque } from "@/lib/ledger/valorEfetivoSaque";
 
 const APORTE_TIPOS = ["APORTE", "APORTE_FINANCEIRO", "APORTE_DIRETO"];
 const LIQUIDACAO_TIPOS = ["LIQUIDACAO"];
+const isSaqueRow = (r: { tipo_transacao?: string | null }) =>
+  String(r?.tipo_transacao ?? "").startsWith("SAQUE");
 
 interface Row {
   tipo_transacao: string;
