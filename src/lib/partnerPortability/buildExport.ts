@@ -110,7 +110,7 @@ async function buildOnePartner(
   );
 
   const rawBookmakers = (bookmakersRes.data ?? []) as any[];
-  const includeCredentials = wantsBookmakers && categories.credentials && !!credentialsPassphrase;
+  const includeCredentials = wantsBookmakers && categories.credentials && wantsCredentials;
 
   const bookmakers: ExportBookmaker[] = await Promise.all(
     rawBookmakers.map(async (b) => ({
@@ -126,10 +126,9 @@ async function buildOnePartner(
     })),
   );
 
-  let secure: ExportEnvelope["secure"] = null;
+  const credentials: PlainCredential[] = [];
 
   if (includeCredentials) {
-    const credentials: SecurePayload["credentials"] = [];
     for (let i = 0; i < rawBookmakers.length; i++) {
       const raw = rawBookmakers[i];
       const password = raw.login_password_encrypted
@@ -141,7 +140,6 @@ async function buildOnePartner(
         password: password || null,
       });
     }
-    secure = await sealSecurePayload({ credentials }, credentialsPassphrase!);
   }
 
   const envelope: ExportEnvelope = {
@@ -167,26 +165,152 @@ async function buildOnePartner(
     banking,
     crypto: cryptoWallets,
     bookmakers,
-    secure,
+    secure: null,
   };
 
+  return { envelope, credentials };
+}
+
+/** Exportação de um único parceiro (compatibilidade com o formato v1). */
+export async function buildPartnerExport(
+  source: PartnerExportSource,
+  categories: Categories,
+  credentialsPassphrase?: string,
+): Promise<ExportEnvelope> {
+  const { envelope, credentials } = await buildOnePartner(
+    source,
+    categories,
+    !!credentialsPassphrase,
+  );
+  if (credentialsPassphrase && credentials.length > 0) {
+    envelope.secure = await sealSecurePayload({ credentials }, credentialsPassphrase);
+  }
   return envelope;
 }
 
-export function downloadExportFile(envelope: ExportEnvelope, partnerName: string): void {
-  const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const slug = partnerName
+export interface BatchExportProgress {
+  done: number;
+  total: number;
+  current: string | null;
+}
+
+export interface BatchExportResult {
+  bundle: ExportBundle;
+  failures: { parceiroId: string; message: string }[];
+}
+
+/**
+ * Exportação em lote: um único arquivo contendo N parceiros.
+ * Cada parceiro é lido isoladamente e sempre restrito ao workspace informado.
+ * As credenciais de todos os parceiros são seladas em um único blob (ext_id é
+ * um hash único por casa/parceiro, então não há mistura possível).
+ */
+export async function buildPartnerBundle(
+  parceiroIds: string[],
+  workspaceId: string,
+  categories: Categories,
+  credentialsPassphrase?: string,
+  onProgress?: (p: BatchExportProgress) => void,
+): Promise<BatchExportResult> {
+  const total = parceiroIds.length;
+  const wantsCredentials = !!credentialsPassphrase;
+
+  const limit = wantsCredentials ? BATCH_LIMIT_WITH_CREDENTIALS : BATCH_LIMIT_PLAIN;
+  if (total > limit) {
+    throw new Error(
+      `Limite de ${limit} parceiros por exportação${wantsCredentials ? " com credenciais" : ""}. Selecionados: ${total}.`,
+    );
+  }
+
+  const envelopes: ExportEnvelope[] = new Array(total);
+  const allCredentials: PlainCredential[] = [];
+  const failures: BatchExportResult["failures"] = [];
+  let done = 0;
+
+  const CONCURRENCY = wantsCredentials ? 2 : 4;
+  let cursor = 0;
+
+  const worker = async () => {
+    while (cursor < total) {
+      const index = cursor++;
+      const parceiroId = parceiroIds[index];
+      try {
+        const { envelope, credentials } = await buildOnePartner(
+          { parceiroId, workspaceId },
+          categories,
+          wantsCredentials,
+        );
+        envelopes[index] = envelope;
+        allCredentials.push(...credentials);
+        done++;
+        onProgress?.({ done, total, current: envelope.partner.nome });
+      } catch (e: any) {
+        failures.push({ parceiroId, message: e?.message ?? "Falha ao ler parceiro" });
+        done++;
+        onProgress?.({ done, total, current: null });
+      }
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, worker));
+
+  const partners = envelopes.filter(Boolean);
+  if (partners.length === 0) {
+    throw new Error("Nenhum parceiro pôde ser exportado.");
+  }
+
+  const secure =
+    wantsCredentials && allCredentials.length > 0
+      ? await sealSecurePayload({ credentials: allCredentials }, credentialsPassphrase!)
+      : null;
+
+  const bundle: ExportBundle = {
+    format: BUNDLE_FORMAT,
+    version: BUNDLE_VERSION,
+    exported_at: new Date().toISOString(),
+    count: partners.length,
+    categories,
+    secure,
+    partners,
+  };
+
+  return { bundle, failures };
+}
+
+function slugify(value: string): string {
+  return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9]+/g, "-")
     .toLowerCase()
     .slice(0, 40);
+}
+
+function triggerDownload(content: unknown, filename: string): void {
+  const blob = new Blob([JSON.stringify(content, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `parceiro-${slug}-${new Date().toISOString().slice(0, 10)}.labbet`;
+  anchor.download = filename;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
 }
+
+export function downloadExportFile(envelope: ExportEnvelope, partnerName: string): void {
+  triggerDownload(
+    envelope,
+    `parceiro-${slugify(partnerName)}-${new Date().toISOString().slice(0, 10)}.labbet`,
+  );
+}
+
+export function downloadBundleFile(bundle: ExportBundle, singleName?: string): void {
+  const date = new Date().toISOString().slice(0, 10);
+  const filename =
+    bundle.partners.length === 1 && singleName
+      ? `parceiro-${slugify(singleName)}-${date}.labbet`
+      : `parceiros-${bundle.partners.length}-${date}.labbet`;
+  triggerDownload(bundle, filename);
+}
+
