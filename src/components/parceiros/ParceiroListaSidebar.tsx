@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { maskCPFPartial } from "@/lib/validators";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { NativeCurrencyKpi, CurrencyEntry } from "@/components/ui/native-currency-kpi";
+import { filterParceiros, normalizeParceiroStatus } from "@/lib/parceiroStatusFilter";
 
 // Multi-currency saldos type
 type SaldosPorMoeda = Record<string, number>;
@@ -84,12 +85,8 @@ export function ParceiroListaSidebar({
   const selectedSet = useMemo(() => new Set(selectedIds ?? []), [selectedIds]);
 
   const filteredParceiros = useMemo(() => {
-    const filtered = parceiros.filter((p) => {
-      const matchesSearch = p.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.cpf.includes(searchTerm);
-      const matchesStatus = statusFilter === "todos" || p.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
+    const filtered = filterParceiros(parceiros, searchTerm, statusFilter);
+
 
     return [...filtered].sort((a, b) => {
       const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
