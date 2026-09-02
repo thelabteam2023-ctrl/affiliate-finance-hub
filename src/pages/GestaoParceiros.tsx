@@ -64,6 +64,8 @@ export default function GestaoParceiros() {
   const [showSensitiveData, setShowSensitiveData] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);
   const [viewMode, setViewMode] = useState(false);
