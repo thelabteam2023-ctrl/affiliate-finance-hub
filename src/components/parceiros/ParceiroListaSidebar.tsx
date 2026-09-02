@@ -172,7 +172,55 @@ export function ParceiroListaSidebar({
             <span className="font-medium text-sm">Novo Parceiro</span>
           </button>
         )}
+        {selectionEnabled && (
+          <div className="flex items-center justify-between gap-2 pt-0.5">
+            <label className="flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer select-none">
+              <Checkbox
+                checked={allFilteredSelected}
+                onCheckedChange={toggleAllFiltered}
+                className="h-3.5 w-3.5"
+              />
+              Selecionar todos ({filteredParceiros.length})
+            </label>
+            {selectedSet.size > 0 && (
+              <div className="flex items-center gap-1">
+                <span className="text-[11px] font-medium text-primary">
+                  {selectedSet.size} selecionado{selectedSet.size > 1 ? "s" : ""}
+                </span>
+                {onExportSelected && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-primary"
+                        onClick={onExportSelected}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">Exportar selecionados</TooltipContent>
+                  </Tooltip>
+                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6 text-muted-foreground"
+                      onClick={() => onSetSelection?.([])}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Limpar seleção</TooltipContent>
+                </Tooltip>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
 
       {/* Lista: flex-1 com scroll próprio - scrollbar sempre visível */}
       <div className="flex-1 min-h-0 overflow-y-scroll">
