@@ -330,7 +330,7 @@ export function useCriarOcorrencia() {
           executor_id: payload.executor_id,
           bookmaker_id: payload.bookmaker_id || null,
           conta_bancaria_id: payload.conta_bancaria_id || null,
-          projeto_id: payload.projeto_id || null,
+          projeto_id: projetoSnapshot,
           parceiro_id: payload.parceiro_id || null,
           aposta_id: payload.aposta_id || null,
           wallet_id: payload.wallet_id || null,
