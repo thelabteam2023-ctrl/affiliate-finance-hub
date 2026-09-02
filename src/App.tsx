@@ -43,7 +43,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { installRpcInterceptor } from "@/lib/dev/rpcInterceptor";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { ErrorMonitorPanel } from "@/components/ErrorMonitorPanel";
+import { AppVersionWatcher } from "@/components/system/AppVersionWatcher";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { GlobalFinancialSync } from "@/components/system/GlobalFinancialSync";
+
 
 // Install RPC interceptor for the system-owner Ledger Monitor (no-op for everyone else)
 installRpcInterceptor();
@@ -363,7 +366,9 @@ const App = () => (
                   <Sonner />
                   <ApostaPopupContainer />
                   <ErrorMonitorPanel />
+                  <AppVersionWatcher />
                   <GlobalFinancialSync />
+
                   <BrowserRouter>
             <Routes>
             {/* Public routes - no layout */}
