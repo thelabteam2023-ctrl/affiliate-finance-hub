@@ -435,10 +435,11 @@ export default function GestaoParceiros() {
     });
   }, [parceiros, roiData, parceriasData]);
 
-  // Inject title into global TopBar
+  // Injeta título + menu compacto de ações na TopBar global
   useEffect(() => {
+    const selectionCount = selectedIds.length;
     setTopBarContent(
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="flex items-center gap-2 cursor-default">
@@ -452,31 +453,53 @@ export default function GestaoParceiros() {
             Gerencie seus parceiros e analise performance financeira
           </TooltipContent>
         </Tooltip>
-        <div className="flex items-center gap-1.5">
+
+        {selectionCount > 0 && (
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="h-7 gap-1.5 text-xs"
-            disabled={!selectedParceiroDetalhes}
             onClick={() => setExportDialogOpen(true)}
           >
             <Download className="h-3.5 w-3.5" />
-            Exportar parceiro
+            Exportar {selectionCount} selecionado{selectionCount > 1 ? "s" : ""}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 gap-1.5 text-xs"
-            onClick={() => setImportDialogOpen(true)}
-          >
-            <Upload className="h-3.5 w-3.5" />
-            Importar parceiro
-          </Button>
-        </div>
+        )}
+
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Ações de portabilidade</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuItem onClick={() => setImportDialogOpen(true)} className="gap-2">
+              <Upload className="h-4 w-4" />
+              Importar parceiros
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setExportDialogOpen(true)}
+              disabled={selectionCount === 0 && !selectedParceiroDetalhes}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Exportar parceiros
+              {selectionCount > 0 && (
+                <span className="ml-auto text-[11px] text-muted-foreground">{selectionCount}</span>
+              )}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     );
     return () => setTopBarContent(null);
-  }, [setTopBarContent, selectedParceiroDetalhes]);
+  }, [setTopBarContent, selectedParceiroDetalhes, selectedIds]);
+
 
 
   if (loading) {
