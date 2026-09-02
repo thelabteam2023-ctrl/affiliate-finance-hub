@@ -33,7 +33,9 @@ import {
   Kanban,
   Briefcase,
   MoreHorizontal,
-  Check
+  Check,
+  AlertTriangle,
+  RefreshCw
 } from "lucide-react";
 import {
   Popover,
@@ -115,6 +117,7 @@ export default function GestaoProjetos() {
   
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string[]>(["EM_ANDAMENTO"]);
   const [tipoFilter, setTipoFilter] = useState<string>("all");
@@ -157,6 +160,7 @@ export default function GestaoProjetos() {
     
     try {
       setLoading(true);
+      setLoadError(null);
       
       let projetoIds: string[] = [];
       
@@ -373,7 +377,10 @@ export default function GestaoProjetos() {
       
       setProjetos(mapped);
     } catch (error: any) {
-      toast.error("Erro ao carregar projetos: " + error.message);
+      const detalhe = error?.message || error?.details || "Erro desconhecido";
+      console.error("[GestaoProjetos] Falha ao carregar projetos", error);
+      setLoadError(detalhe);
+      toast.error("Erro ao carregar projetos: " + detalhe);
     } finally {
       setLoading(false);
     }
@@ -765,6 +772,20 @@ export default function GestaoProjetos() {
               </Card>
             ))}
           </div>
+        ) : loadError ? (
+          <Card className="overflow-hidden border-destructive/40">
+            <CardContent className="pt-6">
+              <div className="text-center py-10 flex flex-col items-center gap-3">
+                <AlertTriangle className="h-10 w-10 text-destructive" />
+                <h3 className="text-lg font-semibold">Não foi possível carregar os projetos</h3>
+                <p className="text-sm text-muted-foreground max-w-md break-words">{loadError}</p>
+                <Button variant="outline" onClick={() => fetchProjetos()} className="gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Tentar novamente
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : filteredProjetos.length === 0 ? (
           <Card className="overflow-hidden">
             <CardContent className="pt-6">
