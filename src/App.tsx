@@ -8,7 +8,7 @@
  * 3. Design Profissional: Estética executiva de BI, tipografia refinada e hierarquia clara.
  * 4. Identidade Visual: Integração da marca oficial LABBET.
  */
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
@@ -43,7 +43,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { installRpcInterceptor } from "@/lib/dev/rpcInterceptor";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { ErrorMonitorPanel } from "@/components/ErrorMonitorPanel";
+import { AppVersionWatcher } from "@/components/system/AppVersionWatcher";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { GlobalFinancialSync } from "@/components/system/GlobalFinancialSync";
+
 
 // Install RPC interceptor for the system-owner Ledger Monitor (no-op for everyone else)
 installRpcInterceptor();
@@ -56,28 +59,10 @@ import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
 function lazyWithChunkRetry<T extends { default: ComponentType<any> }>(factory: () => Promise<T>) {
-  return lazy(async () => {
-    try {
-      const mod = await factory();
-      sessionStorage.removeItem("stakesync:chunk-reload");
-      return mod;
-    } catch (error: any) {
-      const message = String(error?.message ?? error ?? "");
-      const isChunkError =
-        message.includes("Failed to fetch dynamically imported module") ||
-        message.includes("Importing a module script failed") ||
-        message.includes("ChunkLoadError");
-
-      if (isChunkError && sessionStorage.getItem("stakesync:chunk-reload") !== "1") {
-        sessionStorage.setItem("stakesync:chunk-reload", "1");
-        window.location.reload();
-        return new Promise<T>(() => undefined);
-      }
-
-      throw error;
-    }
-  });
+  // A chave identifica o módulo (o texto do import) para o controle de tentativas.
+  return lazyWithRetry(factory, factory.toString().slice(0, 120));
 }
+
 
 // ─── Lazy imports: heavy authenticated pages ───
 const GestaoParceiros = lazyWithChunkRetry(() => import("./pages/GestaoParceiros"));
@@ -381,7 +366,9 @@ const App = () => (
                   <Sonner />
                   <ApostaPopupContainer />
                   <ErrorMonitorPanel />
+                  <AppVersionWatcher />
                   <GlobalFinancialSync />
+
                   <BrowserRouter>
             <Routes>
             {/* Public routes - no layout */}
