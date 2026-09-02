@@ -274,5 +274,6 @@ export function useOperacoesFilter<T>(
     facetOptions,
     hasActiveFilters,
     totalItems: items.length,
+    hiddenByFilters: Math.max(0, items.length - filtered.length),
   };
 }
