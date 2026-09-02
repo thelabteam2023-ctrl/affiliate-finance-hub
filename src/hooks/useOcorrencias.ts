@@ -14,6 +14,7 @@ import type {
   OcorrenciaTipo,
   OcorrenciaAnexo,
 } from '@/types/ocorrencias';
+import { resolverVinculoOcorrencia } from '@/lib/ocorrencias/vinculoOcorrencia';
 
 // Helper typed clients para as novas tabelas não geradas pelo auto-gen
 const ocorrenciasTable = () => (supabase as any).from('ocorrencias');
@@ -304,6 +305,18 @@ export function useCriarOcorrencia() {
 
   return useMutation({
     mutationFn: async (payload: CriarOcorrenciaPayload) => {
+      // 0. Snapshot do projeto: se a ocorrência nasce fora de um projeto mas a casa
+      // está vinculada, congelamos esse vínculo agora (evita o falso "desvinculada").
+      let projetoSnapshot = payload.projeto_id || null;
+      if (!projetoSnapshot && payload.bookmaker_id) {
+        const { data: bkProj } = await (supabase as any)
+          .from('bookmakers')
+          .select('projeto_id')
+          .eq('id', payload.bookmaker_id)
+          .maybeSingle();
+        projetoSnapshot = bkProj?.projeto_id || null;
+      }
+
       // 1. Criar ocorrência
       const { data: ocorrencia, error } = await ocorrenciasTable()
         .insert({
