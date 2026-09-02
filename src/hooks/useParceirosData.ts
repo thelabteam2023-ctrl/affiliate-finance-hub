@@ -172,16 +172,49 @@ const EMPTY: ParceirosQueryData = {
   parceriasData: new Map(),
 };
 
+/** Query key canônica da listagem de parceiros (usada para invalidação em qualquer fluxo de escrita). */
+export const PARCEIROS_DATA_QUERY_KEY = "parceiros-data" as const;
+
 export function useParceirosData() {
   const { workspaceId } = useTabWorkspace();
+  const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["parceiros-data", workspaceId],
+    queryKey: [PARCEIROS_DATA_QUERY_KEY, workspaceId],
     queryFn: () => fetchParceirosData(workspaceId!),
     enabled: !!workspaceId,
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,
+    // Status do parceiro é dado de cadastro crítico para o filtro da listagem:
+    // sempre revalidar contra o banco ao montar a tela.
+    refetchOnMount: "always",
   });
+
+  // Realtime: qualquer mudança em parceiros do workspace (inclusive status alterado
+  // em outra aba/janela ou por outro usuário) atualiza a listagem sem F5.
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    const channel = supabase
+      .channel(`parceiros-status-${workspaceId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "parceiros",
+          filter: `workspace_id=eq.${workspaceId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: [PARCEIROS_DATA_QUERY_KEY, workspaceId] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [workspaceId, queryClient]);
 
   return {
     ...(query.data ?? EMPTY),
@@ -189,3 +222,4 @@ export function useParceirosData() {
     refetch: query.refetch,
   };
 }
+
