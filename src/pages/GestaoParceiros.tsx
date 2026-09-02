@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useTopBar } from "@/contexts/TopBarContext";
-import { Users, ArrowLeft } from "lucide-react";
+import { Users, ArrowLeft, Download, Upload } from "lucide-react";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   AlertDialog,
@@ -27,6 +27,8 @@ import { VinculoCriadoConfirmDialog } from "@/components/bookmakers/VinculoCriad
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { ParceiroListaSidebar } from "@/components/parceiros/ParceiroListaSidebar";
 import { ParceiroDetalhesPanel } from "@/components/parceiros/ParceiroDetalhesPanel";
+import { ExportarParceiroDialog } from "@/components/parceiros/ExportarParceiroDialog";
+import { ImportarParceiroDialog } from "@/components/parceiros/ImportarParceiroDialog";
 import { formatCPF, maskCPFPartial } from "@/lib/validators";
 import { useParceiroFinanceiroCache } from "@/hooks/useParceiroFinanceiroCache";
 import { getGlobalBookmakersCache } from "@/hooks/useParceiroTabsCache";
@@ -54,6 +56,8 @@ export default function GestaoParceiros() {
   
   const [showSensitiveData, setShowSensitiveData] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);
   const [viewMode, setViewMode] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -355,6 +359,22 @@ export default function GestaoParceiros() {
     }
   }, [selectedParceiroDetalhes]);
 
+  // ============== PORTABILIDADE DE PARCEIROS ==============
+  const selectedParceiroNome = useMemo(() => {
+    return parceiros.find(p => p.id === selectedParceiroDetalhes)?.nome ?? "Parceiro";
+  }, [parceiros, selectedParceiroDetalhes]);
+
+  const handlePartnerImported = useCallback((parceiroId: string) => {
+    refetchParceiros();
+    parceiroCache.invalidateCache(parceiroId);
+    getGlobalBookmakersCache().delete(parceiroId);
+    setBookmakerRefreshKey(prev => prev + 1);
+    setSelectedParceiroDetalhes(parceiroId);
+    parceiroCache.selectParceiro(parceiroId);
+    localStorage.setItem('last_selected_partner_id', parceiroId);
+  }, [refetchParceiros, parceiroCache]);
+
+
   // ============== MEMOIZED DERIVED PROPS ==============
   // Evita recriação de objetos/valores a cada render do parent
   
@@ -418,22 +438,46 @@ export default function GestaoParceiros() {
   // Inject title into global TopBar
   useEffect(() => {
     setTopBarContent(
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center gap-2 cursor-default">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-              <Users className="h-4 w-4 text-primary" />
+      <div className="flex items-center gap-3">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-2 cursor-default">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                <Users className="h-4 w-4 text-primary" />
+              </div>
+              <span className="font-semibold text-sm">Gestão de Parceiros ⭐</span>
             </div>
-            <span className="font-semibold text-sm">Gestão de Parceiros ⭐</span>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">
-          Gerencie seus parceiros e analise performance financeira
-        </TooltipContent>
-      </Tooltip>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            Gerencie seus parceiros e analise performance financeira
+          </TooltipContent>
+        </Tooltip>
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 text-xs"
+            disabled={!selectedParceiroDetalhes}
+            onClick={() => setExportDialogOpen(true)}
+          >
+            <Download className="h-3.5 w-3.5" />
+            Exportar parceiro
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 text-xs"
+            onClick={() => setImportDialogOpen(true)}
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Importar parceiro
+          </Button>
+        </div>
+      </div>
     );
     return () => setTopBarContent(null);
-  }, [setTopBarContent]);
+  }, [setTopBarContent, selectedParceiroDetalhes]);
+
 
   if (loading) {
     return (
@@ -624,6 +668,21 @@ export default function GestaoParceiros() {
         </div>
 
         {/* Dialogs */}
+        <ExportarParceiroDialog
+          open={exportDialogOpen}
+          onOpenChange={setExportDialogOpen}
+          parceiroId={selectedParceiroDetalhes}
+          parceiroNome={selectedParceiroNome}
+          workspaceId={workspaceId ?? null}
+        />
+
+        <ImportarParceiroDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          workspaceId={workspaceId ?? null}
+          onImported={handlePartnerImported}
+        />
+
         {dialogOpen && (
           <ParceiroDialog
             key={`parceiro-dialog-${workspaceId ?? "none"}-${editingParceiro?.id ?? "new"}`}
