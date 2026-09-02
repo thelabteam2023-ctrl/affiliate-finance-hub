@@ -430,7 +430,13 @@ export function ImportarParceiroDialog({
             />
             <Line ok={aggregate.bancos > 0} text={`${aggregate.bancos} conta(s) bancária(s)`} />
             <Line ok={aggregate.wallets > 0} text={`${aggregate.wallets} carteira(s) cripto`} />
-            <Line ok={aggregate.casas > 0} text={`${aggregate.casas} casa(s)`} />
+            <Line ok={aggregate.casas > 0} text={`${aggregate.casas} casa(s) criada(s)`} />
+            {aggregate.casasExistentes > 0 && (
+              <Line
+                ok
+                text={`${aggregate.casasExistentes} casa(s) já existente(s) — não duplicada(s)`}
+              />
+            )}
             {aggregate.erros > 0 && <Line ok={false} text={`${aggregate.erros} parceiro(s) com erro`} />}
 
             <Separator />
