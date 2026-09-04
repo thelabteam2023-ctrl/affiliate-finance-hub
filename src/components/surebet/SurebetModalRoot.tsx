@@ -381,7 +381,9 @@ export function SurebetModalRoot({
    
    // 1. Saldo base + Crédito de edição
    const credito = isEditing ? (originalStakes.get(entry.bookmaker_id) || { real: 0, freebet: 0 }) : { real: 0, freebet: 0 };
-   const saldoBase = isFB ? (selectedBk.saldo_freebet ?? 0) : (selectedBk.saldo_operavel ?? 0);
+   // CRÍTICO: entrada REAL só consome saldo REAL livre (saldo_disponivel).
+   // `saldo_operavel` inclui a freebet e não pode servir de base aqui.
+   const saldoBase = isFB ? (selectedBk.saldo_freebet ?? 0) : (selectedBk.saldo_disponivel ?? 0);
    const saldoDisponivelTotal = saldoBase + (isFB ? credito.freebet : credito.real);
  
    // 2. Descontar outras pernas/entradas que usem a mesma casa e mesmo tipo de saldo
