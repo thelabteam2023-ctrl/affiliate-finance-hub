@@ -419,15 +419,16 @@ export function SurebetModalRoot({
     const reservadoAtual = reservadoDe(entry.stake, entry.odd, entry.tipo);
     const excedeu = reservadoAtual > disponivelFinal + 0.01;
     const isLay = (entry.tipo ?? 'back') === 'lay';
-    const rotulo = isLay ? 'Resp' : 'Saldo';
+     const rotulo = isLay ? 'Responsabilidade' : (isFB ? 'Freebet' : 'Saldo real');
+     const fmt = (v: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: selectedBk.moeda || 'USD' }).format(v);
  
-   return {
-     disponivel: disponivelFinal,
-     excedeu,
-      mensagem: excedeu
-        ? `${rotulo} insuficiente. Disponível: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: selectedBk.moeda || 'USD' }).format(disponivelFinal)}`
-        : ""
-   };
+    return {
+      disponivel: disponivelFinal,
+      excedeu,
+       mensagem: excedeu
+         ? `${rotulo} insuficiente. Disponível: ${fmt(disponivelFinal)}${isFB ? '' : ` (freebet: ${fmt(selectedBk.saldo_freebet ?? 0)} não conta como saldo real)`}`
+         : ""
+    };
  }
 
  
