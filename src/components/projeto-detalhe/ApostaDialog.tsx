@@ -70,6 +70,7 @@ import {
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
 import { reliquidarAposta, deletarAposta } from "@/services/aposta";
+import { atualizarApostaCadastral, pickCamposCadastrais } from "@/services/aposta/atualizarApostaCadastral";
 // MOTOR FINANCEIRO v9.5: updateBookmakerBalance REMOVIDO - saldos são atualizados exclusivamente via trigger
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { GerouFreebetInput } from "./GerouFreebetInput";
@@ -1614,6 +1615,40 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     return stakeReal + fbValor;
   }, [stake, usarFreebetBookmaker, valorFreebetUsar]);
 
+  /**
+   * Detecta se a edição de uma aposta LIQUIDADA envolve valores financeiros
+   * (casa, stake, odd ou resultado). Alterações puramente cadastrais
+   * (data/hora, evento, mercado, observações) NÃO envolvem ledger e por isso
+   * não exigem a confirmação de reversão.
+   * Comparações numéricas usam os limiares canônicos do projeto.
+   */
+  const mudouAlgoFinanceiro = (): boolean => {
+    if (!aposta) return true;
+    const resultadoAnterior = aposta.resultado || null;
+    const novoResultado = statusResultado === "PENDENTE" ? null : statusResultado;
+    if (resultadoAnterior !== novoResultado) return true;
+
+    const bookmakerAtualId =
+      tipoAposta === "bookmaker"
+        ? bookmakerId
+        : tipoOperacaoExchange === "cobertura"
+          ? coberturaBackBookmakerId
+          : exchangeBookmakerId;
+    if ((aposta.bookmaker_id || null) !== (bookmakerAtualId || null)) return true;
+
+    const oddNova = parseFloat(odd);
+    if (Number.isFinite(oddNova) && Math.abs((Number(aposta.odd) || 0) - oddNova) > 0.00001) return true;
+
+    if (tipoAposta === "bookmaker") {
+      const stakeNova = stakeBookmakerEfetiva;
+      if (Number.isFinite(stakeNova) && Math.abs((Number(aposta.stake) || 0) - stakeNova) > 0.01) return true;
+      return false;
+    }
+
+    // Modos exchange/cobertura: sem comparação confiável aqui, tratar como financeiro.
+    return true;
+  };
+
   const handleSave = async () => {
     // Validação de campos de registro obrigatórios (Prompt Oficial)
     const registroValidation = validateRegistroAposta(registroValues);
@@ -1625,10 +1660,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     // FASE 3 — Guard de edição de aposta LIQUIDADA.
     // Pede confirmação explícita do usuário antes de reescrever uma aposta
     // já resolvida (envolve REVERSAL no ledger e recálculo de snapshot).
-    if (aposta && aposta.status === "LIQUIDADA") {
+    // Edição puramente cadastral não toca no ledger → não pede confirmação.
+    if (aposta && aposta.status === "LIQUIDADA" && mudouAlgoFinanceiro()) {
       const ok = await requestLiquidadaConfirm();
       if (!ok) return;
     }
+
 
     // Validações básicas comuns a todos os modos
     if (!esporte || !mercado) {
@@ -2310,8 +2347,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // ================================================================
         const apostaEstaLiquidada = aposta.status === "LIQUIDADA";
         const houveMudancaBookmaker = bookmakerAnteriorId !== bookmakerAtualId;
-        const houveMudancaStake = stakeAnterior !== apostaData.stake;
-        const houveMudancaOdd = oddAnterior !== apostaData.odd;
+        const houveMudancaStake = Math.abs((Number(stakeAnterior) || 0) - (Number(apostaData.stake) || 0)) > 0.01;
+        const houveMudancaOdd = Math.abs((Number(oddAnterior) || 0) - (Number(apostaData.odd) || 0)) > 0.00001;
         const houveMudancaResultado = resultadoAnterior !== novoResultado;
         const houveMudancaFinanceira = houveMudancaBookmaker || houveMudancaStake || houveMudancaOdd || houveMudancaResultado;
 
@@ -2341,16 +2378,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           
           console.log("[ApostaDialog] ✅ Reversão concluída:", revertResult);
           
-          // Atualizar campos não-financeiros
+          // Campos cadastrais (data/hora, evento, mercado...) — caminho único, falha alto
+          await atualizarApostaCadastral(aposta.id, pickCamposCadastrais(apostaData));
+
+          // Demais campos não-financeiros de estrutura
           const { error: updateError } = await supabase
             .from("apostas_unificada")
             .update({
-              evento: apostaData.evento,
-              mercado: apostaData.mercado,
-              esporte: apostaData.esporte,
-              selecao: apostaData.selecao,
-              observacoes: apostaData.observacoes,
-              data_aposta: apostaData.data_aposta,
               modo_entrada: apostaData.modo_entrada,
               lay_exchange: apostaData.lay_exchange,
               lay_odd: apostaData.lay_odd,
@@ -2362,8 +2396,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               gerou_freebet: apostaData.gerou_freebet,
               valor_freebet_gerada: apostaData.valor_freebet_gerada,
               tipo_freebet: apostaData.tipo_freebet,
-              estrategia: apostaData.estrategia,
-              contexto_operacional: apostaData.contexto_operacional,
               fonte_saldo: apostaData.fonte_saldo,
               usar_freebet: apostaData.usar_freebet,
               stake_real: apostaData.stake_real,
@@ -2373,8 +2405,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             .eq("id", aposta.id);
           
           if (updateError) {
-            console.warn("[ApostaDialog] Erro ao atualizar campos complementares:", updateError);
+            console.error("[ApostaDialog] Erro ao atualizar campos complementares:", updateError);
+            throw new Error(`Erro ao salvar campos complementares: ${updateError.message}`);
           }
+
           
           // Invalidar caches de saldo
           await invalidateSaldos(projetoId);
@@ -2424,18 +2458,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
           console.log("[ApostaDialog] ✅ reliquidar_aposta_v6 sucesso:", reliqResult);
 
-          // Atualizar campos que o RPC não atualiza (campos descritivos)
+          // Campos cadastrais — caminho único, falha alto
+          await atualizarApostaCadastral(aposta.id, pickCamposCadastrais(apostaData));
+
+          // Demais campos que o RPC não atualiza
           const { error: updateError } = await supabase
             .from("apostas_unificada")
             .update({
-              evento: apostaData.evento,
-              mercado: apostaData.mercado,
-              esporte: apostaData.esporte,
-              selecao: apostaData.selecao,
-              observacoes: apostaData.observacoes,
-              data_aposta: apostaData.data_aposta,
-              estrategia: apostaData.estrategia,
-              contexto_operacional: apostaData.contexto_operacional,
               // Campos de exchange/cobertura
               modo_entrada: apostaData.modo_entrada,
               lay_exchange: apostaData.lay_exchange,
@@ -2458,11 +2487,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             .eq("id", aposta.id);
 
           if (updateError) {
-            console.warn(
+            console.error(
               "[ApostaDialog] Erro ao atualizar campos complementares pós-reliquidação:",
               updateError
             );
+            throw new Error(`Erro ao salvar campos complementares: ${updateError.message}`);
           }
+
 
           await invalidateSaldos(projetoId);
           if (queryClient) await invalidateCanonicalCaches(queryClient, projetoId);
@@ -2504,16 +2535,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           
           console.log("[ApostaDialog] RPC atualizar_aposta_liquidada_atomica_v2 sucesso:", result);
           
-          // Agora atualizar campos que o RPC não atualiza (evento, mercado, observações, etc.)
+          // Campos cadastrais — caminho único, falha alto
+          await atualizarApostaCadastral(aposta.id, pickCamposCadastrais(apostaData));
+
+          // Demais campos que o RPC não atualiza
           const { error: updateError } = await supabase
             .from("apostas_unificada")
             .update({
-              evento: apostaData.evento,
-              mercado: apostaData.mercado,
-              esporte: apostaData.esporte,
-              selecao: apostaData.selecao,
-              observacoes: apostaData.observacoes,
-              data_aposta: apostaData.data_aposta,
               // Campos de exchange/cobertura
               modo_entrada: apostaData.modo_entrada,
               lay_exchange: apostaData.lay_exchange,
@@ -2527,8 +2555,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               gerou_freebet: apostaData.gerou_freebet,
               valor_freebet_gerada: apostaData.valor_freebet_gerada,
               tipo_freebet: apostaData.tipo_freebet,
-              estrategia: apostaData.estrategia,
-              contexto_operacional: apostaData.contexto_operacional,
               fonte_saldo: apostaData.fonte_saldo,
               usar_freebet: apostaData.usar_freebet,
               stake_real: apostaData.stake_real,
@@ -2538,8 +2564,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             .eq("id", aposta.id);
           
           if (updateError) {
-            console.warn("[ApostaDialog] Erro ao atualizar campos complementares:", updateError);
+            console.error("[ApostaDialog] Erro ao atualizar campos complementares:", updateError);
+            throw new Error(`Erro ao salvar campos complementares: ${updateError.message}`);
           }
+
           
           // Invalidar caches de saldo e canônicos
           await invalidateSaldos(projetoId);
@@ -2558,8 +2586,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           let updatePayload = { ...apostaData };
           
           if (apostaEstaLiquidada && !houveMudancaFinanceira) {
-            // PRESERVAR estado financeiro imutável
-            console.log("[ApostaDialog] Editando aposta LIQUIDADA sem mudança financeira - preservando status/resultado");
+            // PRESERVAR estado financeiro imutável.
+            // Além de status/resultado/odd/stake, removemos as colunas que
+            // disparam o gatilho financeiro (tg_sync_aposta_simples_resultado_financeiro):
+            // uma edição cadastral NÃO pode reemitir eventos no ledger.
+            console.log("[ApostaDialog] Editando aposta LIQUIDADA sem mudança financeira - preservando estado financeiro");
             delete updatePayload.status;
             delete updatePayload.resultado;
             delete updatePayload.lucro_prejuizo;
@@ -2567,6 +2598,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             delete updatePayload.odd;
             delete updatePayload.stake;
             delete updatePayload.bookmaker_id;
+            delete updatePayload.stake_real;
+            delete updatePayload.stake_freebet;
+            delete updatePayload.stake_total;
+            delete updatePayload.fonte_saldo;
+            delete updatePayload.usar_freebet;
+            delete updatePayload.odd_final;
+            delete updatePayload.moeda;
           }
           
           const { error } = await supabase
@@ -2574,6 +2612,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             .update(updatePayload)
             .eq("id", aposta.id);
           if (error) throw error;
+
 
           // Garantir invalidação mesmo se não houver mudança financeira (ex: data mudou)
           if (queryClient) await invalidateCanonicalCaches(queryClient, projetoId);
