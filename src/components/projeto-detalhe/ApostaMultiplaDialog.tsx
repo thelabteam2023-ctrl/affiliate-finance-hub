@@ -5,7 +5,7 @@ import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
-import { criarAposta, deletarAposta, liquidarAposta, reliquidarAposta, type SelecaoMultipla } from "@/services/aposta";
+import { criarAposta, deletarAposta, liquidarAposta, reliquidarAposta, atualizarApostaCadastral, CAMPOS_CADASTRAIS, type SelecaoMultipla } from "@/services/aposta";
 import { creditarFreebetViaLedger, estornarFreebetViaLedger } from "@/lib/freebetLedgerService";
 import { isForeignCurrency } from "@/types/currency";
 import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
@@ -1107,6 +1107,14 @@ export function ApostaMultiplaDialog({
             cotacao_snapshot: apostaData.cotacao_snapshot,
             valor_brl_referencia: apostaData.valor_brl_referencia,
         };
+
+        // Campos suplementares SEM os cadastrais (estes vão por atualizarApostaCadastral)
+        const camposSuplementaresNaoCadastrais = Object.fromEntries(
+          Object.entries(camposSuplementares).filter(
+            ([k]) => !(CAMPOS_CADASTRAIS as string[]).includes(k),
+          ),
+        ) as Record<string, any>;
+
 
         // Determinar tipo de transição
         const eraLiquidada = resultadoAnterior !== "PENDENTE" && resultadoAnterior !== null;
