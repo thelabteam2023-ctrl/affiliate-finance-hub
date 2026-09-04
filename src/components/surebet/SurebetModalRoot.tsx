@@ -2331,102 +2331,54 @@ export function SurebetModalRoot({
    * - adjustedBalances: Map de bookmaker_id → saldo ajustado (para exibição)
    */
   const balanceValidation = useMemo(() => {
-    const insufficientLegs: number[] = [];
-    // Granular: Map<"main-{legIdx}" | "sub-{legIdx}-{subIdx}", true>
-    const insufficientEntries = new Map<string, boolean>();
-    const adjustedBalances = new Map<string, number>();
-    
-    // Acumular alocações separadas por bookmaker: real vs freebet
-    const alocadoPorBookmaker = new Map<string, { real: number; freebet: number }>();
-    
-    odds.forEach((entry, index) => {
-      if (entry.bookmaker_id) {
-        const mainStake = parseFloat(entry.stake) || 0;
-        if (mainStake > 0) {
-          // Para lay, o que reserva saldo é a responsabilidade (liability),
-          // não o stake. liability = stake × (odd − 1)
-          const mainOdd = parseFloat(entry.odd) || 0;
-          const isLay = entry.tipo === 'lay';
-          const valorReservado = isLay && mainOdd > 1
-            ? mainStake * (mainOdd - 1)
-            : mainStake;
-          const cur = alocadoPorBookmaker.get(entry.bookmaker_id) || { real: 0, freebet: 0 };
-          if (entry.fonteSaldo === 'FREEBET') cur.freebet += valorReservado; else cur.real += valorReservado;
-          alocadoPorBookmaker.set(entry.bookmaker_id, cur);
-        }
-      }
-      (entry.additionalEntries || []).forEach(sub => {
-        const subBk = sub.bookmaker_id || entry.bookmaker_id;
-        if (!subBk) return;
-        const subStake = parseFloat(sub.stake) || 0;
-        if (subStake > 0) {
-          // Sub-entradas herdam o tipo da perna principal
-          const subOdd = parseFloat(sub.odd) || parseFloat(entry.odd) || 0;
-          const isLay = entry.tipo === 'lay';
-          const valorReservado = isLay && subOdd > 1
-            ? subStake * (subOdd - 1)
-            : subStake;
-          const cur = alocadoPorBookmaker.get(subBk) || { real: 0, freebet: 0 };
-          if (sub.fonteSaldo === 'FREEBET') cur.freebet += valorReservado; else cur.real += valorReservado;
-          alocadoPorBookmaker.set(subBk, cur);
-        }
-      });
-    });
-    
-    // Validar cada bookmaker
-    const bookmakerInsuficientes = new Set<string>();
-    const bookmakerFBInsuficientes = new Set<string>();
-    
-    for (const [bkId, alocado] of alocadoPorBookmaker.entries()) {
-      const bookmaker = saldosValidacao.find(b => b.id === bkId);
-      // FAIL-CLOSED: casa desconhecida na lista de saldos = bloqueio, nunca liberação.
-      if (!bookmaker) {
-        if (!saldosProntos) continue;
-        if (alocado.real > 0) bookmakerInsuficientes.add(bkId);
-        if (alocado.freebet > 0) bookmakerFBInsuficientes.add(bkId);
-        continue;
-      }
-      const credito = isEditing ? (originalStakesByBookmaker.get(bkId) || { real: 0, freebet: 0 }) : { real: 0, freebet: 0 };
-      const saldoReal = (bookmaker.saldo_operavel ?? 0) + credito.real;
-      const saldoFB = (bookmaker.saldo_freebet ?? 0) + credito.freebet;
-      if (alocado.real > saldoReal + 0.01) bookmakerInsuficientes.add(bkId);
-      if (alocado.freebet > saldoFB + 0.01) bookmakerFBInsuficientes.add(bkId);
+    // FONTE ÚNICA: usa o utilitário puro compartilhado (mesma lógica da tabela
+    // de surebets), eliminando a cópia divergente que existia aqui.
+    // Enquanto os saldos não estiverem carregados, nada é liberado nem marcado.
+    const saldosParaValidar = saldosProntos
+      ? saldosValidacao.map(bk => ({
+          id: bk.id,
+          saldo_operavel: bk.saldo_operavel ?? 0,
+          saldo_disponivel: bk.saldo_disponivel ?? 0,
+          saldo_freebet: bk.saldo_freebet ?? 0,
+        }))
+      : [];
+
+    if (!saldosProntos) {
+      return {
+        hasInsufficientBalance: false,
+        insufficientLegs: [] as number[],
+        insufficientEntries: new Map<string, boolean>(),
+        adjustedBalances: new Map<string, number>(),
+        bookmakerFBInsuficientes: new Set<string>(),
+      };
     }
 
-    
-    // Marcar entradas específicas com problema
-    odds.forEach((entry, index) => {
-      let legHasIssue = false;
-      
-      if (entry.bookmaker_id) {
-        const isMainFB = entry.fonteSaldo === 'FREEBET';
-        if ((isMainFB && bookmakerFBInsuficientes.has(entry.bookmaker_id)) ||
-            (!isMainFB && bookmakerInsuficientes.has(entry.bookmaker_id))) {
-          insufficientEntries.set(`main-${index}`, true);
-          legHasIssue = true;
-        }
-      }
-      
-      (entry.additionalEntries || []).forEach((sub, subIdx) => {
-        const subBk = sub.bookmaker_id || entry.bookmaker_id;
-        if (!subBk) return;
-        const isSubFB = sub.fonteSaldo === 'FREEBET';
-        if ((isSubFB && bookmakerFBInsuficientes.has(subBk)) ||
-            (!isSubFB && bookmakerInsuficientes.has(subBk))) {
-          insufficientEntries.set(`sub-${index}-${subIdx}`, true);
-          legHasIssue = true;
-        }
-      });
-      
-      if (legHasIssue) insufficientLegs.push(index);
-    });
-    
+    const result = validateBalance(
+      odds.map(entry => ({
+        bookmaker_id: entry.bookmaker_id,
+        stake: entry.stake,
+        fonteSaldo: entry.fonteSaldo,
+        tipo: entry.tipo as "back" | "lay" | undefined,
+        odd: entry.odd,
+        additionalEntries: (entry.additionalEntries || []).map(sub => ({
+          bookmaker_id: sub.bookmaker_id,
+          stake: sub.stake,
+          fonteSaldo: sub.fonteSaldo,
+          tipo: (sub.tipo ?? entry.tipo) as "back" | "lay" | undefined,
+          odd: sub.odd ?? entry.odd,
+        })),
+      })),
+      saldosParaValidar,
+      isEditing,
+      originalStakesByBookmaker
+    );
+
     return {
-      hasInsufficientBalance: insufficientLegs.length > 0,
-      insufficientLegs,
-      insufficientEntries,
-      adjustedBalances,
-      bookmakerFBInsuficientes,
+      hasInsufficientBalance: result.hasInsufficientBalance,
+      insufficientLegs: result.insufficientLegs,
+      insufficientEntries: result.insufficientEntries,
+      adjustedBalances: new Map<string, number>(),
+      bookmakerFBInsuficientes: result.bookmakerFBInsuficientes,
     };
   }, [odds, saldosValidacao, saldosProntos, isEditing, originalStakesByBookmaker]);
 
