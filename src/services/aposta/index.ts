@@ -25,6 +25,15 @@ export {
   aplicarCamposNovaEntrada,
 } from './ApostaService';
 
+// Caminho único para edição cadastral (sem efeito financeiro)
+export {
+  atualizarApostaCadastral,
+  pickCamposCadastrais,
+  houveMudancaCadastral,
+  CAMPOS_CADASTRAIS,
+} from './atualizarApostaCadastral';
+export type { ApostaCadastralInput } from './atualizarApostaCadastral';
+
 // Re-exportar tipos de input para liquidação de surebet
 export type { LiquidarSurebetPernaInput, LiquidarPernaSurebetInput } from './ApostaService';
 
