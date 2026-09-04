@@ -225,7 +225,8 @@ export function useSafeApostaSave() {
         
         const moeda = (saldo.moeda as string) || "BRL";
         const stakeR = roundForCurrency(bs.stake, moeda);
-        const saldoR = roundForCurrency(saldo.saldo_operavel || 0, moeda);
+        // Entrada com saldo real valida contra saldo real livre (nunca somando freebet).
+        const saldoR = roundForCurrency(saldo.saldo_disponivel || 0, moeda);
         if (stakeR > saldoR + getCurrencyEpsilon(moeda)) {
           errors.push(`Saldo insuficiente: disponível ${saldoR.toFixed(2)}, necessário ${stakeR.toFixed(2)}`);
         }
