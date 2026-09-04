@@ -2586,8 +2586,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           let updatePayload = { ...apostaData };
           
           if (apostaEstaLiquidada && !houveMudancaFinanceira) {
-            // PRESERVAR estado financeiro imutável
-            console.log("[ApostaDialog] Editando aposta LIQUIDADA sem mudança financeira - preservando status/resultado");
+            // PRESERVAR estado financeiro imutável.
+            // Além de status/resultado/odd/stake, removemos as colunas que
+            // disparam o gatilho financeiro (tg_sync_aposta_simples_resultado_financeiro):
+            // uma edição cadastral NÃO pode reemitir eventos no ledger.
+            console.log("[ApostaDialog] Editando aposta LIQUIDADA sem mudança financeira - preservando estado financeiro");
             delete updatePayload.status;
             delete updatePayload.resultado;
             delete updatePayload.lucro_prejuizo;
@@ -2595,6 +2598,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             delete updatePayload.odd;
             delete updatePayload.stake;
             delete updatePayload.bookmaker_id;
+            delete updatePayload.stake_real;
+            delete updatePayload.stake_freebet;
+            delete updatePayload.stake_total;
+            delete updatePayload.fonte_saldo;
+            delete updatePayload.usar_freebet;
+            delete updatePayload.odd_final;
+            delete updatePayload.moeda;
           }
           
           const { error } = await supabase
@@ -2602,6 +2612,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             .update(updatePayload)
             .eq("id", aposta.id);
           if (error) throw error;
+
 
           // Garantir invalidação mesmo se não houver mudança financeira (ex: data mudou)
           if (queryClient) await invalidateCanonicalCaches(queryClient, projetoId);
