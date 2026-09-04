@@ -789,10 +789,16 @@ export function ApostaCard({
               <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
                 {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
               </span>
+              {parseLocalDateTime(aposta.data_aposta).getTime() > Date.now() && (
+                <Badge variant="outline" className="text-[9px] px-1 py-0 bg-amber-500/10 text-amber-400 border-amber-500/30">
+                  Evento futuro
+                </Badge>
+              )}
               <DateAnomalyBadge
                 anomaly={detectDateAnomaly(aposta.data_aposta, aposta.created_at ? new Date(aposta.created_at) : undefined)}
                 onClick={() => onEdit?.(aposta.id)}
               />
+
               {(isForeignCurrency || needsConsolidation) && (
                 <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
                   {displayCurrency}

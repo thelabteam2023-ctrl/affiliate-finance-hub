@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { DateRange } from "react-day-picker";
-import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
+import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns";
 
 /**
  * Sistema de Filtros Independentes por Aba
@@ -87,8 +87,8 @@ export function getDateRangeFromPeriod(
       return { start: subDays(today, 6), end: endOfDay(now) };
     
     case "mes_atual":
-      // primeiro dia do mês atual até hoje
-      return { start: startOfMonth(now), end: endOfDay(now) };
+      // primeiro ao último dia do mês atual (inclui eventos futuros do mês)
+      return { start: startOfMonth(now), end: endOfDay(endOfMonth(now)) };
     
     case "mes_anterior":
       // primeiro dia do mês anterior até último dia do mês anterior
@@ -99,8 +99,9 @@ export function getDateRangeFromPeriod(
       };
     
     case "ano":
-      // primeiro dia do ano atual até hoje
-      return { start: startOfYear(now), end: endOfDay(now) };
+      // ano civil completo (inclui eventos futuros do ano)
+      return { start: startOfYear(now), end: endOfDay(endOfYear(now)) };
+
     
     case "custom":
       if (customRange?.from) {
