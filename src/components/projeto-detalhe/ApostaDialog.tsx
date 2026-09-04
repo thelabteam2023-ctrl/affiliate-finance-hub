@@ -2347,8 +2347,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // ================================================================
         const apostaEstaLiquidada = aposta.status === "LIQUIDADA";
         const houveMudancaBookmaker = bookmakerAnteriorId !== bookmakerAtualId;
-        const houveMudancaStake = stakeAnterior !== apostaData.stake;
-        const houveMudancaOdd = oddAnterior !== apostaData.odd;
+        const houveMudancaStake = Math.abs((Number(stakeAnterior) || 0) - (Number(apostaData.stake) || 0)) > 0.01;
+        const houveMudancaOdd = Math.abs((Number(oddAnterior) || 0) - (Number(apostaData.odd) || 0)) > 0.00001;
         const houveMudancaResultado = resultadoAnterior !== novoResultado;
         const houveMudancaFinanceira = houveMudancaBookmaker || houveMudancaStake || houveMudancaOdd || houveMudancaResultado;
 
