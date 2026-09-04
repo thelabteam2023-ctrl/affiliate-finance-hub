@@ -60,6 +60,7 @@ import {
   type LayCollapseEntryPreview,
 } from "@/components/projeto-detalhe/ConfirmLayCollapseDialog";
 import { capitalComprometido } from "@/utils/pernaLayHelpers";
+import { validateBalance } from "@/utils/surebetBalanceValidation";
 
 // ============================================
 // TIPOS
