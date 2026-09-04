@@ -476,7 +476,7 @@ export function SurebetTableRow({
                           Disponível: {formatCurrency(
                             entry.fonteSaldo === 'FREEBET' 
                               ? selectedBookmaker.saldo_freebet 
-                              : selectedBookmaker.saldo_operavel, 
+                              : selectedBookmaker.saldo_disponivel, 
                             selectedBookmaker.moeda
                           )}
                         </div>
@@ -709,7 +709,7 @@ export function SurebetTableRow({
                         <div>{isSubFB ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
                         <div className="opacity-80">
                           Disp: {formatCurrency(
-                            isSubFB ? addBookmaker.saldo_freebet : addBookmaker.saldo_operavel, 
+                            isSubFB ? addBookmaker.saldo_freebet : addBookmaker.saldo_disponivel, 
                             addBookmaker.moeda
                           )}
                         </div>
