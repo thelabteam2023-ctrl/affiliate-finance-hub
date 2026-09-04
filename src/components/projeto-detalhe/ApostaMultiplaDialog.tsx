@@ -1153,7 +1153,10 @@ export function ApostaMultiplaDialog({
             throw new Error(liquidResult.error?.message || 'Erro ao liquidar aposta');
           }
           // Atualizar campos suplementares
-          await supabase.from("apostas_unificada").update(camposSuplementares).eq("id", aposta.id);
+          await atualizarApostaCadastral(aposta.id, apostaData as any);
+          const { error: supError2 } = await supabase.from("apostas_unificada").update(camposSuplementaresNaoCadastrais).eq("id", aposta.id);
+          if (supError2) throw new Error(`Erro ao salvar campos complementares: ${supError2.message}`);
+
         }
         // CASO 3: LIQUIDADA → LIQUIDADA (reliquidação) ou mudança de stake/odd
         else if (eraLiquidada && houveMudancaFinanceira) {
@@ -1189,7 +1192,10 @@ export function ApostaMultiplaDialog({
           }
 
           // Atualizar campos suplementares
-          await supabase.from("apostas_unificada").update(camposSuplementares).eq("id", aposta.id);
+          await atualizarApostaCadastral(aposta.id, apostaData as any);
+          const { error: supError3 } = await supabase.from("apostas_unificada").update(camposSuplementaresNaoCadastrais).eq("id", aposta.id);
+          if (supError3) throw new Error(`Erro ao salvar campos complementares: ${supError3.message}`);
+
         }
         // CASO 4: Mudança de stake/odd/bookmaker em aposta PENDENTE (sem liquidação)
         else if (!eraLiquidada && houveMudancaFinanceira) {
