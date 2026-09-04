@@ -143,7 +143,10 @@ export function validateBalance(
       continue;
     }
     const credito = isEditing ? (originalCredits.get(bkId) || { real: 0, freebet: 0 }) : { real: 0, freebet: 0 };
-    const saldoReal = (bookmaker.saldo_operavel ?? 0) + credito.real;
+    // CRÍTICO: entrada REAL só pode consumir saldo REAL livre (saldo_disponivel).
+    // `saldo_operavel` soma a freebet e NÃO pode ser usado aqui — era a brecha
+    // que permitia registrar entrada real com saldo real zerado.
+    const saldoReal = (bookmaker.saldo_disponivel ?? 0) + credito.real;
     const saldoFB = (bookmaker.saldo_freebet ?? 0) + credito.freebet;
     if (alocado.real > saldoReal + 0.01) bookmakerInsuficientes.add(bkId);
     if (alocado.freebet > saldoFB + 0.01) bookmakerFBInsuficientes.add(bkId);
