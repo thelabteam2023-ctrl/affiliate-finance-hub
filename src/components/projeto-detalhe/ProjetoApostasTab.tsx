@@ -507,7 +507,27 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           const newPendentes = pendentesData.filter((p: any) => !existingIds.has(p.id));
           allData = [...allData, ...newPendentes];
         }
+
+        // Rede de segurança: eventos FUTUROS (qualquer status) fora da janela
+        if (dateFilters.endUTC) {
+          const endUTC = dateFilters.endUTC;
+          const futurasData = await fetchAllPaginated(() =>
+            supabase
+              .from("apostas_unificada")
+              .select(selectFields)
+              .eq("projeto_id", projetoId)
+              .eq("forma_registro", "SIMPLES")
+              .is("cancelled_at", null)
+              .gt("data_aposta", endUTC)
+              .order("data_aposta", { ascending: false })
+          );
+          if (futurasData && futurasData.length > 0) {
+            const existingIds = new Set(allData.map((a: any) => a.id));
+            allData = [...allData, ...futurasData.filter((f: any) => !existingIds.has(f.id))];
+          }
+        }
       }
+
       
       // Buscar bookmakers para montar informações
       const bookmakerIds = [...new Set(allData.map((a: any) => a.bookmaker_id).filter(Boolean))];
@@ -648,7 +668,27 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           const newPendentes = pendentesData.filter((p: any) => !existingIds.has(p.id));
           allData = [...allData, ...newPendentes];
         }
+
+        // Rede de segurança: eventos FUTUROS (qualquer status) fora da janela
+        if (dateFiltersMultipla.endUTC) {
+          const endUTC = dateFiltersMultipla.endUTC;
+          const futurasData = await fetchAllPaginated(() =>
+            supabase
+              .from("apostas_unificada")
+              .select(selectFieldsMultipla)
+              .eq("projeto_id", projetoId)
+              .eq("forma_registro", "MULTIPLA")
+              .is("cancelled_at", null)
+              .gt("data_aposta", endUTC)
+              .order("data_aposta", { ascending: false })
+          );
+          if (futurasData && futurasData.length > 0) {
+            const existingIds = new Set(allData.map((a: any) => a.id));
+            allData = [...allData, ...futurasData.filter((f: any) => !existingIds.has(f.id))];
+          }
+        }
       }
+
       
       // Buscar bookmakers
       const bookmakerIds = [...new Set(allData.map((a: any) => a.bookmaker_id).filter(Boolean))];
@@ -737,7 +777,27 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           const newPendentes = pendentesData.filter((p: any) => !existingIds.has(p.id));
           allSurebetData = [...allSurebetData, ...newPendentes];
         }
+
+        // Rede de segurança: eventos FUTUROS (qualquer status) fora da janela
+        if (dateFiltersSurebet.endUTC) {
+          const endUTC = dateFiltersSurebet.endUTC;
+          const futurasData = await fetchAllPaginated(() =>
+            supabase
+              .from("apostas_unificada")
+              .select(selectFieldsSurebet)
+              .eq("projeto_id", projetoId)
+              .eq("forma_registro", "ARBITRAGEM")
+              .is("cancelled_at", null)
+              .gt("data_aposta", endUTC)
+              .order("data_aposta", { ascending: false })
+          );
+          if (futurasData && futurasData.length > 0) {
+            const existingIds = new Set(allSurebetData.map((a: any) => a.id));
+            allSurebetData = [...allSurebetData, ...futurasData.filter((f: any) => !existingIds.has(f.id))];
+          }
+        }
       }
+
       
       // Determinar pernas reais: usar apostas_pernas (tabela relacional) se existirem, senão fallback para JSON
       const allBookmakerIds = new Set<string>();
