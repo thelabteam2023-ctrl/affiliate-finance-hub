@@ -29,6 +29,13 @@
       "when": 1788552400370,
       "tag": "0003_restore_estorno_promocional_financial_events",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788553463969,
+      "tag": "0004_guard_saldo_insuficiente_stake_entradas",
+      "breakpoints": true
     }
   ]
 }
