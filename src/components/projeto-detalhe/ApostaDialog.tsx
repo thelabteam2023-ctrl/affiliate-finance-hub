@@ -2458,18 +2458,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
           console.log("[ApostaDialog] ✅ reliquidar_aposta_v6 sucesso:", reliqResult);
 
-          // Atualizar campos que o RPC não atualiza (campos descritivos)
+          // Campos cadastrais — caminho único, falha alto
+          await atualizarApostaCadastral(aposta.id, pickCamposCadastrais(apostaData));
+
+          // Demais campos que o RPC não atualiza
           const { error: updateError } = await supabase
             .from("apostas_unificada")
             .update({
-              evento: apostaData.evento,
-              mercado: apostaData.mercado,
-              esporte: apostaData.esporte,
-              selecao: apostaData.selecao,
-              observacoes: apostaData.observacoes,
-              data_aposta: apostaData.data_aposta,
-              estrategia: apostaData.estrategia,
-              contexto_operacional: apostaData.contexto_operacional,
               // Campos de exchange/cobertura
               modo_entrada: apostaData.modo_entrada,
               lay_exchange: apostaData.lay_exchange,
@@ -2492,11 +2487,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             .eq("id", aposta.id);
 
           if (updateError) {
-            console.warn(
+            console.error(
               "[ApostaDialog] Erro ao atualizar campos complementares pós-reliquidação:",
               updateError
             );
+            throw new Error(`Erro ao salvar campos complementares: ${updateError.message}`);
           }
+
 
           await invalidateSaldos(projetoId);
           if (queryClient) await invalidateCanonicalCaches(queryClient, projetoId);
