@@ -2459,8 +2459,30 @@ export function CaixaTransacaoDialog({
         return;
       }
 
+      // ======================================================================
+      // 🔒 TRAVA ANTI-ÓRFÃO: origem e destino são OBRIGATÓRIOS
+      // ----------------------------------------------------------------------
+      // Todas as validações abaixo eram condicionais ao TIPO já escolhido.
+      // Com origem/destino vazios nenhuma delas rodava e a transação era
+      // gravada sem casa e sem conta: não debita saldo da bookmaker, não gera
+      // financial_event, não entra no extrato do projeto — e ainda assim
+      // aparece no Caixa Operacional rotulada como "Despesa Externa".
+      // ======================================================================
+      if (tipoTransacao !== "APORTE_FINANCEIRO") {
+        if (!origemTipo || !destinoTipo) {
+          toast({
+            title: "Operação bloqueada",
+            description:
+              "Selecione a ORIGEM e o DESTINO da transação. Nenhuma movimentação pode ser registrada sem os dois lados definidos.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       // Validate origin fields
       if (origemTipo === "PARCEIRO_CONTA") {
+
         if (!origemParceiroId) {
           toast({
             title: "Erro",
