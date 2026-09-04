@@ -2090,6 +2090,38 @@ export function CaixaTransacaoDialog({
   };
 
   /**
+   * Reaplica os defaults de ORIGEM/DESTINO para o tipo de transação corrente.
+   *
+   * 🔒 BLINDAGEM: o efeito que define esses defaults só dispara quando
+   * `tipoTransacao` muda. Em lançamentos em sequência (o dialog permanece
+   * aberto após um sucesso) o tipo NÃO muda, então limpar origem/destino
+   * deixava o formulário sem origem e sem destino — permitindo gravar um
+   * SAQUE órfão (sem casa e sem conta), que não debita saldo, não gera
+   * evento financeiro e ainda aparece no Caixa Operacional como
+   * "Despesa Externa".
+   */
+  const aplicarDefaultsOrigemDestino = () => {
+    if (tipoTransacao === "SAQUE") {
+      setOrigemTipo("BOOKMAKER");
+      setDestinoTipo(tipoMoeda === "FIAT" ? "PARCEIRO_CONTA" : "PARCEIRO_WALLET");
+    } else if (tipoTransacao === "DEPOSITO") {
+      setOrigemTipo(tipoMoeda === "FIAT" ? "PARCEIRO_CONTA" : "PARCEIRO_WALLET");
+      setDestinoTipo("BOOKMAKER");
+    } else if (tipoTransacao === "TRANSFERENCIA") {
+      if (fluxoTransferencia === "CAIXA_PARCEIRO") {
+        setOrigemTipo("CAIXA_OPERACIONAL");
+        setDestinoTipo(tipoMoeda === "FIAT" ? "PARCEIRO_CONTA" : "PARCEIRO_WALLET");
+      } else if (fluxoTransferencia === "PARCEIRO_CAIXA") {
+        setOrigemTipo(tipoMoeda === "FIAT" ? "PARCEIRO_CONTA" : "PARCEIRO_WALLET");
+        setDestinoTipo("CAIXA_OPERACIONAL");
+      } else {
+        setOrigemTipo(tipoMoeda === "FIAT" ? "PARCEIRO_CONTA" : "PARCEIRO_WALLET");
+        setDestinoTipo(tipoMoeda === "FIAT" ? "PARCEIRO_CONTA" : "PARCEIRO_WALLET");
+      }
+    }
+  };
+
+  /**
    * Limpa os campos da operação recém-registrada, mas mantém o contexto de
    * tipo/moeda para permitir lançamentos em sequência no mesmo dialog.
    */
@@ -2104,16 +2136,17 @@ export function CaixaTransacaoDialog({
     setDescricao("");
     setDataTransacao("");
     // REMOVIDO: valorCreditado reset - agora é tratado na Conciliação
-    setOrigemTipo("");
     setOrigemParceiroId("");
     setOrigemContaId("");
     setOrigemWalletId("");
     setOrigemBookmakerId("");
-    setDestinoTipo("");
     setDestinoParceiroId("");
     setDestinoContaId("");
     setDestinoWalletId("");
     setDestinoBookmakerId("");
+    // Reaplica os tipos de origem/destino do contexto preservado.
+    aplicarDefaultsOrigemDestino();
+
 
     // Reset refs de tracking para auto-focus
     prevCoin.current = "";
