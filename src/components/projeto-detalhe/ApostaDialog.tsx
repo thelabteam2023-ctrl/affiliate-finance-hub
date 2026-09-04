@@ -2535,16 +2535,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           
           console.log("[ApostaDialog] RPC atualizar_aposta_liquidada_atomica_v2 sucesso:", result);
           
-          // Agora atualizar campos que o RPC não atualiza (evento, mercado, observações, etc.)
+          // Campos cadastrais — caminho único, falha alto
+          await atualizarApostaCadastral(aposta.id, pickCamposCadastrais(apostaData));
+
+          // Demais campos que o RPC não atualiza
           const { error: updateError } = await supabase
             .from("apostas_unificada")
             .update({
-              evento: apostaData.evento,
-              mercado: apostaData.mercado,
-              esporte: apostaData.esporte,
-              selecao: apostaData.selecao,
-              observacoes: apostaData.observacoes,
-              data_aposta: apostaData.data_aposta,
               // Campos de exchange/cobertura
               modo_entrada: apostaData.modo_entrada,
               lay_exchange: apostaData.lay_exchange,
@@ -2558,8 +2555,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               gerou_freebet: apostaData.gerou_freebet,
               valor_freebet_gerada: apostaData.valor_freebet_gerada,
               tipo_freebet: apostaData.tipo_freebet,
-              estrategia: apostaData.estrategia,
-              contexto_operacional: apostaData.contexto_operacional,
               fonte_saldo: apostaData.fonte_saldo,
               usar_freebet: apostaData.usar_freebet,
               stake_real: apostaData.stake_real,
@@ -2569,8 +2564,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             .eq("id", aposta.id);
           
           if (updateError) {
-            console.warn("[ApostaDialog] Erro ao atualizar campos complementares:", updateError);
+            console.error("[ApostaDialog] Erro ao atualizar campos complementares:", updateError);
+            throw new Error(`Erro ao salvar campos complementares: ${updateError.message}`);
           }
+
           
           // Invalidar caches de saldo e canônicos
           await invalidateSaldos(projetoId);
