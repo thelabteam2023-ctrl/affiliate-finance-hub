@@ -471,7 +471,7 @@ export function SurebetTableRow({
                       <div>{error}</div>
                     ) : (
                       <>
-                        <div>{entry.fonteSaldo === 'FREEBET' ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
+                        <div>{entry.fonteSaldo === 'FREEBET' ? 'Freebet insuficiente' : 'Saldo real insuficiente'}</div>
                         <div className="opacity-80">
                           Disponível: {formatCurrency(
                             entry.fonteSaldo === 'FREEBET' 
@@ -706,7 +706,7 @@ export function SurebetTableRow({
                     </div>
                     {subInsufficient && addBookmaker && (
                       <div className="text-[9px] text-destructive font-medium leading-tight text-center max-w-[100px]">
-                        <div>{isSubFB ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
+                        <div>{isSubFB ? 'Freebet insuficiente' : 'Saldo real insuficiente'}</div>
                         <div className="opacity-80">
                           Disp: {formatCurrency(
                             isSubFB ? addBookmaker.saldo_freebet : addBookmaker.saldo_disponivel, 
