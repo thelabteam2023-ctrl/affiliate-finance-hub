@@ -323,10 +323,10 @@ export function SurebetMobileCard({
                          <div>{erro || errosPorPerna?.[pernaIndex]}</div>
                        ) : (
                          <>
-                           <div>{entry.fonteSaldo === 'FREEBET' ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
+                           <div>{entry.fonteSaldo === 'FREEBET' ? 'Freebet insuficiente' : 'Saldo real insuficiente'}</div>
                            <div className="opacity-80">
                              Disp: {formatCurrency(
-                               entry.fonteSaldo === 'FREEBET' ? selectedBookmaker.saldo_freebet : selectedBookmaker.saldo_operavel, 
+                               entry.fonteSaldo === 'FREEBET' ? selectedBookmaker.saldo_freebet : selectedBookmaker.saldo_disponivel, 
                                selectedBookmaker.moeda
                              )}
                            </div>
@@ -520,10 +520,10 @@ export function SurebetMobileCard({
                       </div>
                       {subInsuf && addBookmaker && (
                         <div className="text-[9px] text-destructive font-medium mt-0.5 leading-tight text-center">
-                          <div>{isSubFB ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
+                          <div>{isSubFB ? 'Freebet insuficiente' : 'Saldo real insuficiente'}</div>
                           <div className="opacity-80">
                             Disp: {formatCurrency(
-                              isSubFB ? addBookmaker.saldo_freebet : addBookmaker.saldo_operavel, 
+                              isSubFB ? addBookmaker.saldo_freebet : addBookmaker.saldo_disponivel, 
                               addBookmaker.moeda
                             )}
                           </div>

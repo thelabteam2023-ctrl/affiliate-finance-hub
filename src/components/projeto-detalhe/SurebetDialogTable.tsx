@@ -1778,12 +1778,10 @@ export function SurebetDialogTable({
                           } : null}
                           className={(() => {
                             if (!selectedBookmaker || isEditing) return "";
-                            const stakeTotal = getStakeTotalPerna(entry);
-                            let stakesOutras = 0;
-                            odds.forEach((o, idx) => {
-                              if (pernaIndex !== idx && o.bookmaker_id === entry.bookmaker_id) stakesOutras += getStakeTotalPerna(o);
-                            });
-                            const isInsuficiente = stakeTotal > (selectedBookmaker.saldo_operavel - stakesOutras) + 0.01;
+                            // Fonte única: mesmo validador do modal (real x freebet separados).
+                            const isInsuficiente =
+                              balanceCheck.bookmakerInsuficientes?.has(selectedBookmaker.id) ||
+                              balanceCheck.bookmakerFBInsuficientes?.has(selectedBookmaker.id);
                             return isInsuficiente ? "text-destructive font-bold bg-destructive/10 rounded px-1" : "";
                           })()}
                         />
