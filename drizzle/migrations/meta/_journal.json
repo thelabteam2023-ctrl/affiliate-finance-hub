@@ -22,6 +22,13 @@
       "when": 1788487800965,
       "tag": "0002_guard_cash_ledger_origem_destino",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788552400370,
+      "tag": "0003_restore_estorno_promocional_financial_events",
+      "breakpoints": true
     }
   ]
 }
