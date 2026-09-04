@@ -2378,16 +2378,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           
           console.log("[ApostaDialog] ✅ Reversão concluída:", revertResult);
           
-          // Atualizar campos não-financeiros
+          // Campos cadastrais (data/hora, evento, mercado...) — caminho único, falha alto
+          await atualizarApostaCadastral(aposta.id, pickCamposCadastrais(apostaData));
+
+          // Demais campos não-financeiros de estrutura
           const { error: updateError } = await supabase
             .from("apostas_unificada")
             .update({
-              evento: apostaData.evento,
-              mercado: apostaData.mercado,
-              esporte: apostaData.esporte,
-              selecao: apostaData.selecao,
-              observacoes: apostaData.observacoes,
-              data_aposta: apostaData.data_aposta,
               modo_entrada: apostaData.modo_entrada,
               lay_exchange: apostaData.lay_exchange,
               lay_odd: apostaData.lay_odd,
@@ -2399,8 +2396,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               gerou_freebet: apostaData.gerou_freebet,
               valor_freebet_gerada: apostaData.valor_freebet_gerada,
               tipo_freebet: apostaData.tipo_freebet,
-              estrategia: apostaData.estrategia,
-              contexto_operacional: apostaData.contexto_operacional,
               fonte_saldo: apostaData.fonte_saldo,
               usar_freebet: apostaData.usar_freebet,
               stake_real: apostaData.stake_real,
@@ -2410,8 +2405,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             .eq("id", aposta.id);
           
           if (updateError) {
-            console.warn("[ApostaDialog] Erro ao atualizar campos complementares:", updateError);
+            console.error("[ApostaDialog] Erro ao atualizar campos complementares:", updateError);
+            throw new Error(`Erro ao salvar campos complementares: ${updateError.message}`);
           }
+
           
           // Invalidar caches de saldo
           await invalidateSaldos(projetoId);
