@@ -15,6 +15,13 @@
       "when": 1788327478510,
       "tag": "0001_bookmakers_portability_ext_id",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788487800965,
+      "tag": "0002_guard_cash_ledger_origem_destino",
+      "breakpoints": true
     }
   ]
 }
