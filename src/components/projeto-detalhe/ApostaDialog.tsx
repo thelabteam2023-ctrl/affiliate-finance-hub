@@ -1615,6 +1615,40 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     return stakeReal + fbValor;
   }, [stake, usarFreebetBookmaker, valorFreebetUsar]);
 
+  /**
+   * Detecta se a edição de uma aposta LIQUIDADA envolve valores financeiros
+   * (casa, stake, odd ou resultado). Alterações puramente cadastrais
+   * (data/hora, evento, mercado, observações) NÃO envolvem ledger e por isso
+   * não exigem a confirmação de reversão.
+   * Comparações numéricas usam os limiares canônicos do projeto.
+   */
+  const mudouAlgoFinanceiro = (): boolean => {
+    if (!aposta) return true;
+    const resultadoAnterior = aposta.resultado || null;
+    const novoResultado = statusResultado === "PENDENTE" ? null : statusResultado;
+    if (resultadoAnterior !== novoResultado) return true;
+
+    const bookmakerAtualId =
+      tipoAposta === "bookmaker"
+        ? bookmakerId
+        : tipoOperacaoExchange === "cobertura"
+          ? coberturaBackBookmakerId
+          : exchangeBookmakerId;
+    if ((aposta.bookmaker_id || null) !== (bookmakerAtualId || null)) return true;
+
+    const oddNova = parseFloat(odd);
+    if (Number.isFinite(oddNova) && Math.abs((Number(aposta.odd) || 0) - oddNova) > 0.00001) return true;
+
+    if (tipoAposta === "bookmaker") {
+      const stakeNova = stakeBookmakerEfetiva;
+      if (Number.isFinite(stakeNova) && Math.abs((Number(aposta.stake) || 0) - stakeNova) > 0.01) return true;
+      return false;
+    }
+
+    // Modos exchange/cobertura: sem comparação confiável aqui, tratar como financeiro.
+    return true;
+  };
+
   const handleSave = async () => {
     // Validação de campos de registro obrigatórios (Prompt Oficial)
     const registroValidation = validateRegistroAposta(registroValues);
@@ -1626,10 +1660,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     // FASE 3 — Guard de edição de aposta LIQUIDADA.
     // Pede confirmação explícita do usuário antes de reescrever uma aposta
     // já resolvida (envolve REVERSAL no ledger e recálculo de snapshot).
-    if (aposta && aposta.status === "LIQUIDADA") {
+    // Edição puramente cadastral não toca no ledger → não pede confirmação.
+    if (aposta && aposta.status === "LIQUIDADA" && mudouAlgoFinanceiro()) {
       const ok = await requestLiquidadaConfirm();
       if (!ok) return;
     }
+
 
     // Validações básicas comuns a todos os modos
     if (!esporte || !mercado) {
