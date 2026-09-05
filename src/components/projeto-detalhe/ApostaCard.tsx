@@ -479,7 +479,10 @@ export function ApostaCard({
   // Exibição dual de moeda: quando aposta single-currency está em moeda
   // diferente da moeda de consolidação do projeto, exibir conversão (≈ USD/BRL)
   // Usa convertToConsolidation (Cotação de Trabalho), garantindo paridade com ledger.
-  const isLiquidada = aposta.status === "LIQUIDADA" || (aposta.resultado != null && aposta.resultado !== "PENDENTE");
+  // REGRA CANÔNICA: só é liquidada quando 100% das pernas estão resolvidas
+  // (ver src/utils/operacaoLifecycle.ts). Estado PARCIAL/legado conta como aberta.
+  const isLiquidada = isOperacaoConcluida(aposta);
+  const progressoPernas = getProgressoPernas(aposta.pernas as Array<{ resultado?: string | null }> | undefined);
   const showDualCurrency =
     !needsConsolidation &&
     !!moedaConsolidacao &&
