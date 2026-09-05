@@ -943,12 +943,12 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   // de inconsistência status/resultado corrigido pela RPC reverter_liquidacao_v4 idempotente).
   const apostasAbertas = useMemo(() =>
     apostas
-      .filter(a => a.status === "PENDENTE")
+      .filter(a => isOperacaoAberta(a))
       .sort((a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()),
     [apostas]
   );
   const apostasHistorico = useMemo(() => {
-    const hist = apostas.filter(a => a.status === "LIQUIDADA");
+    const hist = apostas.filter(a => isOperacaoConcluida(a));
     const asc = tabFilters.sortOrder === "asc";
     return hist.sort((a, b) => {
       const ta = new Date(a.data_aposta).getTime();
