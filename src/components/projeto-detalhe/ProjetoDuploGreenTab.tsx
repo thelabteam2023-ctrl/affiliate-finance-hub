@@ -87,6 +87,7 @@ import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
 import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
+import { isOperacaoAberta, isOperacaoConcluida, getProgressoPernas } from "@/utils/operacaoLifecycle";
 
 interface ProjetoDuploGreenTabProps {
   projetoId: string;
@@ -786,7 +787,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     const totalStake = apostasParaKpi.reduce((acc, a) => acc + getConsolidatedStake(a, convertFn, moedaConsol), 0);
     const volumeLiquidado = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedStake(a, convertFn, moedaConsol), 0);
     const lucroTotal = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertFn, moedaConsol), 0);
-    const pendentes = apostasParaKpi.filter((a) => !a.resultado || a.resultado === "PENDENTE").length;
+    const pendentes = apostasParaKpi.filter((a) => isOperacaoAberta(a)).length;
     const greens = apostasParaKpi.filter((a) => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
     const reds = apostasParaKpi.filter((a) => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
     const liquidadas = apostasLiquidadas.length;

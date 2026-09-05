@@ -68,6 +68,7 @@ import {
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import { bonusDebug } from "@/lib/debug/bonusTabDebugger";
 import { BonusDebugPanel } from "./_debug/BonusDebugPanel";
+import { isOperacaoAberta, isOperacaoConcluida, getProgressoPernas } from "@/utils/operacaoLifecycle";
 
 interface BonusApostasTabProps {
   projetoId: string;

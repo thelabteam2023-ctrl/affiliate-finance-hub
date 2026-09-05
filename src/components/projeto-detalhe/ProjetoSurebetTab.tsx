@@ -86,6 +86,7 @@ import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCa
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 import { useInvalidateAfterMutation } from "@/hooks/useInvalidateAfterMutation";
 import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
+import { isOperacaoAberta, isOperacaoConcluida, getProgressoPernas } from "@/utils/operacaoLifecycle";
 
 interface ProjetoSurebetTabProps {
   projetoId: string;
@@ -1082,12 +1083,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   // Abertas: ordenadas por data_operacao crescente (jogo mais próximo primeiro)
   const surebetsAbertas = useMemo(() => 
     filteredSurebetsForOperacoes
-      .filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE")
+      .filter(s => isOperacaoAberta(s))
       .sort((a, b) => new Date(a.data_operacao).getTime() - new Date(b.data_operacao).getTime()),
     [filteredSurebetsForOperacoes]
   );
   const surebetsHistorico = useMemo(() => {
-    const hist = filteredSurebetsForOperacoes.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE");
+    const hist = filteredSurebetsForOperacoes.filter(s => isOperacaoConcluida(s));
     const asc = tabFilters.sortOrder === "asc";
     return hist.sort((a, b) => {
       const ta = new Date(a.data_operacao || a.created_at).getTime();
@@ -1097,8 +1098,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   }, [filteredSurebetsForOperacoes, tabFilters.sortOrder]);
 
   // Contagens totais (sem filtros dimensionais) para indicar no badge
-  const totalSurebetsAbertas = useMemo(() => surebets.filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE").length, [surebets]);
-  const totalSurebetsHistorico = useMemo(() => surebets.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE").length, [surebets]);
+  const totalSurebetsAbertas = useMemo(() => surebets.filter(s => isOperacaoAberta(s)).length, [surebets]);
+  const totalSurebetsHistorico = useMemo(() => surebets.filter(s => isOperacaoConcluida(s)).length, [surebets]);
 
   // Auto-switch to history tab when no open operations
   useEffect(() => {

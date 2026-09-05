@@ -88,6 +88,7 @@ import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
 import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
+import { isOperacaoAberta, isOperacaoConcluida, getProgressoPernas } from "@/utils/operacaoLifecycle";
 
 interface ProjetoPunterTabProps {
   projetoId: string;
@@ -684,7 +685,7 @@ export function ProjetoPunterTab({
     const totalStake = apostasParaKpi.reduce((acc, a) => acc + getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao), 0);
     const volumeLiquidado = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao), 0);
     const lucroTotal = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertToConsolidation, moedaConsolidacao), 0);
-    const pendentes = apostasParaKpi.filter(a => !a.resultado || a.resultado === "PENDENTE").length;
+    const pendentes = apostasParaKpi.filter(a => isOperacaoAberta(a)).length;
     const greens = apostasParaKpi.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
     const reds = apostasParaKpi.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
     const liquidadas = apostasLiquidadas.length;
@@ -796,7 +797,7 @@ export function ProjetoPunterTab({
   // Abertas: ordenadas por data_aposta crescente (jogo mais próximo primeiro)
   const apostasAbertas = useMemo(() => 
     apostas
-      .filter(a => !a.resultado || a.resultado === "PENDENTE")
+      .filter(a => isOperacaoAberta(a))
       .sort((a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()),
     [apostas]
   );

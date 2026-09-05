@@ -70,6 +70,7 @@ import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 import { DeleteBetConfirmDialog, type DeleteBetInfo } from "@/components/apostas/DeleteBetConfirmDialog";
 import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
+import { isOperacaoAberta, isOperacaoConcluida, getProgressoPernas } from "@/utils/operacaoLifecycle";
 
 // Contextos de aposta para filtro unificado
 type ApostaContexto = "NORMAL" | "FREEBET" | "BONUS" | "SUREBET";
@@ -1261,13 +1262,13 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const isItemPendente = (item: ApostaUnificada): boolean => {
     if (item.tipo === "simples") {
       const aposta = item.data as Aposta;
-      return !aposta.resultado || aposta.resultado === "PENDENTE" || aposta.status === "PENDENTE";
+      return isOperacaoAberta(aposta);
     } else if (item.tipo === "multipla") {
       const multipla = item.data as ApostaMultipla;
-      return !multipla.resultado || multipla.resultado === "PENDENTE" || multipla.status === "PENDENTE";
+      return isOperacaoAberta(multipla);
     } else {
       const surebet = item.data as Surebet;
-      return !surebet.resultado || surebet.resultado === "PENDENTE" || surebet.status === "PENDENTE";
+      return isOperacaoAberta(surebet);
     }
   };
 
@@ -1292,16 +1293,16 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   // Total counts without dimensional filters for badge comparison
   const totalAbertasRaw = useMemo(() => {
     let count = 0;
-    count += apostas.filter(a => !a.resultado || a.resultado === "PENDENTE" || a.status === "PENDENTE").length;
-    count += apostasMultiplas.filter(am => !am.resultado || am.resultado === "PENDENTE" || am.status === "PENDENTE").length;
-    count += surebets.filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE").length;
+    count += apostas.filter(a => isOperacaoAberta(a)).length;
+    count += apostasMultiplas.filter(am => isOperacaoAberta(am)).length;
+    count += surebets.filter(s => isOperacaoAberta(s)).length;
     return count;
   }, [apostas, apostasMultiplas, surebets]);
   const totalHistoricoRaw = useMemo(() => {
     let count = 0;
-    count += apostas.filter(a => a.resultado && a.resultado !== "PENDENTE" && a.status !== "PENDENTE").length;
-    count += apostasMultiplas.filter(am => am.resultado && am.resultado !== "PENDENTE" && am.status !== "PENDENTE").length;
-    count += surebets.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE").length;
+    count += apostas.filter(a => isOperacaoConcluida(a)).length;
+    count += apostasMultiplas.filter(am => isOperacaoConcluida(am)).length;
+    count += surebets.filter(s => isOperacaoConcluida(s)).length;
     return count;
   }, [apostas, apostasMultiplas, surebets]);
 
