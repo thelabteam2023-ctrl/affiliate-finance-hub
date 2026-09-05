@@ -681,7 +681,7 @@ export function ProjetoPunterTab({
     const { convertToConsolidation, moedaConsolidacao } = { convertToConsolidation: convertToConsolidationFn, moedaConsolidacao: moedaConsolidacaoVal };
     
     const total = apostasParaKpi.length;
-    const apostasLiquidadas = apostasParaKpi.filter(a => a.resultado && a.resultado !== "PENDENTE");
+    const apostasLiquidadas = apostasParaKpi.filter(a => isOperacaoConcluida(a));
     const totalStake = apostasParaKpi.reduce((acc, a) => acc + getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao), 0);
     const volumeLiquidado = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao), 0);
     const lucroTotal = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertToConsolidation, moedaConsolidacao), 0);
@@ -802,7 +802,7 @@ export function ProjetoPunterTab({
     [apostas]
   );
   const apostasHistorico = useMemo(() => {
-    const hist = apostas.filter(a => a.resultado && a.resultado !== "PENDENTE");
+    const hist = apostas.filter(a => isOperacaoConcluida(a));
     const asc = tabFilters.sortOrder === "asc";
     return hist.sort((a, b) => {
       const ta = new Date(a.data_aposta).getTime();

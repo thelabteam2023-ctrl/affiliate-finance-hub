@@ -782,7 +782,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       return Number.isFinite(value) ? value : 0;
     };
 
-    const apostasLiquidadas = apostasParaKpi.filter((a) => a.resultado && a.resultado !== "PENDENTE");
+    const apostasLiquidadas = apostasParaKpi.filter((a) => isOperacaoConcluida(a));
     // SNAPSHOT: Usa Cotação de Trabalho (congelada no registro) para eliminar variação cambial
     const totalStake = apostasParaKpi.reduce((acc, a) => acc + getConsolidatedStake(a, convertFn, moedaConsol), 0);
     const volumeLiquidado = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedStake(a, convertFn, moedaConsol), 0);
