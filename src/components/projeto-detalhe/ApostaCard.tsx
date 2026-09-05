@@ -26,6 +26,7 @@ import { esporteToSportKey } from "@/utils/esporteToSportKey";
 import { BetRowActionsMenu, type BetResultado } from "@/components/apostas/BetRowActionsMenu";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { getStrategyDisplay } from "@/lib/strategyDisplay";
+import { isOperacaoConcluida, getProgressoPernas } from "@/utils/operacaoLifecycle";
 
 // Tipos de estratégia para badge
 export type EstrategiaType = 
