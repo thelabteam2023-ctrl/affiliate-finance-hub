@@ -68,6 +68,7 @@ import {
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import { bonusDebug } from "@/lib/debug/bonusTabDebugger";
 import { BonusDebugPanel } from "./_debug/BonusDebugPanel";
+import { isOperacaoAberta, isOperacaoConcluida, getProgressoPernas } from "@/utils/operacaoLifecycle";
 
 interface BonusApostasTabProps {
   projetoId: string;
@@ -877,17 +878,8 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
   // Abertas: NUNCA filtrar por dateRange — apostas pendentes (incl. eventos futuros)
   // devem aparecer independente do período selecionado. Status é o único critério.
   const apostasAbertas = apostasUnificadasRaw.filter(item => {
-    if (item.tipo === "simples") {
-      const a = item.data as Aposta;
-      return a.status === "PENDENTE" || !a.resultado;
-    }
-    if (item.tipo === "multipla") {
-      const am = item.data as ApostaMultipla;
-      return am.status === "PENDENTE" || !am.resultado;
-    }
-    if (item.tipo === "surebet") {
-      const sb = item.data as Surebet;
-      return sb.status === "PENDENTE" || !sb.resultado;
+    if (item.tipo === "simples" || item.tipo === "multipla" || item.tipo === "surebet") {
+      return isOperacaoAberta(item.data as { status?: string | null; resultado?: string | null });
     }
     return false;
   }).sort((a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime());
@@ -929,17 +921,8 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
     const itemDate = parseLocalDateTime(item.data_aposta);
     return itemDate >= dateRange.start && itemDate <= dateRange.end;
   }) : apostasUnificadasRaw).filter(item => {
-    if (item.tipo === "simples") {
-      const a = item.data as Aposta;
-      return a.status !== "PENDENTE" && a.resultado;
-    }
-    if (item.tipo === "multipla") {
-      const am = item.data as ApostaMultipla;
-      return am.status !== "PENDENTE" && am.resultado;
-    }
-    if (item.tipo === "surebet") {
-      const sb = item.data as Surebet;
-      return sb.status !== "PENDENTE" && sb.resultado;
+    if (item.tipo === "simples" || item.tipo === "multipla" || item.tipo === "surebet") {
+      return isOperacaoConcluida(item.data as { status?: string | null; resultado?: string | null });
     }
     return false;
   });

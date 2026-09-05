@@ -87,6 +87,7 @@ import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
 import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
+import { isOperacaoAberta, isOperacaoConcluida, getProgressoPernas } from "@/utils/operacaoLifecycle";
 
 interface ProjetoDuploGreenTabProps {
   projetoId: string;
@@ -781,12 +782,12 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       return Number.isFinite(value) ? value : 0;
     };
 
-    const apostasLiquidadas = apostasParaKpi.filter((a) => a.resultado && a.resultado !== "PENDENTE");
+    const apostasLiquidadas = apostasParaKpi.filter((a) => isOperacaoConcluida(a));
     // SNAPSHOT: Usa Cotação de Trabalho (congelada no registro) para eliminar variação cambial
     const totalStake = apostasParaKpi.reduce((acc, a) => acc + getConsolidatedStake(a, convertFn, moedaConsol), 0);
     const volumeLiquidado = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedStake(a, convertFn, moedaConsol), 0);
     const lucroTotal = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertFn, moedaConsol), 0);
-    const pendentes = apostasParaKpi.filter((a) => !a.resultado || a.resultado === "PENDENTE").length;
+    const pendentes = apostasParaKpi.filter((a) => isOperacaoAberta(a)).length;
     const greens = apostasParaKpi.filter((a) => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
     const reds = apostasParaKpi.filter((a) => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
     const liquidadas = apostasLiquidadas.length;
@@ -943,12 +944,12 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   // de inconsistência status/resultado corrigido pela RPC reverter_liquidacao_v4 idempotente).
   const apostasAbertas = useMemo(() =>
     apostas
-      .filter(a => a.status === "PENDENTE")
+      .filter(a => isOperacaoAberta(a))
       .sort((a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()),
     [apostas]
   );
   const apostasHistorico = useMemo(() => {
-    const hist = apostas.filter(a => a.status === "LIQUIDADA");
+    const hist = apostas.filter(a => isOperacaoConcluida(a));
     const asc = tabFilters.sortOrder === "asc";
     return hist.sort((a, b) => {
       const ta = new Date(a.data_aposta).getTime();

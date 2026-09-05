@@ -26,6 +26,7 @@ import { esporteToSportKey } from "@/utils/esporteToSportKey";
 import { BetRowActionsMenu, type BetResultado } from "@/components/apostas/BetRowActionsMenu";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { getStrategyDisplay } from "@/lib/strategyDisplay";
+import { isOperacaoConcluida, getProgressoPernas } from "@/utils/operacaoLifecycle";
 
 // Tipos de estratégia para badge
 export type EstrategiaType = 
@@ -479,7 +480,10 @@ export function ApostaCard({
   // Exibição dual de moeda: quando aposta single-currency está em moeda
   // diferente da moeda de consolidação do projeto, exibir conversão (≈ USD/BRL)
   // Usa convertToConsolidation (Cotação de Trabalho), garantindo paridade com ledger.
-  const isLiquidada = aposta.status === "LIQUIDADA" || (aposta.resultado != null && aposta.resultado !== "PENDENTE");
+  // REGRA CANÔNICA: só é liquidada quando 100% das pernas estão resolvidas
+  // (ver src/utils/operacaoLifecycle.ts). Estado PARCIAL/legado conta como aberta.
+  const isLiquidada = isOperacaoConcluida(aposta);
+  const progressoPernas = getProgressoPernas(aposta.pernas as Array<{ resultado?: string | null }> | undefined);
   const showDualCurrency =
     !needsConsolidation &&
     !!moedaConsolidacao &&
@@ -579,7 +583,14 @@ export function ApostaCard({
                   FB
                 </Badge>
               )}
-              <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
+              <>
+                <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
+                {progressoPernas.isParcial && (
+                  <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-[10px] px-1.5 py-0">
+                    Parcial ({progressoPernas.resolvidas}/{progressoPernas.total})
+                  </Badge>
+                )}
+              </>
               
               {/* Menu de Ações Rápidas */}
               {(onDelete || onDuplicate || onQuickResolve || onEdit) && (
@@ -895,7 +906,14 @@ export function ApostaCard({
               FB
             </Badge>
           )}
-          <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
+          <>
+                <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
+                {progressoPernas.isParcial && (
+                  <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-[10px] px-1.5 py-0">
+                    Parcial ({progressoPernas.resolvidas}/{progressoPernas.total})
+                  </Badge>
+                )}
+              </>
           
           <div className="ml-auto">
             {(onDelete || onDuplicate || onQuickResolve || onEdit) && (
