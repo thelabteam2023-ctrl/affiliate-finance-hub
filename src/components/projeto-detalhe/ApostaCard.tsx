@@ -582,7 +582,14 @@ export function ApostaCard({
                   FB
                 </Badge>
               )}
-              <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
+              <>
+                <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
+                {progressoPernas.isParcial && (
+                  <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-[10px] px-1.5 py-0">
+                    Parcial ({progressoPernas.resolvidas}/{progressoPernas.total})
+                  </Badge>
+                )}
+              </>
               
               {/* Menu de Ações Rápidas */}
               {(onDelete || onDuplicate || onQuickResolve || onEdit) && (
@@ -898,7 +905,14 @@ export function ApostaCard({
               FB
             </Badge>
           )}
-          <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
+          <>
+                <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
+                {progressoPernas.isParcial && (
+                  <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-[10px] px-1.5 py-0">
+                    Parcial ({progressoPernas.resolvidas}/{progressoPernas.total})
+                  </Badge>
+                )}
+              </>
           
           <div className="ml-auto">
             {(onDelete || onDuplicate || onQuickResolve || onEdit) && (
