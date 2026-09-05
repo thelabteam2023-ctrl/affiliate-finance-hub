@@ -920,17 +920,8 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
     const itemDate = parseLocalDateTime(item.data_aposta);
     return itemDate >= dateRange.start && itemDate <= dateRange.end;
   }) : apostasUnificadasRaw).filter(item => {
-    if (item.tipo === "simples") {
-      const a = item.data as Aposta;
-      return a.status !== "PENDENTE" && a.resultado;
-    }
-    if (item.tipo === "multipla") {
-      const am = item.data as ApostaMultipla;
-      return am.status !== "PENDENTE" && am.resultado;
-    }
-    if (item.tipo === "surebet") {
-      const sb = item.data as Surebet;
-      return sb.status !== "PENDENTE" && sb.resultado;
+    if (item.tipo === "simples" || item.tipo === "multipla" || item.tipo === "surebet") {
+      return isOperacaoConcluida(item.data as { status?: string | null; resultado?: string | null });
     }
     return false;
   });
