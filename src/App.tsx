@@ -719,6 +719,16 @@ const App = () => (
               </ProtectedRoute>
             } />
 
+            <Route path="/admin/auditoria-cambial" element={
+              <ProtectedRoute requiredRole={['owner', 'admin']} requireSystemOwner={false}>
+                <AuthenticatedLayout>
+                  <Suspense fallback={<PageLoader />}>
+                    <AuditoriaCambial />
+                  </Suspense>
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
             </Routes>
