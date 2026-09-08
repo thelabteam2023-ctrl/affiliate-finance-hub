@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +25,21 @@ interface Props {
 
 export function ExcluirMovimentacaoDialog({ open, onOpenChange, transacao, resumoTransacao }: Props) {
   const [motivo, setMotivo] = useState("");
+  const [derivados, setDerivados] = useState<Array<{ id: string; tipo_transacao: string; valor: number; moeda: string | null; coin: string | null }>>([]);
   const { excluir } = useReverterMovimentacao();
+
+  useEffect(() => {
+    if (!open || !transacao?.id) {
+      setDerivados([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.rpc("fn_ledger_derived_children", { p_transacao_id: transacao.id });
+      if (!cancelled) setDerivados((data as any) || []);
+    })();
+    return () => { cancelled = true; };
+  }, [open, transacao?.id]);
 
   const handleConfirm = async () => {
     if (!transacao || motivo.trim().length < 5) return;
@@ -61,6 +76,22 @@ export function ExcluirMovimentacaoDialog({ open, onOpenChange, transacao, resum
               {resumoTransacao && (
                 <div className="rounded-md border bg-muted/40 p-2 font-mono text-xs">
                   {resumoTransacao}
+                </div>
+              )}
+              {derivados.length > 0 && (
+                <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-2 text-xs">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                  <div>
+                    <strong>Ajustes cambiais vinculados:</strong> serão excluídos junto (com snapshot na auditoria).
+                    <ul className="mt-1 space-y-0.5 font-mono">
+                      {derivados.map((d) => (
+                        <li key={d.id}>
+                          {d.tipo_transacao === "GANHO_CAMBIAL" ? "Ganho" : "Perda"} de{" "}
+                          {Number(d.valor).toFixed(6)} {d.coin || d.moeda}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               )}
               <p className="text-xs text-muted-foreground">

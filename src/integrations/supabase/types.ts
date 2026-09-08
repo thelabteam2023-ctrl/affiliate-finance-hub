@@ -2769,6 +2769,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_conversao_referencia_id_fkey"
             columns: ["conversao_referencia_id"]
             isOneToOne: false
+            referencedRelation: "v_auditoria_integridade_cambial"
+            referencedColumns: ["ajuste_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_conversao_referencia_id_fkey"
+            columns: ["conversao_referencia_id"]
+            isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
           },
@@ -3231,6 +3238,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
             columns: ["referencia_transacao_id"]
             isOneToOne: false
+            referencedRelation: "v_auditoria_integridade_cambial"
+            referencedColumns: ["ajuste_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["referencia_transacao_id"]
+            isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
           },
@@ -3410,6 +3424,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_ajustes_auditoria"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_manual_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_auditoria_integridade_cambial"
+            referencedColumns: ["ajuste_id"]
           },
           {
             foreignKeyName: "cashback_manual_cash_ledger_id_fkey"
@@ -4959,6 +4980,13 @@ export type Database = {
             foreignKeyName: "exchange_adjustments_cash_ledger_id_fkey"
             columns: ["cash_ledger_id"]
             isOneToOne: false
+            referencedRelation: "v_auditoria_integridade_cambial"
+            referencedColumns: ["ajuste_id"]
+          },
+          {
+            foreignKeyName: "exchange_adjustments_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
           },
@@ -5917,6 +5945,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_ajustes_auditoria"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_auditoria_integridade_cambial"
+            referencedColumns: ["ajuste_id"]
           },
           {
             foreignKeyName: "giros_gratis_cash_ledger_id_fkey"
@@ -7469,6 +7504,13 @@ export type Database = {
             foreignKeyName: "ocorrencias_ajuste_ledger_id_fkey"
             columns: ["ajuste_ledger_id"]
             isOneToOne: false
+            referencedRelation: "v_auditoria_integridade_cambial"
+            referencedColumns: ["ajuste_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_ajuste_ledger_id_fkey"
+            columns: ["ajuste_ledger_id"]
+            isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
           },
@@ -7667,6 +7709,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_ajustes_auditoria"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_perda_ledger_id_fkey"
+            columns: ["perda_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_auditoria_integridade_cambial"
+            referencedColumns: ["ajuste_id"]
           },
           {
             foreignKeyName: "ocorrencias_perda_ledger_id_fkey"
@@ -8225,6 +8274,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_ajustes_auditoria"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_operador_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_auditoria_integridade_cambial"
+            referencedColumns: ["ajuste_id"]
           },
           {
             foreignKeyName: "pagamentos_operador_cash_ledger_id_fkey"
@@ -8975,6 +9031,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_ajustes_auditoria"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participacao_ciclos_pagamento_ledger_id_fkey"
+            columns: ["pagamento_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_auditoria_integridade_cambial"
+            referencedColumns: ["ajuste_id"]
           },
           {
             foreignKeyName: "participacao_ciclos_pagamento_ledger_id_fkey"
@@ -10954,6 +11017,13 @@ export type Database = {
             foreignKeyName: "projeto_perdas_ledger_id_ref_fkey"
             columns: ["ledger_id_ref"]
             isOneToOne: false
+            referencedRelation: "v_auditoria_integridade_cambial"
+            referencedColumns: ["ajuste_id"]
+          },
+          {
+            foreignKeyName: "projeto_perdas_ledger_id_ref_fkey"
+            columns: ["ledger_id_ref"]
+            isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
           },
@@ -11958,6 +12028,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_ajustes_auditoria"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stablecoin_correction_log_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_auditoria_integridade_cambial"
+            referencedColumns: ["ajuste_id"]
           },
           {
             foreignKeyName: "stablecoin_correction_log_cash_ledger_id_fkey"
@@ -13288,6 +13365,13 @@ export type Database = {
             foreignKeyName: "wallet_transit_log_ledger_id_fkey"
             columns: ["ledger_id"]
             isOneToOne: false
+            referencedRelation: "v_auditoria_integridade_cambial"
+            referencedColumns: ["ajuste_id"]
+          },
+          {
+            foreignKeyName: "wallet_transit_log_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
           },
@@ -13966,6 +14050,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
             columns: ["referencia_transacao_id"]
             isOneToOne: false
+            referencedRelation: "v_auditoria_integridade_cambial"
+            referencedColumns: ["ajuste_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["referencia_transacao_id"]
+            isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
           },
@@ -14012,6 +14103,103 @@ export type Database = {
           user_id: string | null
         }
         Relationships: []
+      }
+      v_auditoria_integridade_cambial: {
+        Row: {
+          ajuste_competencia: string | null
+          ajuste_criado_em: string | null
+          ajuste_id: string | null
+          ajuste_moeda: string | null
+          ajuste_projeto_id: string | null
+          ajuste_status: string | null
+          ajuste_tipo: string | null
+          ajuste_valor: number | null
+          casa: string | null
+          diagnostico: string | null
+          pai_competencia: string | null
+          pai_id: string | null
+          pai_projeto_id: string | null
+          pai_revertido_em: string | null
+          pai_status: string | null
+          pai_tipo: string | null
+          pai_valor: number | null
+          parceiro: string | null
+          projeto: string | null
+          workspace: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_ledger_projeto_id_snapshot_fkey"
+            columns: ["pai_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_projeto_id_snapshot_fkey"
+            columns: ["ajuste_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["pai_id"]
+            isOneToOne: false
+            referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["pai_id"]
+            isOneToOne: false
+            referencedRelation: "v_ajustes_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["pai_id"]
+            isOneToOne: false
+            referencedRelation: "v_auditoria_integridade_cambial"
+            referencedColumns: ["ajuste_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["pai_id"]
+            isOneToOne: false
+            referencedRelation: "v_eventos_promocionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["pai_id"]
+            isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ajuste_ledger_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["pai_id"]
+            isOneToOne: false
+            referencedRelation: "v_saques_duplicidade_audit"
+            referencedColumns: ["saque_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["pai_id"]
+            isOneToOne: false
+            referencedRelation: "v_snapshot_anomalias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_bonus_historico: {
         Row: {
@@ -18039,6 +18227,20 @@ export type Database = {
       }
       fn_bookmaker_parity_sum: { Args: { p_ids: string[] }; Returns: number }
       fn_get_market_group: { Args: { p_market: string }; Returns: string }
+      fn_ledger_derived_children: {
+        Args: { p_transacao_id: string }
+        Returns: {
+          coin: string
+          data_transacao: string
+          descricao: string
+          id: string
+          moeda: string
+          qtd_coin: number
+          status: string
+          tipo_transacao: string
+          valor: number
+        }[]
+      }
       fn_ledger_profundo_bookmaker: {
         Args: { p_bookmaker_id: string }
         Returns: {

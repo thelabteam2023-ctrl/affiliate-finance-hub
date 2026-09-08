@@ -61,26 +61,44 @@ interface Dependencias {
   }>;
 }
 
+interface DerivadoCambial {
+  id: string;
+  tipo_transacao: string;
+  valor: number;
+  moeda: string | null;
+  coin: string | null;
+  qtd_coin: number | null;
+  data_transacao: string;
+  descricao: string | null;
+  status: string | null;
+}
+
 export function ReverterMovimentacaoDialog({ open, onOpenChange, transacao, resumoTransacao }: Props) {
   const [motivo, setMotivo] = useState("");
   const [deps, setDeps] = useState<Dependencias | null>(null);
   const [loadingDeps, setLoadingDeps] = useState(false);
+  const [derivados, setDerivados] = useState<DerivadoCambial[]>([]);
   const { reverter } = useReverterMovimentacao();
 
   useEffect(() => {
     if (!open || !transacao?.id) {
       setDeps(null);
+      setDerivados([]);
       return;
     }
     let cancelled = false;
     (async () => {
       setLoadingDeps(true);
       try {
-        const { data, error } = await supabase.rpc("get_movimentacao_dependencies", {
-          p_transacao_id: transacao.id,
-        });
+        const [{ data, error }, { data: filhos }] = await Promise.all([
+          supabase.rpc("get_movimentacao_dependencies", { p_transacao_id: transacao.id }),
+          supabase.rpc("fn_ledger_derived_children", { p_transacao_id: transacao.id }),
+        ]);
         if (!cancelled && !error && data) {
           setDeps(data as unknown as Dependencias);
+        }
+        if (!cancelled) {
+          setDerivados((filhos as unknown as DerivadoCambial[]) || []);
         }
       } finally {
         if (!cancelled) setLoadingDeps(false);
@@ -154,6 +172,28 @@ export function ReverterMovimentacaoDialog({ open, onOpenChange, transacao, resu
               <strong>Swap interno:</strong> esta reversão desfará as <strong>duas pernas</strong> da operação
               (entrada e saída) de uma só vez, com o mesmo motivo. Não é possível reverter apenas metade do swap.
             </span>
+          </div>
+        )}
+
+        {derivados.length > 0 && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+            <div className="space-y-1">
+              <p>
+                <strong>Ajustes cambiais vinculados:</strong> esta reversão também desfará{" "}
+                {derivados.length === 1 ? "o lançamento abaixo" : `os ${derivados.length} lançamentos abaixo`},
+                gerados por esta mesma operação.
+              </p>
+              <ul className="space-y-0.5 font-mono">
+                {derivados.map((d) => (
+                  <li key={d.id}>
+                    {d.tipo_transacao === "GANHO_CAMBIAL" ? "Ganho" : "Perda"} de{" "}
+                    {Number(d.valor).toFixed(6)} {d.coin || d.moeda} —{" "}
+                    {String(d.data_transacao).slice(0, 10).split("-").reverse().join("/")}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
 

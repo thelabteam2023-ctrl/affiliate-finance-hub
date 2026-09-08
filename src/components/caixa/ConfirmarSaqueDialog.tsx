@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { getTodayCivilDate } from "@/utils/dateUtils";
+import { dataCompetenciaAjusteCambial } from "@/lib/ledger/competenciaCambial";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
@@ -224,6 +225,9 @@ export function ConfirmarSaqueDialog({
   const handleConfirmar = async () => {
     if (!saque || !isValid) return;
 
+    // Ajustes cambiais nascem com a competência do saque, não com a data da confirmação
+    const dataCompetenciaSaque = dataCompetenciaAjusteCambial(saque.data_transacao);
+
     try {
       setLoading(true);
 
@@ -321,7 +325,8 @@ export function ConfirmarSaqueDialog({
               valor: Math.abs(diferencaCoin),
               moeda: coinMoeda,
               status: "CONFIRMADO",
-              data_transacao: getTodayCivilDate(),
+              // Competência do saque pai (não a data da confirmação)
+              data_transacao: dataCompetenciaSaque,
               descricao: `${tipoAjuste === "GANHO_CAMBIAL" ? "Ganho" : "Perda"} na liquidação cripto - ${saque.bookmaker_nome || "Saque"} (diferença: ${Math.abs(diferencaCoin).toFixed(6)} ${coinMoeda})`,
               workspace_id: bookmaker.workspace_id,
               user_id: userData.user.id,
@@ -384,7 +389,8 @@ export function ConfirmarSaqueDialog({
               valor: Math.abs(diferencaFiat),
               moeda: moedaDestinoFiat,
               status: "CONFIRMADO",
-              data_transacao: getTodayCivilDate(),
+              // Competência do saque pai (não a data da confirmação)
+              data_transacao: dataCompetenciaSaque,
               descricao: `Ajuste cambial - Saque ${saque.bookmaker_nome || "Bookmaker"}`,
               workspace_id: bookmaker.workspace_id,
               user_id: userData.user.id,

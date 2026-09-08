@@ -827,6 +827,12 @@ export function AppSidebar() {
                 )}
               </DropdownMenuItem>
             )}
+            {(isSystemOwner || role === 'owner' || role === 'admin') && (
+              <DropdownMenuItem onClick={() => navigate("/admin/auditoria-cambial")}>
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Auditoria cambial
+              </DropdownMenuItem>
+            )}
             {isSystemOwner && (
               <DropdownMenuItem onClick={() => navigate("/admin/api-explorer")}>
                 <Globe className="mr-2 h-4 w-4" />
