@@ -385,7 +385,8 @@ export function ConfirmarSaqueDialog({
               valor: Math.abs(diferencaFiat),
               moeda: moedaDestinoFiat,
               status: "CONFIRMADO",
-              data_transacao: getTodayCivilDate(),
+              // Competência do saque pai (não a data da confirmação)
+              data_transacao: dataCompetenciaSaque,
               descricao: `Ajuste cambial - Saque ${saque.bookmaker_nome || "Bookmaker"}`,
               workspace_id: bookmaker.workspace_id,
               user_id: userData.user.id,
