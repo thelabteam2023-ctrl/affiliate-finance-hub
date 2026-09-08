@@ -3311,9 +3311,13 @@ export function CaixaTransacaoDialog({
 
     } catch (error: any) {
       console.error("Erro ao registrar transação:", error);
+      const rawMsg = String(error?.message || "");
+      const isSaldoInsuficiente = rawMsg.includes("SALDO_INSUFICIENTE");
       toast({
-        title: "Erro ao registrar transação",
-        description: error.message,
+        title: isSaldoInsuficiente ? "Saldo insuficiente" : "Erro ao registrar transação",
+        description: isSaldoInsuficiente
+          ? `${rawMsg.replace(/^.*SALDO_INSUFICIENTE:\s*/, "")} Atualize a tela e confira se este lançamento já foi feito.`
+          : rawMsg,
         variant: "destructive",
       });
     } finally {
