@@ -65,22 +65,28 @@ export function ReverterMovimentacaoDialog({ open, onOpenChange, transacao, resu
   const [motivo, setMotivo] = useState("");
   const [deps, setDeps] = useState<Dependencias | null>(null);
   const [loadingDeps, setLoadingDeps] = useState(false);
+  const [derivados, setDerivados] = useState<DerivadoCambial[]>([]);
   const { reverter } = useReverterMovimentacao();
 
   useEffect(() => {
     if (!open || !transacao?.id) {
       setDeps(null);
+      setDerivados([]);
       return;
     }
     let cancelled = false;
     (async () => {
       setLoadingDeps(true);
       try {
-        const { data, error } = await supabase.rpc("get_movimentacao_dependencies", {
-          p_transacao_id: transacao.id,
-        });
+        const [{ data, error }, { data: filhos }] = await Promise.all([
+          supabase.rpc("get_movimentacao_dependencies", { p_transacao_id: transacao.id }),
+          supabase.rpc("fn_ledger_derived_children", { p_transacao_id: transacao.id }),
+        ]);
         if (!cancelled && !error && data) {
           setDeps(data as unknown as Dependencias);
+        }
+        if (!cancelled) {
+          setDerivados((filhos as unknown as DerivadoCambial[]) || []);
         }
       } finally {
         if (!cancelled) setLoadingDeps(false);
