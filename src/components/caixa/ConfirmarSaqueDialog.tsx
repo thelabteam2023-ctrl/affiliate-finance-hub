@@ -225,8 +225,7 @@ export function ConfirmarSaqueDialog({
     if (!saque || !isValid) return;
 
     // Ajustes cambiais nascem com a competência do saque, não com a data da confirmação
-    const dataCompetenciaSaque =
-      (saque.data_transacao ? String(saque.data_transacao).slice(0, 10) : "") || getTodayCivilDate();
+    const dataCompetenciaSaque = dataCompetenciaAjusteCambial(saque.data_transacao);
 
     try {
       setLoading(true);
