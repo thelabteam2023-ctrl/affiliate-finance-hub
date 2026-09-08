@@ -25,7 +25,21 @@ interface Props {
 
 export function ExcluirMovimentacaoDialog({ open, onOpenChange, transacao, resumoTransacao }: Props) {
   const [motivo, setMotivo] = useState("");
+  const [derivados, setDerivados] = useState<Array<{ id: string; tipo_transacao: string; valor: number; moeda: string | null; coin: string | null }>>([]);
   const { excluir } = useReverterMovimentacao();
+
+  useEffect(() => {
+    if (!open || !transacao?.id) {
+      setDerivados([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.rpc("fn_ledger_derived_children", { p_transacao_id: transacao.id });
+      if (!cancelled) setDerivados((data as any) || []);
+    })();
+    return () => { cancelled = true; };
+  }, [open, transacao?.id]);
 
   const handleConfirm = async () => {
     if (!transacao || motivo.trim().length < 5) return;
