@@ -730,6 +730,16 @@ const App = () => (
               </ProtectedRoute>
             } />
 
+            <Route path="/admin/saldos-negativos" element={
+              <ProtectedRoute requiredRole={['owner', 'admin']} requireSystemOwner={false}>
+                <AuthenticatedLayout>
+                  <Suspense fallback={<PageLoader />}>
+                    <SaldosNegativos />
+                  </Suspense>
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
             </Routes>
