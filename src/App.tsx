@@ -101,6 +101,7 @@ const Solicitacoes = lazyWithChunkRetry(() => import("./pages/Solicitacoes"));
 const Comunicados = lazyWithChunkRetry(() => import("./pages/Comunicados"));
 const DevLedgerMonitor = lazyWithChunkRetry(() => import("./pages/DevLedgerMonitor"));
 const LedgerAnomalies = lazyWithChunkRetry(() => import("./pages/LedgerAnomalies"));
+const AuditoriaCambial = lazyWithChunkRetry(() => import("./pages/AuditoriaCambial"));
 const LaboratorioValueBet = lazyWithChunkRetry(() => import("./pages/LaboratorioValueBet"));
 const ApiExplorer = lazyWithChunkRetry(() => import("./pages/ApiExplorer"));
 
