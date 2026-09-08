@@ -78,6 +78,22 @@ export function ExcluirMovimentacaoDialog({ open, onOpenChange, transacao, resum
                   {resumoTransacao}
                 </div>
               )}
+              {derivados.length > 0 && (
+                <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-2 text-xs">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                  <div>
+                    <strong>Ajustes cambiais vinculados:</strong> serão excluídos junto (com snapshot na auditoria).
+                    <ul className="mt-1 space-y-0.5 font-mono">
+                      {derivados.map((d) => (
+                        <li key={d.id}>
+                          {d.tipo_transacao === "GANHO_CAMBIAL" ? "Ganho" : "Perda"} de{" "}
+                          {Number(d.valor).toFixed(6)} {d.coin || d.moeda}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 Disponível apenas nos primeiros 30 minutos após criação. Para movimentações mais antigas, use Reverter.
               </p>
