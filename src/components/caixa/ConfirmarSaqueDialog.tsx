@@ -230,11 +230,20 @@ export function ConfirmarSaqueDialog({
       // Verificar status atual
       const { data: currentSaque, error: fetchError } = await supabase
         .from("cash_ledger")
-        .select("status")
+        .select("status, auditoria_metadata")
         .eq("id", saque.id)
         .single();
 
       if (fetchError) throw fetchError;
+
+      // Preserva o histórico de auditoria (marcas de duplicidade, origem, etc.)
+      const auditoriaMerged = {
+        ...((currentSaque?.auditoria_metadata as Record<string, unknown>) || {}),
+        ignore_duplicate: true,
+        confirmado_em: new Date().toISOString(),
+      };
+
+
 
       if (currentSaque?.status !== "PENDENTE") {
         toast.error("Este saque já foi processado anteriormente.");
