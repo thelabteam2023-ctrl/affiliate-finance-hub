@@ -833,6 +833,12 @@ export function AppSidebar() {
                 Auditoria cambial
               </DropdownMenuItem>
             )}
+            {(isSystemOwner || role === 'owner' || role === 'admin') && (
+              <DropdownMenuItem onClick={() => navigate("/admin/saldos-negativos")}>
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Saldos negativos
+              </DropdownMenuItem>
+            )}
             {isSystemOwner && (
               <DropdownMenuItem onClick={() => navigate("/admin/api-explorer")}>
                 <Globe className="mr-2 h-4 w-4" />
