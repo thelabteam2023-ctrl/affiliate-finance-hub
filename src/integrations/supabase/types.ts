@@ -493,6 +493,13 @@ export type Database = {
             foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
           },
@@ -674,6 +681,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_pernas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -1104,6 +1118,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -1553,6 +1574,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_balance_audit_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -2029,6 +2057,13 @@ export type Database = {
             foreignKeyName: "bookmaker_stake_reservations_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_stake_reservations_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
           },
@@ -2135,6 +2170,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_unlinked_acks_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -2867,6 +2909,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
             columns: ["destino_bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
+            columns: ["destino_bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
           },
@@ -3099,6 +3148,13 @@ export type Database = {
             columns: ["origem_bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_bookmaker_id_fkey"
+            columns: ["origem_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -3395,6 +3451,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_manual_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -4952,6 +5015,13 @@ export type Database = {
             foreignKeyName: "exchange_adjustments_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exchange_adjustments_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
           },
@@ -5305,6 +5375,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_events_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -5714,6 +5791,13 @@ export type Database = {
             foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
           },
@@ -5922,6 +6006,13 @@ export type Database = {
             foreignKeyName: "giros_gratis_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
           },
@@ -6124,6 +6215,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_disponiveis_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -6685,6 +6783,13 @@ export type Database = {
             foreignKeyName: "ledger_parity_anomalies_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_parity_anomalies_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
           },
@@ -6809,6 +6914,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "limitation_events_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -7610,6 +7722,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -10176,6 +10295,13 @@ export type Database = {
             foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
           },
@@ -10491,6 +10617,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_bookmaker_historico_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -10983,6 +11116,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_perdas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -11689,6 +11829,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -13031,6 +13178,13 @@ export type Database = {
             foreignKeyName: "transacoes_bookmakers_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transacoes_bookmakers_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
           },
@@ -14308,6 +14462,13 @@ export type Database = {
             foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
           },
@@ -14964,6 +15125,37 @@ export type Database = {
           },
         ]
       }
+      v_bookmakers_saldo_negativo: {
+        Row: {
+          id: string | null
+          moeda: string | null
+          nome: string | null
+          parceiro_nome: string | null
+          projeto_id: string | null
+          projeto_nome: string | null
+          saldo_atual: number | null
+          saldo_freebet: number | null
+          status: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmakers_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmakers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_ciclos_proximos_fechamento: {
         Row: {
           alerta: string | null
@@ -15354,6 +15546,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
             columns: ["destino_bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
+            columns: ["destino_bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
           },
@@ -15425,6 +15624,13 @@ export type Database = {
             columns: ["origem_bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_bookmaker_id_fkey"
+            columns: ["origem_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -15566,6 +15772,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -15809,6 +16022,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "limitation_events_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {
@@ -16241,6 +16461,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_saldo_negativo"
             referencedColumns: ["id"]
           },
           {

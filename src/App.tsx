@@ -102,6 +102,7 @@ const Comunicados = lazyWithChunkRetry(() => import("./pages/Comunicados"));
 const DevLedgerMonitor = lazyWithChunkRetry(() => import("./pages/DevLedgerMonitor"));
 const LedgerAnomalies = lazyWithChunkRetry(() => import("./pages/LedgerAnomalies"));
 const AuditoriaCambial = lazyWithChunkRetry(() => import("./pages/AuditoriaCambial"));
+const SaldosNegativos = lazyWithChunkRetry(() => import("./pages/SaldosNegativos"));
 const LaboratorioValueBet = lazyWithChunkRetry(() => import("./pages/LaboratorioValueBet"));
 const ApiExplorer = lazyWithChunkRetry(() => import("./pages/ApiExplorer"));
 
@@ -724,6 +725,16 @@ const App = () => (
                 <AuthenticatedLayout>
                   <Suspense fallback={<PageLoader />}>
                     <AuditoriaCambial />
+                  </Suspense>
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/admin/saldos-negativos" element={
+              <ProtectedRoute requiredRole={['owner', 'admin']} requireSystemOwner={false}>
+                <AuthenticatedLayout>
+                  <Suspense fallback={<PageLoader />}>
+                    <SaldosNegativos />
                   </Suspense>
                 </AuthenticatedLayout>
               </ProtectedRoute>
