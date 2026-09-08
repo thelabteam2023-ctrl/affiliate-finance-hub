@@ -61,6 +61,18 @@ interface Dependencias {
   }>;
 }
 
+interface DerivadoCambial {
+  id: string;
+  tipo_transacao: string;
+  valor: number;
+  moeda: string | null;
+  coin: string | null;
+  qtd_coin: number | null;
+  data_transacao: string;
+  descricao: string | null;
+  status: string | null;
+}
+
 export function ReverterMovimentacaoDialog({ open, onOpenChange, transacao, resumoTransacao }: Props) {
   const [motivo, setMotivo] = useState("");
   const [deps, setDeps] = useState<Dependencias | null>(null);
