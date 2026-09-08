@@ -321,7 +321,8 @@ export function ConfirmarSaqueDialog({
               valor: Math.abs(diferencaCoin),
               moeda: coinMoeda,
               status: "CONFIRMADO",
-              data_transacao: getTodayCivilDate(),
+              // Competência do saque pai (não a data da confirmação)
+              data_transacao: dataCompetenciaSaque,
               descricao: `${tipoAjuste === "GANHO_CAMBIAL" ? "Ganho" : "Perda"} na liquidação cripto - ${saque.bookmaker_nome || "Saque"} (diferença: ${Math.abs(diferencaCoin).toFixed(6)} ${coinMoeda})`,
               workspace_id: bookmaker.workspace_id,
               user_id: userData.user.id,
