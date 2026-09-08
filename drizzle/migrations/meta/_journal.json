@@ -78,6 +78,13 @@
       "when": 1788843165782,
       "tag": "0010_guard_bookmaker_saldo_bypass_runtime",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788843198913,
+      "tag": "0011_saldo_negativo_view_e_ajuste_manual",
+      "breakpoints": true
     }
   ]
 }
