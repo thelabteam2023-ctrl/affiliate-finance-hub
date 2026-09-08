@@ -175,6 +175,28 @@ export function ReverterMovimentacaoDialog({ open, onOpenChange, transacao, resu
           </div>
         )}
 
+        {derivados.length > 0 && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+            <div className="space-y-1">
+              <p>
+                <strong>Ajustes cambiais vinculados:</strong> esta reversão também desfará{" "}
+                {derivados.length === 1 ? "o lançamento abaixo" : `os ${derivados.length} lançamentos abaixo`},
+                gerados por esta mesma operação.
+              </p>
+              <ul className="space-y-0.5 font-mono">
+                {derivados.map((d) => (
+                  <li key={d.id}>
+                    {d.tipo_transacao === "GANHO_CAMBIAL" ? "Ganho" : "Perda"} de{" "}
+                    {Number(d.valor).toFixed(6)} {d.coin || d.moeda} —{" "}
+                    {String(d.data_transacao).slice(0, 10).split("-").reverse().join("/")}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
         {/* Painel de dependências */}
         {loadingDeps && (
           <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
