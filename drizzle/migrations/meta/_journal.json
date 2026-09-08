@@ -57,6 +57,13 @@
       "when": 1788840540617,
       "tag": "0007_saque_duplicado_janela_ampliada_e_saldo_guard_rpc",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788841774844,
+      "tag": "0008_reversao_cadeia_perdas_cambiais_derivadas",
+      "breakpoints": true
     }
   ]
 }
