@@ -2669,7 +2669,7 @@ export function CaixaTransacaoDialog({
         }
       }
 
-      // Validar saldo insuficiente
+      // Validar saldo insuficiente (dados em memória)
       if (checkSaldoInsuficiente()) {
         toast({
           title: "Erro",
@@ -2678,6 +2678,42 @@ export function CaixaTransacaoDialog({
         });
         return;
       }
+
+      // TRAVA ANTI-CONCORRÊNCIA: em SAQUE, reconsultar o saldo REAL da casa no banco.
+      // A lista em memória pode estar desatualizada se outro operador acabou de sacar.
+      if (tipoTransacao === "SAQUE" && origemBookmakerId) {
+        const valorSaque = parseFloat(valor) || 0;
+        const { data: bmFresh, error: bmFreshError } = await supabase
+          .from("bookmakers")
+          .select("nome, saldo_atual, moeda")
+          .eq("id", origemBookmakerId)
+          .single();
+
+        if (bmFreshError) throw bmFreshError;
+
+        const { data: pendentesFresh } = await supabase
+          .from("cash_ledger")
+          .select("valor")
+          .eq("tipo_transacao", "SAQUE")
+          .eq("status", "PENDENTE")
+          .eq("origem_bookmaker_id", origemBookmakerId);
+
+        const totalPendente = (pendentesFresh || []).reduce(
+          (acc, p) => acc + (Number(p.valor) || 0),
+          0
+        );
+        const disponivelReal = (Number(bmFresh?.saldo_atual) || 0) - totalPendente;
+
+        if (valorSaque > disponivelReal + 0.01) {
+          toast({
+            title: "Saldo insuficiente",
+            description: `${bmFresh?.nome || "Casa"} tem ${formatCurrency(disponivelReal, bmFresh?.moeda || undefined)} disponível (já descontados saques pendentes) e você pediu ${formatCurrency(valorSaque, bmFresh?.moeda || undefined)}. Atualize a tela e confira se este saque já foi lançado.`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
 
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
