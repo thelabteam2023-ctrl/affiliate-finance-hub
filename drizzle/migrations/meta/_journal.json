@@ -43,6 +43,13 @@
       "when": 1788569816384,
       "tag": "0005_parcial_liquidacao_pai_pendente",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788840492859,
+      "tag": "0006_guard_saldo_bookmaker_nao_negativo",
+      "breakpoints": true
     }
   ]
 }
