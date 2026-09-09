@@ -237,6 +237,32 @@ function detectMarketFamily(mercado: string): "MATCH_ODDS" | "MONEYLINE" | "TOTA
   const directMatch = UI_MERCADO_MAP[mercado.toLowerCase().trim()];
   if (directMatch) return directMatch;
 
+  // ★ Camada semântica de sinônimos (Match Result, Resultado da Partida, 1X2, FT Result...)
+  const canonical = normalizeMarketKey(mercado).canonical;
+  if (canonical) {
+    if (isThreeWayMatchResult(canonical)) return "MATCH_ODDS";
+    switch (canonical) {
+      case "DRAW_NO_BET": return "DNB";
+      case "ASIAN_HANDICAP":
+      case "HANDICAP":
+      case "PERIOD_HANDICAP": return "HANDICAP";
+      case "TOTAL_GOALS":
+      case "PERIOD_TOTAL": return "TOTALS";
+      case "TEAM_TOTALS": return "TEAM_TOTALS";
+      case "PLAYER_TOTALS": return "PLAYER_TOTALS";
+      case "BOTH_TEAMS_TO_SCORE": return "YES_NO";
+      case "RACE_TO": return "RACE_TO";
+      case "WINNER":
+      case "TO_QUALIFY":
+      case "PERIOD_WINNER": return "MONEYLINE";
+      // CORRECT_SCORE e DOUBLE_CHANCE não têm inferência automática de pernas
+      case "CORRECT_SCORE":
+      case "DOUBLE_CHANCE": return null;
+    }
+  }
+
+
+
   // ★ REGRA DE OURO: Contexto temporal tem PRIORIDADE MÁXIMA
   // Quarter > Half > Set > Inning > Match
   // Se detectar período, classificar pelo sub-tipo do período, NUNCA como MATCH
