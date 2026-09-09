@@ -2527,6 +2527,7 @@ export function SurebetModalRoot({
                   const mapped = mapDailyEventToFormFields(ev);
                   setEsporte(mapped.esporte);
                   setEvento(mapped.evento);
+                  dataEditadaManualRef.current = true;
                   setDataAposta(mapped.dataAposta);
                   setImportedHomeTeam(mapped.homeTeam);
                   setImportedAwayTeam(mapped.awayTeam);
