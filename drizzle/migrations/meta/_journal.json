@@ -85,6 +85,13 @@
       "when": 1788843198913,
       "tag": "0011_saldo_negativo_view_e_ajuste_manual",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788924555077,
+      "tag": "0012_fix_guard_saldo_event_scope_cast",
+      "breakpoints": true
     }
   ]
 }
