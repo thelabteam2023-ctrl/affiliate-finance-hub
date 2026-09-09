@@ -2510,7 +2510,7 @@ export function SurebetModalRoot({
               onEsporteChange: setEsporte,
               onEventoChange: setEvento,
               onMercadoChange: setMercado,
-              onDataApostaChange: setDataAposta,
+              onDataApostaChange: (v: string) => { dataEditadaManualRef.current = true; setDataAposta(v); },
               esportesList: ESPORTES,
             }}
             showImport={false}
