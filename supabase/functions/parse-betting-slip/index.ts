@@ -7,10 +7,21 @@ interface ParsedField {
   confidence: "high" | "medium" | "low" | "none";
 }
 
+interface ParsedTimeField extends ParsedField {
+  /** Rótulo literal que apareceu no print junto do horário (ex: "Início", "Aposta feita em"). */
+  label?: string | null;
+}
+
 interface ParsedBetSlip {
   mandante: ParsedField;
   visitante: ParsedField;
   dataHora: ParsedField;
+  /** Início do evento (kickoff). */
+  eventStartsAt?: ParsedTimeField;
+  /** Momento em que a aposta foi registrada na casa. */
+  betPlacedAt?: ParsedTimeField;
+  /** Momento da liquidação/resolução da aposta. */
+  settledAt?: ParsedTimeField;
   esporte: ParsedField;
   liga: ParsedField;
   mercado: ParsedField;
@@ -22,6 +33,7 @@ interface ParsedBetSlip {
   resultado: ParsedField;
   bookmakerNome: ParsedField;
 }
+
 
 interface ParsedSelecao {
   evento: ParsedField;
@@ -338,8 +350,21 @@ FORMATO DE RESPOSTA (JSON estrito):
   "stake": { "value": "VALOR NUMÉRICO APOSTADO ou null", "confidence": "high|medium|low|none" },
   "retorno": { "value": "VALOR NUMÉRICO DO RETORNO ou null", "confidence": "high|medium|low|none" },
   "resultado": { "value": "GREEN|RED|VOID ou null se pendente", "confidence": "high|medium|low|none" },
+  "eventStartsAt": { "value": "YYYY-MM-DDTHH:mm ou null", "label": "rótulo literal do print ou null", "confidence": "high|medium|low|none" },
+  "betPlacedAt": { "value": "YYYY-MM-DDTHH:mm ou null", "label": "rótulo literal do print ou null", "confidence": "high|medium|low|none" },
+  "settledAt": { "value": "YYYY-MM-DDTHH:mm ou null", "label": "rótulo literal do print ou null", "confidence": "high|medium|low|none" },
   "bookmakerNome": { "value": "NOME DA CASA DE APOSTAS ou null", "confidence": "high|medium|low|none" }
 }
+
+REGRAS DE HORÁRIO (críticas):
+- Um print pode ter VÁRIOS horários com significados diferentes. Classifique cada um pelo rótulo/posição:
+  * Início do jogo/evento (ex: "Início", "Começa", "Kick-off", "Hoje 07:30", horário ao lado dos times) → "eventStartsAt"
+  * Horário em que a aposta foi feita/registrada (ex: "Aposta feita em", "Realizada em", "Placed", data do recibo/cupom) → "betPlacedAt"
+  * Horário de liquidação/resolução (ex: "Liquidada em", "Resolvida", "Settled") → "settledAt"
+- Copie em "label" o rótulo exatamente como aparece no print, para permitir revisão.
+- NUNCA invente horário: se um papel não estiver no print, retorne null com confidence "none".
+- "dataHora" continua sendo o horário mais provável do EVENTO (compatibilidade).
+
 
 Nível de confiança:
 - "high": texto claramente visível e inequívoco
@@ -680,6 +705,30 @@ Estes prints normalmente NÃO mostram stake nem retorno, e usam os seguintes ró
         if (dateResult.wasYearInferred && parsedData.dataHora.confidence === "high") {
           parsedData.dataHora.confidence = "medium";
         }
+      }
+
+      // Normalize the role-specific timestamps the same way (never invent values)
+      for (const key of ["eventStartsAt", "betPlacedAt", "settledAt"] as const) {
+        const field = (parsedData as Record<string, ParsedTimeField | undefined>)[key];
+        if (field?.value) {
+          const r = normalizeDateWithCurrentYear(field.value);
+          field.value = r.value;
+          if (r.wasYearInferred && field.confidence === "high") field.confidence = "medium";
+        } else {
+          (parsedData as Record<string, ParsedTimeField>)[key] = {
+            value: null,
+            label: field?.label ?? null,
+            confidence: "none",
+          };
+        }
+      }
+
+      // Compatibilidade: dataHora reflete o início do evento quando disponível
+      if (!parsedData.dataHora?.value && parsedData.eventStartsAt?.value) {
+        parsedData.dataHora = {
+          value: parsedData.eventStartsAt.value,
+          confidence: parsedData.eventStartsAt.confidence,
+        };
       }
 
       // Normalize numeric fields - odds with 5 decimal precision

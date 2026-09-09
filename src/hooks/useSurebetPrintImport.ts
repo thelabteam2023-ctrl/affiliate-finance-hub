@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { ParsedBetSlip, ParsedField } from "./useImportBetPrint";
@@ -10,6 +10,9 @@ import {
 } from "@/lib/ocrNormalization";
 import { detectDateAnomaly, type DateAnomalyResult } from "@/lib/dateAnomalyDetection";
 import { calcularOddReal, formatOddDisplay, type OddCalculationResult } from "@/lib/oddRealCalculation";
+import { normalizeMarketKey, isThreeWayMatchResult } from "@/lib/ocr/marketSynonyms";
+import { resolveSelectionPosition, type MatchPosition } from "@/lib/ocr/teamNameMatch";
+import { resolveEventTimes, type ResolvedTimes } from "@/lib/ocr/eventTimeResolution";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -99,35 +102,35 @@ const BINARY_LINE_PAIRS: Record<string, string> = {
 // ========================================================================
 
 /**
- * MATCH_ODDS: determines canonical position (0=Home, 1=Draw, 2=Away)
- * and returns selections for ALL 3 legs.
+ * MATCH_RESULT (3 vias): identifica em qual posição (casa/empate/fora) está a
+ * seleção lida no print e devolve as DUAS seleções complementares, na ordem
+ * canônica, para serem distribuídas nas pernas ainda vazias.
+ *
+ * Nunca repete a seleção já lida e nunca assume que a perna 1 é a casa.
  */
-function inferMatchOddsLegs(
+function inferMatchResultComplements(
   scannedSelection: string,
   mandante: string | null,
   visitante: string | null
-): { legSelections: (string | null)[]; scannedPosition: number } | null {
+): { scannedPosition: MatchPosition; complements: string[] } | null {
   if (!mandante || !visitante) return null;
 
-  const sel = scannedSelection.toLowerCase().trim();
-  let scannedPosition = -1;
+  const resolved = resolveSelectionPosition(scannedSelection, mandante, visitante);
+  if (!resolved) return null;
 
-  if (/^(empate|draw|x)$/i.test(sel)) {
-    scannedPosition = 1;
-  } else if (mandante.toLowerCase().includes(sel) || sel.includes(mandante.toLowerCase())) {
-    scannedPosition = 0;
-  } else if (visitante.toLowerCase().includes(sel) || sel.includes(visitante.toLowerCase())) {
-    scannedPosition = 2;
-  } else if (sel === "1") {
-    scannedPosition = 0;
-  } else if (sel === "2") {
-    scannedPosition = 2;
-  }
+  const byPosition: Record<MatchPosition, string> = {
+    HOME: mandante.toUpperCase(),
+    DRAW: "EMPATE",
+    AWAY: visitante.toUpperCase(),
+  };
+  const order: MatchPosition[] = ["HOME", "DRAW", "AWAY"];
+  const complements = order
+    .filter(pos => pos !== resolved.position)
+    .map(pos => byPosition[pos]);
 
-  if (scannedPosition === -1) return null;
-  const legSelections: (string | null)[] = [mandante.toUpperCase(), "EMPATE", visitante.toUpperCase()];
-  return { legSelections, scannedPosition };
+  return { scannedPosition: resolved.position, complements };
 }
+
 
 /**
  * HANDICAP: "Team A -1.5" → generates "Team B +1.5" with inverted sign.
@@ -234,6 +237,32 @@ function detectMarketFamily(mercado: string): "MATCH_ODDS" | "MONEYLINE" | "TOTA
   const directMatch = UI_MERCADO_MAP[mercado.toLowerCase().trim()];
   if (directMatch) return directMatch;
 
+  // ★ Camada semântica de sinônimos (Match Result, Resultado da Partida, 1X2, FT Result...)
+  const canonical = normalizeMarketKey(mercado).canonical;
+  if (canonical) {
+    if (isThreeWayMatchResult(canonical)) return "MATCH_ODDS";
+    switch (canonical) {
+      case "DRAW_NO_BET": return "DNB";
+      case "ASIAN_HANDICAP":
+      case "HANDICAP":
+      case "PERIOD_HANDICAP": return "HANDICAP";
+      case "TOTAL_GOALS":
+      case "PERIOD_TOTAL": return "TOTALS";
+      case "TEAM_TOTALS": return "TEAM_TOTALS";
+      case "PLAYER_TOTALS": return "PLAYER_TOTALS";
+      case "BOTH_TEAMS_TO_SCORE": return "YES_NO";
+      case "RACE_TO": return "RACE_TO";
+      case "WINNER":
+      case "TO_QUALIFY":
+      case "PERIOD_WINNER": return "MONEYLINE";
+      // CORRECT_SCORE e DOUBLE_CHANCE não têm inferência automática de pernas
+      case "CORRECT_SCORE":
+      case "DOUBLE_CHANCE": return null;
+    }
+  }
+
+
+
   // ★ REGRA DE OURO: Contexto temporal tem PRIORIDADE MÁXIMA
   // Quarter > Half > Set > Inning > Match
   // Se detectar período, classificar pelo sub-tipo do período, NUNCA como MATCH
@@ -273,14 +302,24 @@ export interface LegPrintData {
   oddCalculation: OddCalculationResult | null;
 }
 
+export interface SurebetSharedContext {
+  esporte: string | null;
+  evento: string | null;
+  mercado: string | null;
+  /** Início do evento resolvido a partir do print ("YYYY-MM-DDTHH:mm"). */
+  dataEvento: string | null;
+  /** Horário em que a aposta foi registrada na casa (não vai para o formulário). */
+  dataAposta: string | null;
+  /** true quando havia mais de um horário plausível e o usuário deve confirmar. */
+  dataEventoAmbigua: boolean;
+  /** Confiança da escolha do horário do evento. */
+  dataEventoConfianca: ResolvedTimes["confidence"];
+}
+
 export interface UseSurebetPrintImportReturn {
   legPrints: LegPrintData[];
   isProcessingAny: boolean;
-  sharedContext: {
-    esporte: string | null;
-    evento: string | null;
-    mercado: string | null;
-  };
+  sharedContext: SurebetSharedContext;
   processLegImage: (legIndex: number, file: File, formMercado?: string | null) => Promise<void>;
   processLegFromClipboard: (legIndex: number, event: ClipboardEvent) => Promise<void>;
   clearLegPrint: (legIndex: number) => void;
@@ -316,25 +355,34 @@ const createEmptyLegPrint = (): LegPrintData => ({
   oddCalculation: null,
 });
 
+const EMPTY_SHARED_CONTEXT: SurebetSharedContext = {
+  esporte: null,
+  evento: null,
+  mercado: null,
+  dataEvento: null,
+  dataAposta: null,
+  dataEventoAmbigua: false,
+  dataEventoConfianca: "none",
+};
+
 export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
   const [legPrints, setLegPrints] = useState<LegPrintData[]>([]);
-  const [sharedContext, setSharedContext] = useState<{
-    esporte: string | null;
-    evento: string | null;
-    mercado: string | null;
-  }>({
-    esporte: null,
-    evento: null,
-    mercado: null,
-  });
+  const [sharedContext, setSharedContext] = useState<SurebetSharedContext>(EMPTY_SHARED_CONTEXT);
   // ★ DETECÇÃO DE ANOMALIA TEMPORAL - Estado de confirmação por perna
   const [dateAnomalyConfirmed, setDateAnomalyConfirmed] = useState<Set<number>>(new Set());
 
   const initializeLegPrints = useCallback((numLegs: number) => {
     setLegPrints(Array.from({ length: numLegs }, createEmptyLegPrint));
-    setSharedContext({ esporte: null, evento: null, mercado: null });
+    setSharedContext(EMPTY_SHARED_CONTEXT);
     setDateAnomalyConfirmed(new Set());
   }, []);
+
+  // Espelho síncrono do contexto (evita ler estado desatualizado no processamento)
+  const sharedContextRef = useRef<SurebetSharedContext>(EMPTY_SHARED_CONTEXT);
+  useEffect(() => {
+    sharedContextRef.current = sharedContext;
+  }, [sharedContext]);
+
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -428,19 +476,38 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
     console.log(`[SurebetPrintInfer] Market: "${mercado}", Family: ${family || "UNKNOWN"}, Selection: "${sourceLine}"`);
 
     switch (family) {
-      // ========== MATCH_ODDS / 1X2 (3-leg) ==========
+      // ========== MATCH_RESULT / 1X2 (3 vias) ==========
       case "MATCH_ODDS": {
-        const result = inferMatchOddsLegs(sourceLine, mandanteVal || null, visitanteVal || null);
-        if (result) {
-          console.log(`[SurebetPrintInfer] MATCH_ODDS: position=${result.scannedPosition}`);
-          setLegPrints(prev => prev.map((leg, idx) => {
-            if (idx === processedLegIndex || leg.parsedData || leg.imagePreview) return leg;
-            const sel = result.legSelections[idx];
-            return sel ? buildInferredLegData(sel) : leg;
-          }));
+        const result = inferMatchResultComplements(sourceLine, mandanteVal || null, visitanteVal || null);
+        if (!result) {
+          console.log("[SurebetPrintInfer] MATCH_RESULT: seleção não reconhecida como casa/empate/fora — nada preenchido");
+          return;
         }
+        console.log(`[SurebetPrintInfer] MATCH_RESULT: lida="${sourceLine}" (${result.scannedPosition}), complementos=${result.complements.join(" | ")}`);
+        setLegPrints(prev => {
+          // Distribui as seleções complementares nas pernas AINDA VAZIAS,
+          // na ordem em que aparecem — nunca repete a seleção já lida
+          // e nunca sobrescreve o que já foi preenchido.
+          const queue = [...result.complements];
+          const jaPreenchidas = new Set(
+            prev
+              .map(leg => (leg.parsedData?.selecao?.value || "").trim().toUpperCase())
+              .filter(Boolean)
+          );
+          jaPreenchidas.add(sourceLine.trim().toUpperCase());
+
+          return prev.map((leg, idx) => {
+            if (idx === processedLegIndex || leg.parsedData || leg.imagePreview) return leg;
+            while (queue.length && jaPreenchidas.has(queue[0].toUpperCase())) queue.shift();
+            const sel = queue.shift();
+            if (!sel) return leg;
+            jaPreenchidas.add(sel.toUpperCase());
+            return buildInferredLegData(sel);
+          });
+        });
         return;
       }
+
 
       // ========== HANDICAP (2-leg: Team A -X → Team B +X) ==========
       case "HANDICAP": {
@@ -599,21 +666,29 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
           return updated;
         });
 
+        // ★ HORÁRIOS: separar início do evento, registro da aposta e liquidação
+        const resolvedTimes = resolveEventTimes([
+          { value: rawData.eventStartsAt?.value ?? null, label: rawData.eventStartsAt?.label ?? "kickoff", role: "EVENT_START" },
+          { value: rawData.betPlacedAt?.value ?? null, label: rawData.betPlacedAt?.label ?? "bet placed", role: "BET_PLACED" },
+          { value: rawData.settledAt?.value ?? null, label: rawData.settledAt?.label ?? "settled at", role: "SETTLED" },
+          { value: normalizedData.dataHora?.value ?? null, label: null },
+        ]);
+
         // Update shared context - first valid print defines the global event
         // Regardless of which leg it comes from
         setSharedContext(prev => {
           const newContext = { ...prev };
           
           // Esporte: atualiza se não definido
-          if (!prev.esporte && rawData.esporte?.value) {
-            newContext.esporte = rawData.esporte.value;
+          if (!prev.esporte && normalizedData.esporte?.value) {
+            newContext.esporte = normalizedData.esporte.value;
           }
           
           // Evento: PRIMEIRO PRINT VÁLIDO define o evento global
           // O evento vem de mandante x visitante
           if (!prev.evento) {
-            const mandante = rawData.mandante?.value;
-            const visitante = rawData.visitante?.value;
+            const mandante = normalizedData.mandante?.value;
+            const visitante = normalizedData.visitante?.value;
             if (mandante && visitante) {
               newContext.evento = `${mandante} x ${visitante}`;
             } else if (mandante) {
@@ -624,17 +699,37 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
           }
           
           // Mercado: atualiza se não definido
-          if (!prev.mercado && rawData.mercado?.value) {
-            newContext.mercado = rawData.mercado.value;
+          if (!prev.mercado && (normalizedData.mercado?.value || rawData.mercado?.value)) {
+            newContext.mercado = normalizedData.mercado?.value || rawData.mercado?.value;
+          }
+
+          // Horário do evento: só o primeiro print resolve, e nunca sobrescreve
+          if (!prev.dataEvento && resolvedTimes.eventStartsAt) {
+            newContext.dataEvento = resolvedTimes.eventStartsAt;
+            newContext.dataEventoAmbigua = resolvedTimes.ambiguous;
+            newContext.dataEventoConfianca = resolvedTimes.confidence;
+          }
+          if (!prev.dataAposta && resolvedTimes.betPlacedAt) {
+            newContext.dataAposta = resolvedTimes.betPlacedAt;
           }
           
           return newContext;
         });
 
-        // Try to infer lines for other legs
-        tryInferOtherLegs(legIndex, rawData, sharedContext.mercado, formMercado);
+        // Try to infer lines for other legs — usa SEMPRE os dados normalizados
+        // e o mercado lido no próprio print (evita contexto desatualizado).
+        const mercadoParaInferencia =
+          normalizedData.mercado?.value || rawData.mercado?.value || sharedContextRef.current.mercado || formMercado || null;
+        tryInferOtherLegs(legIndex, normalizedData, mercadoParaInferencia, formMercado);
+
+        if (resolvedTimes.ambiguous && resolvedTimes.eventStartsAt) {
+          toast.info(
+            `Perna ${legIndex + 1}: mais de um horário no print. Sugerido ${resolvedTimes.eventStartsAt.replace("T", " ")} como início do jogo — confira antes de salvar.`
+          );
+        }
 
         toast.success(`Perna ${legIndex + 1}: Print analisado com sucesso!`);
+
       } else {
         throw new Error("Resposta inválida do servidor");
       }
@@ -682,7 +777,7 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
 
   const clearAllPrints = useCallback(() => {
     setLegPrints(prev => prev.map(createEmptyLegPrint));
-    setSharedContext({ esporte: null, evento: null, mercado: null });
+    setSharedContext(EMPTY_SHARED_CONTEXT);
   }, []);
 
   // Accept an inferred line (remove inference indicator)

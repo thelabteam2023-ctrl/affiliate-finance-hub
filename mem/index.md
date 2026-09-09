@@ -8,3 +8,4 @@
 - [Aposta Parcial Lifecycle](mem://architecture/aposta-parcial-lifecycle-standard) — Aposta só conclui com 100% das pernas resolvidas; helper único isOperacaoAberta/isOperacaoConcluida
 - [Ajuste Cambial Derivado](mem://finance/ajuste-cambial-derivado-standard) — PERDA/GANHO_CAMBIAL são filhos do lançamento pai: herdam competência e projeto, revertem/excluem em cadeia, auditoria em /admin/auditoria-cambial
 - [Troca de Casa em Aposta Simples](mem://finance/troca-casa-aposta-simples-reconciliacao) — Trigger reconcilia stake: estorna na casa antiga e debita na nova ao editar aposta pendente
+- [Leitura de Print na Arbitragem](mem://features/apostas/leitura-print-surebet-semantica) — Mercado canônico por sinônimos, posição da seleção 1X2 sem chute e separação entre início do evento e horário do registro
