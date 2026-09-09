@@ -16,9 +16,9 @@ describe("marketSynonyms", () => {
     expect(isThreeWayMatchResult(normalizeMarketKey("Placar Exato").canonical!)).toBe(false);
   });
 
-  it("dá prioridade a mercados de período", () => {
-    const c = normalizeMarketKey("Resultado 1º Tempo").canonical;
-    expect(isThreeWayMatchResult(c!)).toBe(false);
+  it("mantém mercados de período separados do tempo integral", () => {
+    expect(normalizeMarketKey("Resultado 1º Tempo").canonical).toBe("HALF_TIME_RESULT");
+    expect(normalizeMarketKey("Resultado 1º Tempo").canonical).not.toBe("MATCH_RESULT_1X2");
   });
 });
 
