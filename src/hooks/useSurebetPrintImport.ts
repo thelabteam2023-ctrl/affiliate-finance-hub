@@ -102,35 +102,35 @@ const BINARY_LINE_PAIRS: Record<string, string> = {
 // ========================================================================
 
 /**
- * MATCH_ODDS: determines canonical position (0=Home, 1=Draw, 2=Away)
- * and returns selections for ALL 3 legs.
+ * MATCH_RESULT (3 vias): identifica em qual posição (casa/empate/fora) está a
+ * seleção lida no print e devolve as DUAS seleções complementares, na ordem
+ * canônica, para serem distribuídas nas pernas ainda vazias.
+ *
+ * Nunca repete a seleção já lida e nunca assume que a perna 1 é a casa.
  */
-function inferMatchOddsLegs(
+function inferMatchResultComplements(
   scannedSelection: string,
   mandante: string | null,
   visitante: string | null
-): { legSelections: (string | null)[]; scannedPosition: number } | null {
+): { scannedPosition: MatchPosition; complements: string[] } | null {
   if (!mandante || !visitante) return null;
 
-  const sel = scannedSelection.toLowerCase().trim();
-  let scannedPosition = -1;
+  const resolved = resolveSelectionPosition(scannedSelection, mandante, visitante);
+  if (!resolved) return null;
 
-  if (/^(empate|draw|x)$/i.test(sel)) {
-    scannedPosition = 1;
-  } else if (mandante.toLowerCase().includes(sel) || sel.includes(mandante.toLowerCase())) {
-    scannedPosition = 0;
-  } else if (visitante.toLowerCase().includes(sel) || sel.includes(visitante.toLowerCase())) {
-    scannedPosition = 2;
-  } else if (sel === "1") {
-    scannedPosition = 0;
-  } else if (sel === "2") {
-    scannedPosition = 2;
-  }
+  const byPosition: Record<MatchPosition, string> = {
+    HOME: mandante.toUpperCase(),
+    DRAW: "EMPATE",
+    AWAY: visitante.toUpperCase(),
+  };
+  const order: MatchPosition[] = ["HOME", "DRAW", "AWAY"];
+  const complements = order
+    .filter(pos => pos !== resolved.position)
+    .map(pos => byPosition[pos]);
 
-  if (scannedPosition === -1) return null;
-  const legSelections: (string | null)[] = [mandante.toUpperCase(), "EMPATE", visitante.toUpperCase()];
-  return { legSelections, scannedPosition };
+  return { scannedPosition: resolved.position, complements };
 }
+
 
 /**
  * HANDICAP: "Team A -1.5" → generates "Team B +1.5" with inverted sign.
