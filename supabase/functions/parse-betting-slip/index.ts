@@ -7,10 +7,21 @@ interface ParsedField {
   confidence: "high" | "medium" | "low" | "none";
 }
 
+interface ParsedTimeField extends ParsedField {
+  /** Rótulo literal que apareceu no print junto do horário (ex: "Início", "Aposta feita em"). */
+  label?: string | null;
+}
+
 interface ParsedBetSlip {
   mandante: ParsedField;
   visitante: ParsedField;
   dataHora: ParsedField;
+  /** Início do evento (kickoff). */
+  eventStartsAt?: ParsedTimeField;
+  /** Momento em que a aposta foi registrada na casa. */
+  betPlacedAt?: ParsedTimeField;
+  /** Momento da liquidação/resolução da aposta. */
+  settledAt?: ParsedTimeField;
   esporte: ParsedField;
   liga: ParsedField;
   mercado: ParsedField;
@@ -22,6 +33,7 @@ interface ParsedBetSlip {
   resultado: ParsedField;
   bookmakerNome: ParsedField;
 }
+
 
 interface ParsedSelecao {
   evento: ParsedField;
