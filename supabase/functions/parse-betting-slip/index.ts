@@ -707,6 +707,30 @@ Estes prints normalmente NÃO mostram stake nem retorno, e usam os seguintes ró
         }
       }
 
+      // Normalize the role-specific timestamps the same way (never invent values)
+      for (const key of ["eventStartsAt", "betPlacedAt", "settledAt"] as const) {
+        const field = (parsedData as Record<string, ParsedTimeField | undefined>)[key];
+        if (field?.value) {
+          const r = normalizeDateWithCurrentYear(field.value);
+          field.value = r.value;
+          if (r.wasYearInferred && field.confidence === "high") field.confidence = "medium";
+        } else {
+          (parsedData as Record<string, ParsedTimeField>)[key] = {
+            value: null,
+            label: field?.label ?? null,
+            confidence: "none",
+          };
+        }
+      }
+
+      // Compatibilidade: dataHora reflete o início do evento quando disponível
+      if (!parsedData.dataHora?.value && parsedData.eventStartsAt?.value) {
+        parsedData.dataHora = {
+          value: parsedData.eventStartsAt.value,
+          confidence: parsedData.eventStartsAt.confidence,
+        };
+      }
+
       // Normalize numeric fields - odds with 5 decimal precision
       parsedData.odd.value = normalizeNumericString(parsedData.odd?.value, 5);
       parsedData.stake.value = normalizeNumericString(parsedData.stake?.value);
