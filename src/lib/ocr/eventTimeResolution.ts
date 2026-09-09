@@ -66,9 +66,36 @@ export function parseFlexibleDateTime(raw: string | null | undefined, now: Date 
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
-  // Hora: 14:30 | 14h30 | 14.30 | 14-30 | 2:30 pm | 1430 não é aceito
-  const timeMatch = lower.match(/(\d{1,2})\s*(?::|h|\.|-)\s*(\d{2})\s*(am|pm)?/);
-  const bareAmPm = !timeMatch ? lower.match(/(\d{1,2})\s*(am|pm)/) : null;
+  // Data primeiro — e removida do texto para não ser confundida com hora
+  let year: number | null = null;
+  let month: number | null = null;
+  let day: number | null = null;
+  let rest = lower;
+
+  const isoMatch = lower.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    year = parseInt(isoMatch[1], 10);
+    month = parseInt(isoMatch[2], 10);
+    day = parseInt(isoMatch[3], 10);
+    rest = lower.replace(isoMatch[0], " ");
+  } else {
+    const dmyMatch = lower.match(/(\d{1,2})\s*[/]\s*(\d{1,2})(?:\s*[/]\s*(\d{2,4}))?/);
+    if (dmyMatch) {
+      day = parseInt(dmyMatch[1], 10);
+      month = parseInt(dmyMatch[2], 10);
+      if (dmyMatch[3]) {
+        const y = parseInt(dmyMatch[3], 10);
+        year = y < 100 ? 2000 + y : y;
+      } else {
+        year = now.getFullYear();
+      }
+      rest = lower.replace(dmyMatch[0], " ");
+    }
+  }
+
+  // Hora: 14:30 | 14h30 | 14.30 | 2:30 pm
+  const timeMatch = rest.match(/(\d{1,2})\s*(?::|h|\.)\s*(\d{2})\s*(am|pm)?/);
+  const bareAmPm = !timeMatch ? rest.match(/(\d{1,2})\s*(am|pm)/) : null;
 
   let hours: number | null = null;
   let minutes = 0;
@@ -85,13 +112,7 @@ export function parseFlexibleDateTime(raw: string | null | undefined, now: Date 
   }
   if (hours === null || hours > 23 || minutes > 59) return null;
 
-  // Data
-  let year: number | null = null;
-  let month: number | null = null;
-  let day: number | null = null;
 
-  const isoMatch = lower.match(/(\d{4})-(\d{2})-(\d{2})/);
-  const dmyMatch = !isoMatch ? lower.match(/(\d{1,2})\s*[/.-]\s*(\d{1,2})(?:\s*[/.-]\s*(\d{2,4}))?/) : null;
 
   if (isoMatch) {
     year = parseInt(isoMatch[1], 10);
