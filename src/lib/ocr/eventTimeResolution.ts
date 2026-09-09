@@ -112,36 +112,18 @@ export function parseFlexibleDateTime(raw: string | null | undefined, now: Date 
   }
   if (hours === null || hours > 23 || minutes > 59) return null;
 
-
-
-  if (isoMatch) {
-    year = parseInt(isoMatch[1], 10);
-    month = parseInt(isoMatch[2], 10);
-    day = parseInt(isoMatch[3], 10);
-  } else if (dmyMatch) {
-    // Prints de apostas usam DD/MM
-    day = parseInt(dmyMatch[1], 10);
-    month = parseInt(dmyMatch[2], 10);
-    if (dmyMatch[3]) {
-      const y = parseInt(dmyMatch[3], 10);
-      year = y < 100 ? 2000 + y : y;
+  if (year === null) {
+    if (/\bamanha\b|\btomorrow\b/.test(lower)) {
+      const d = new Date(now.getTime() + 86400000);
+      year = d.getFullYear();
+      month = d.getMonth() + 1;
+      day = d.getDate();
     } else {
+      // "hoje" ou apenas hora: assume o dia corrente
       year = now.getFullYear();
+      month = now.getMonth() + 1;
+      day = now.getDate();
     }
-  } else if (/\bamanha\b|\btomorrow\b/.test(lower)) {
-    const d = new Date(now.getTime() + 86400000);
-    year = d.getFullYear();
-    month = d.getMonth() + 1;
-    day = d.getDate();
-  } else if (/\bhoje\b|\btoday\b/.test(lower)) {
-    year = now.getFullYear();
-    month = now.getMonth() + 1;
-    day = now.getDate();
-  } else {
-    // Apenas hora: assume o dia corrente
-    year = now.getFullYear();
-    month = now.getMonth() + 1;
-    day = now.getDate();
   }
 
   if (!year || !month || !day || month > 12 || day > 31) return null;
