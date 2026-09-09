@@ -660,21 +660,29 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
           return updated;
         });
 
+        // ★ HORÁRIOS: separar início do evento, registro da aposta e liquidação
+        const resolvedTimes = resolveEventTimes([
+          { value: rawData.eventStartsAt?.value ?? null, label: rawData.eventStartsAt?.label ?? "kickoff", role: "EVENT_START" },
+          { value: rawData.betPlacedAt?.value ?? null, label: rawData.betPlacedAt?.label ?? "bet placed", role: "BET_PLACED" },
+          { value: rawData.settledAt?.value ?? null, label: rawData.settledAt?.label ?? "settled at", role: "SETTLED" },
+          { value: normalizedData.dataHora?.value ?? null, label: null },
+        ]);
+
         // Update shared context - first valid print defines the global event
         // Regardless of which leg it comes from
         setSharedContext(prev => {
           const newContext = { ...prev };
           
           // Esporte: atualiza se não definido
-          if (!prev.esporte && rawData.esporte?.value) {
-            newContext.esporte = rawData.esporte.value;
+          if (!prev.esporte && normalizedData.esporte?.value) {
+            newContext.esporte = normalizedData.esporte.value;
           }
           
           // Evento: PRIMEIRO PRINT VÁLIDO define o evento global
           // O evento vem de mandante x visitante
           if (!prev.evento) {
-            const mandante = rawData.mandante?.value;
-            const visitante = rawData.visitante?.value;
+            const mandante = normalizedData.mandante?.value;
+            const visitante = normalizedData.visitante?.value;
             if (mandante && visitante) {
               newContext.evento = `${mandante} x ${visitante}`;
             } else if (mandante) {
@@ -685,17 +693,37 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
           }
           
           // Mercado: atualiza se não definido
-          if (!prev.mercado && rawData.mercado?.value) {
-            newContext.mercado = rawData.mercado.value;
+          if (!prev.mercado && (normalizedData.mercado?.value || rawData.mercado?.value)) {
+            newContext.mercado = normalizedData.mercado?.value || rawData.mercado?.value;
+          }
+
+          // Horário do evento: só o primeiro print resolve, e nunca sobrescreve
+          if (!prev.dataEvento && resolvedTimes.eventStartsAt) {
+            newContext.dataEvento = resolvedTimes.eventStartsAt;
+            newContext.dataEventoAmbigua = resolvedTimes.ambiguous;
+            newContext.dataEventoConfianca = resolvedTimes.confidence;
+          }
+          if (!prev.dataAposta && resolvedTimes.betPlacedAt) {
+            newContext.dataAposta = resolvedTimes.betPlacedAt;
           }
           
           return newContext;
         });
 
-        // Try to infer lines for other legs
-        tryInferOtherLegs(legIndex, rawData, sharedContext.mercado, formMercado);
+        // Try to infer lines for other legs — usa SEMPRE os dados normalizados
+        // e o mercado lido no próprio print (evita contexto desatualizado).
+        const mercadoParaInferencia =
+          normalizedData.mercado?.value || rawData.mercado?.value || sharedContextRef.current.mercado || formMercado || null;
+        tryInferOtherLegs(legIndex, normalizedData, mercadoParaInferencia, formMercado);
+
+        if (resolvedTimes.ambiguous && resolvedTimes.eventStartsAt) {
+          toast.info(
+            `Perna ${legIndex + 1}: mais de um horário no print. Sugerido ${resolvedTimes.eventStartsAt.replace("T", " ")} como início do jogo — confira antes de salvar.`
+          );
+        }
 
         toast.success(`Perna ${legIndex + 1}: Print analisado com sucesso!`);
+
       } else {
         throw new Error("Resposta inválida do servidor");
       }
