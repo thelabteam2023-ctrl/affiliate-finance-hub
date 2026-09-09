@@ -4870,7 +4870,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {renderLiquidadaConfirmDialog()}
       </>
+
     );
   }
 
