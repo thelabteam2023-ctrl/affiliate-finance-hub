@@ -278,6 +278,8 @@ export function SurebetModalRoot({
   const [importedDailyEventId, setImportedDailyEventId] = useState<string | null>(null);
   const [mercado, setMercado] = useState("");
   const [dataAposta, setDataAposta] = useState("");
+  /** true assim que o usuário mexe na data manualmente — o print nunca sobrescreve. */
+  const dataEditadaManualRef = useRef(false);
   
   const [modeloTipo, setModeloTipo] = useState<"2" | "3" | "4+">("2");
   const [numPernasCustom, setNumPernasCustom] = useState<number>(4);
