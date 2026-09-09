@@ -470,19 +470,38 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
     console.log(`[SurebetPrintInfer] Market: "${mercado}", Family: ${family || "UNKNOWN"}, Selection: "${sourceLine}"`);
 
     switch (family) {
-      // ========== MATCH_ODDS / 1X2 (3-leg) ==========
+      // ========== MATCH_RESULT / 1X2 (3 vias) ==========
       case "MATCH_ODDS": {
-        const result = inferMatchOddsLegs(sourceLine, mandanteVal || null, visitanteVal || null);
-        if (result) {
-          console.log(`[SurebetPrintInfer] MATCH_ODDS: position=${result.scannedPosition}`);
-          setLegPrints(prev => prev.map((leg, idx) => {
-            if (idx === processedLegIndex || leg.parsedData || leg.imagePreview) return leg;
-            const sel = result.legSelections[idx];
-            return sel ? buildInferredLegData(sel) : leg;
-          }));
+        const result = inferMatchResultComplements(sourceLine, mandanteVal || null, visitanteVal || null);
+        if (!result) {
+          console.log("[SurebetPrintInfer] MATCH_RESULT: seleção não reconhecida como casa/empate/fora — nada preenchido");
+          return;
         }
+        console.log(`[SurebetPrintInfer] MATCH_RESULT: lida="${sourceLine}" (${result.scannedPosition}), complementos=${result.complements.join(" | ")}`);
+        setLegPrints(prev => {
+          // Distribui as seleções complementares nas pernas AINDA VAZIAS,
+          // na ordem em que aparecem — nunca repete a seleção já lida
+          // e nunca sobrescreve o que já foi preenchido.
+          const queue = [...result.complements];
+          const jaPreenchidas = new Set(
+            prev
+              .map(leg => (leg.parsedData?.selecao?.value || "").trim().toUpperCase())
+              .filter(Boolean)
+          );
+          jaPreenchidas.add(sourceLine.trim().toUpperCase());
+
+          return prev.map((leg, idx) => {
+            if (idx === processedLegIndex || leg.parsedData || leg.imagePreview) return leg;
+            while (queue.length && jaPreenchidas.has(queue[0].toUpperCase())) queue.shift();
+            const sel = queue.shift();
+            if (!sel) return leg;
+            jaPreenchidas.add(sel.toUpperCase());
+            return buildInferredLegData(sel);
+          });
+        });
         return;
       }
+
 
       // ========== HANDICAP (2-leg: Team A -X → Team B +X) ==========
       case "HANDICAP": {
