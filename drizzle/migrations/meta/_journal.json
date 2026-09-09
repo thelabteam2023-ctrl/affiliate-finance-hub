@@ -92,6 +92,13 @@
       "when": 1788924555077,
       "tag": "0012_fix_guard_saldo_event_scope_cast",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788925477608,
+      "tag": "0013_reconciliar_stake_aposta_simples_troca_casa",
+      "breakpoints": true
     }
   ]
 }
