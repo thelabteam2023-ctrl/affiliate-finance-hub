@@ -36,7 +36,9 @@ const SETTLED_LABEL =
   /(settle(?:d|ment)?\s*(?:at|time)?|resolved\s*at|liquidad[ao]|resolvid[ao]|pag[ao]\s*em|encerrad[ao])/i;
 
 export function classifyTimeLabel(label: string | null | undefined): TimeRole {
-  const text = String(label || "");
+  const text = String(label || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
   if (!text.trim()) return "UNKNOWN";
   if (SETTLED_LABEL.test(text)) return "SETTLED";
   if (EVENT_LABEL.test(text)) return "EVENT_START";
