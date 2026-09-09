@@ -302,14 +302,24 @@ export interface LegPrintData {
   oddCalculation: OddCalculationResult | null;
 }
 
+export interface SurebetSharedContext {
+  esporte: string | null;
+  evento: string | null;
+  mercado: string | null;
+  /** Início do evento resolvido a partir do print ("YYYY-MM-DDTHH:mm"). */
+  dataEvento: string | null;
+  /** Horário em que a aposta foi registrada na casa (não vai para o formulário). */
+  dataAposta: string | null;
+  /** true quando havia mais de um horário plausível e o usuário deve confirmar. */
+  dataEventoAmbigua: boolean;
+  /** Confiança da escolha do horário do evento. */
+  dataEventoConfianca: ResolvedTimes["confidence"];
+}
+
 export interface UseSurebetPrintImportReturn {
   legPrints: LegPrintData[];
   isProcessingAny: boolean;
-  sharedContext: {
-    esporte: string | null;
-    evento: string | null;
-    mercado: string | null;
-  };
+  sharedContext: SurebetSharedContext;
   processLegImage: (legIndex: number, file: File, formMercado?: string | null) => Promise<void>;
   processLegFromClipboard: (legIndex: number, event: ClipboardEvent) => Promise<void>;
   clearLegPrint: (legIndex: number) => void;
@@ -345,25 +355,28 @@ const createEmptyLegPrint = (): LegPrintData => ({
   oddCalculation: null,
 });
 
+const EMPTY_SHARED_CONTEXT: SurebetSharedContext = {
+  esporte: null,
+  evento: null,
+  mercado: null,
+  dataEvento: null,
+  dataAposta: null,
+  dataEventoAmbigua: false,
+  dataEventoConfianca: "none",
+};
+
 export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
   const [legPrints, setLegPrints] = useState<LegPrintData[]>([]);
-  const [sharedContext, setSharedContext] = useState<{
-    esporte: string | null;
-    evento: string | null;
-    mercado: string | null;
-  }>({
-    esporte: null,
-    evento: null,
-    mercado: null,
-  });
+  const [sharedContext, setSharedContext] = useState<SurebetSharedContext>(EMPTY_SHARED_CONTEXT);
   // ★ DETECÇÃO DE ANOMALIA TEMPORAL - Estado de confirmação por perna
   const [dateAnomalyConfirmed, setDateAnomalyConfirmed] = useState<Set<number>>(new Set());
 
   const initializeLegPrints = useCallback((numLegs: number) => {
     setLegPrints(Array.from({ length: numLegs }, createEmptyLegPrint));
-    setSharedContext({ esporte: null, evento: null, mercado: null });
+    setSharedContext(EMPTY_SHARED_CONTEXT);
     setDateAnomalyConfirmed(new Set());
   }, []);
+
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
