@@ -29,7 +29,7 @@ export interface ResolvedTimes {
 }
 
 const EVENT_LABEL =
-  /(kick\s*-?\s*off|kickoff|starts?\s*(?:at|on)?|start\s*time|match\s*time|event\s*(?:start|time)|inicio|in[ií]cio\s*(?:do\s*)?(?:jogo|evento|partida)|hor[aá]rio\s*(?:do\s*)?(?:jogo|evento|partida)|come[cç]a|jogo\s*em)/i;
+  /(kick\s*-?\s*off|kickoff|starts?\s*(?:at|on)?|start\s*time|match\s*time|event\s*(?:start|time)|inicio|horario\s*(?:do\s*)?(?:jogo|evento|partida)|comeca|jogo\s*em)/i;
 const BET_LABEL =
   /(bet\s*placed|placed\s*(?:at|on)?|bet\s*time|aposta\s*(?:feita|realizada|registrada|colocada)|realizada\s*em|feita\s*em|registro\s*da\s*aposta|criada\s*em|data\s*da\s*aposta)/i;
 const SETTLED_LABEL =
