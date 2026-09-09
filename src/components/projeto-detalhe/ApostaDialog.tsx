@@ -453,10 +453,28 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     ((ok: boolean) => void) | null
   >(null);
 
+  // Blindagem: se por qualquer motivo o diálogo de confirmação não aparecer,
+  // o salvamento NÃO pode ficar preso em silêncio — avisa e libera o formulário.
   const requestLiquidadaConfirm = () =>
     new Promise<boolean>((resolve) => {
-      setLiquidadaConfirmResolve(() => resolve);
+      let settled = false;
+      const finish = (ok: boolean) => {
+        if (settled) return;
+        settled = true;
+        resolve(ok);
+      };
+      const timeoutId = window.setTimeout(() => {
+        if (settled) return;
+        toast.error("Não foi possível confirmar a alteração. Tente salvar novamente.");
+        setLiquidadaConfirmResolve(null);
+        finish(false);
+      }, 60000);
+      setLiquidadaConfirmResolve(() => (ok: boolean) => {
+        window.clearTimeout(timeoutId);
+        finish(ok);
+      });
     });
+
 
   // ========== HOOK CANÔNICO DE SALDOS ==========
   // Esta é a ÚNICA fonte de verdade para saldos de bookmaker
