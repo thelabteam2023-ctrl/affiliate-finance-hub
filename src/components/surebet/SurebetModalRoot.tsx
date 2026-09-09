@@ -1112,7 +1112,13 @@ export function SurebetModalRoot({
     if (sharedContext.evento && !evento) setEvento(sharedContext.evento);
     if (sharedContext.esporte) setEsporte(sharedContext.esporte);
     if (sharedContext.mercado && !mercado) setMercado(sharedContext.mercado);
+    // Horário: usa o INÍCIO DO EVENTO lido no print (nunca o horário do registro
+    // da aposta) e só quando o usuário ainda não escolheu a data manualmente.
+    if (sharedContext.dataEvento && !dataEditadaManualRef.current) {
+      setDataAposta(sharedContext.dataEvento);
+    }
   }, [legPrints]);
+
 
   // Se o usuário editar o campo `evento` depois de importar, descartar o
   // snapshot — não persistir logos que não correspondem mais ao texto.
