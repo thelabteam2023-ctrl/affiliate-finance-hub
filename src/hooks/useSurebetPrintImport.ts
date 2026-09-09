@@ -10,6 +10,9 @@ import {
 } from "@/lib/ocrNormalization";
 import { detectDateAnomaly, type DateAnomalyResult } from "@/lib/dateAnomalyDetection";
 import { calcularOddReal, formatOddDisplay, type OddCalculationResult } from "@/lib/oddRealCalculation";
+import { normalizeMarketKey, isThreeWayMatchResult } from "@/lib/ocr/marketSynonyms";
+import { resolveSelectionPosition, type MatchPosition } from "@/lib/ocr/teamNameMatch";
+import { resolveEventTimes, type ResolvedTimes } from "@/lib/ocr/eventTimeResolution";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
