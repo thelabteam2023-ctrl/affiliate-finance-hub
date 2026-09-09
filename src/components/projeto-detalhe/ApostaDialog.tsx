@@ -453,10 +453,28 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     ((ok: boolean) => void) | null
   >(null);
 
+  // Blindagem: se por qualquer motivo o diálogo de confirmação não aparecer,
+  // o salvamento NÃO pode ficar preso em silêncio — avisa e libera o formulário.
   const requestLiquidadaConfirm = () =>
     new Promise<boolean>((resolve) => {
-      setLiquidadaConfirmResolve(() => resolve);
+      let settled = false;
+      const finish = (ok: boolean) => {
+        if (settled) return;
+        settled = true;
+        resolve(ok);
+      };
+      const timeoutId = window.setTimeout(() => {
+        if (settled) return;
+        toast.error("Não foi possível confirmar a alteração. Tente salvar novamente.");
+        setLiquidadaConfirmResolve(null);
+        finish(false);
+      }, 60000);
+      setLiquidadaConfirmResolve(() => (ok: boolean) => {
+        window.clearTimeout(timeoutId);
+        finish(ok);
+      });
     });
+
 
   // ========== HOOK CANÔNICO DE SALDOS ==========
   // Esta é a ÚNICA fonte de verdade para saldos de bookmaker
@@ -3498,6 +3516,60 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   );
 
   // ============================================
+  // CONFIRMAÇÃO DE EDIÇÃO DE APOSTA LIQUIDADA
+  // Precisa existir nos DOIS modos de render (modal e janela standalone).
+  // Se ficar de fora de um deles, requestLiquidadaConfirm() nunca resolve
+  // e o botão Salvar fica em silêncio absoluto.
+  // ============================================
+  const renderLiquidadaConfirmDialog = () => (
+    <AlertDialog
+      open={!!liquidadaConfirmResolve}
+      onOpenChange={(isOpen) => {
+        if (!isOpen && liquidadaConfirmResolve) {
+          liquidadaConfirmResolve(false);
+          setLiquidadaConfirmResolve(null);
+        }
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Aposta já liquidada</AlertDialogTitle>
+          <AlertDialogDescription className="space-y-2">
+            <span className="block">
+              Salvar alterações irá <strong>reverter</strong> os lançamentos financeiros atuais e
+              reemitir novos eventos no caixa.
+            </span>
+            <span className="block">
+              O saldo da bookmaker e o lucro serão recalculados a partir do zero.
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              Uma verificação automática de paridade saldo × ledger roda logo após o salvamento.
+            </span>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel
+            onClick={() => {
+              liquidadaConfirmResolve?.(false);
+              setLiquidadaConfirmResolve(null);
+            }}
+          >
+            Cancelar
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              liquidadaConfirmResolve?.(true);
+              setLiquidadaConfirmResolve(null);
+            }}
+          >
+            Reverter e salvar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
+  // ============================================
   // EMBEDDED MODE (Fullscreen - igual ao Surebet)
   // ============================================
   if (embedded && open) {
@@ -4816,7 +4888,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {renderLiquidadaConfirmDialog()}
       </>
+
     );
   }
 
@@ -5144,51 +5219,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        open={!!liquidadaConfirmResolve}
-        onOpenChange={(open) => {
-          if (!open && liquidadaConfirmResolve) {
-            liquidadaConfirmResolve(false);
-            setLiquidadaConfirmResolve(null);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Aposta já liquidada</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <span className="block">
-                Salvar alterações irá <strong>reverter</strong> os lançamentos financeiros atuais e
-                reemitir novos eventos no caixa.
-              </span>
-              <span className="block">
-                O saldo da bookmaker e o lucro serão recalculados a partir do zero.
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                Uma verificação automática de paridade saldo × ledger roda logo após o salvamento.
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                liquidadaConfirmResolve?.(false);
-                setLiquidadaConfirmResolve(null);
-              }}
-            >
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                liquidadaConfirmResolve?.(true);
-                setLiquidadaConfirmResolve(null);
-              }}
-            >
-              Reverter e salvar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {renderLiquidadaConfirmDialog()}
+
 
       {/* Camada A: confirmação de colapso multi-casa → LAY */}
       <ConfirmLayCollapseDialog
