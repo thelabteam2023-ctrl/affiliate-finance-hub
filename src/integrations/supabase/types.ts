@@ -18515,6 +18515,10 @@ export type Database = {
           status_reconciliacao: string
         }[]
       }
+      fn_reconciliar_stake_aposta_simples: {
+        Args: { p_aposta_id: string }
+        Returns: Json
+      }
       fn_registrar_swap_crypto: {
         Args: {
           p_coin_destino: string
