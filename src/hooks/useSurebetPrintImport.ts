@@ -777,7 +777,7 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
 
   const clearAllPrints = useCallback(() => {
     setLegPrints(prev => prev.map(createEmptyLegPrint));
-    setSharedContext({ esporte: null, evento: null, mercado: null });
+    setSharedContext(EMPTY_SHARED_CONTEXT);
   }, []);
 
   // Accept an inferred line (remove inference indicator)
