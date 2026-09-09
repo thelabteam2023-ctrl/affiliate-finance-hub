@@ -377,6 +377,12 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
     setDateAnomalyConfirmed(new Set());
   }, []);
 
+  // Espelho síncrono do contexto (evita ler estado desatualizado no processamento)
+  const sharedContextRef = useRef<SurebetSharedContext>(EMPTY_SHARED_CONTEXT);
+  useEffect(() => {
+    sharedContextRef.current = sharedContext;
+  }, [sharedContext]);
+
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
