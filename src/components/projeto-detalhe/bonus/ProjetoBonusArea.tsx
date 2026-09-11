@@ -124,9 +124,13 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger, actionsSlot, onDat
         {activeTab !== "visao-geral" && (
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1">{periodFilterComponent}</div>
-            {actionsSlot && <div className="shrink-0">{actionsSlot}</div>}
+            <div className="shrink-0 flex items-center gap-2">
+              <SaldoOperavelCard projetoId={projetoId} variant="compact" />
+              {activeTab === "apostas" && actionsSlot}
+            </div>
           </div>
         )}
+
         {activeTab === "bookmakers" && <BonusBookmakersTab projetoId={projetoId} />}
         {activeTab === "apostas" && <BonusApostasTab projetoId={projetoId} dateRange={dateRange} onDataChange={onDataChange} />}
       </div>
