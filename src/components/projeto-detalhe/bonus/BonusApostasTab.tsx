@@ -2,7 +2,6 @@ import { openSurebetWindow } from "@/lib/windowHelper";
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
 import { useTabFilters } from "@/hooks/useTabFilters";
 import { StandardTimeFilter } from "../StandardTimeFilter";
-import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
@@ -1513,10 +1512,8 @@ export function BonusApostasTab({ projetoId, onDataChange }: BonusApostasTabProp
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
-        <SaldoOperavelCard projetoId={projetoId} variant="compact" />
-      </div>
       <Card>
+
         <CardHeader className="pb-3">
           {/* Sub-abas Abertas / Histórico - usando componente padronizado */}
           <div className="mb-3">
