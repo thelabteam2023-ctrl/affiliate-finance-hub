@@ -1594,7 +1594,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
             <div className="flex-1">{periodFilterComponent}</div>
             <div className="shrink-0 flex items-center gap-2">
               <SaldoOperavelCard projetoId={projetoId} variant="compact" />
-              {actionsSlot}
+              {activeNavTab !== "por-casa" && actionsSlot}
             </div>
           </div>
         )}
