@@ -5,6 +5,8 @@ import { LayoutDashboard, Building2, Target, PanelLeft, LayoutList } from "lucid
 import { BonusVisaoGeralTab } from "./BonusVisaoGeralTab";
 import { BonusBookmakersTab } from "./BonusBookmakersTab";
 import { BonusApostasTab } from "./BonusApostasTab";
+import { SaldoOperavelCard } from "../SaldoOperavelCard";
+
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
