@@ -180,6 +180,12 @@ type StakeOrigem = "print" | "referencia" | "manual";
 
 // Estrutura interna do formulário - mantendo compatibilidade
 interface OddEntry {
+  /** ID da perna no banco (apostas_pernas.id) — preserva identidade na edição */
+  pernaId?: string;
+  /** ID da entrada principal no banco (apostas_perna_entradas.id) */
+  mainEntryId?: string;
+  /** Fonte do saldo da entrada principal: REAL ou FREEBET */
+  fonteSaldo?: string;
   bookmaker_id: string;
   moeda: SupportedCurrency;
   odd: string;
