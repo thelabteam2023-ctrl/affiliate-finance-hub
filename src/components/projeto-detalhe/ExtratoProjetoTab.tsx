@@ -54,6 +54,7 @@ import {
 } from "lucide-react";
 import { CURRENCY_SYMBOLS, type SupportedCurrency } from "@/types/currency";
 import { RecuperacaoCapitalCard } from "./RecuperacaoCapitalCard";
+import { resolveValorConsolidado } from "@/lib/ledger/resolveValorConsolidado";
 
 interface ExtratoProjetoTabProps {
   projetoId: string;
@@ -543,27 +544,22 @@ function useProjetoExtrato(
       let saquesConsolidadoSnap = 0;
       let ajustesConsolidadoSnap = 0;
 
-      // Converte snapshot USD → moeda de consolidação do projeto (USD ou BRL).
-      // Para USD: passthrough. Para BRL: usa Cotação de Trabalho USD→BRL do projeto
-      // (estável dentro do ciclo, não flutua com PTAX live).
-      const snapshotToConsolidacao = (valorUsdSnap: number): number => {
-        if (!valorUsdSnap) return 0;
-        if (moedaConsolidacao === "USD") return valorUsdSnap;
-        // Converter USD → moeda consolidação via Cotação de Trabalho
-        return convertToConsolidation(valorUsdSnap, "USD");
-      };
 
-      // Resolve o valor consolidado de UM evento usando hierarquia snapshot → trabalho.
-      const resolveConsolidado = (e: any, valorBase: number, moeda: string): number => {
-        // Se houver valor_usd_referencia (snapshot congelado), usar ele (SSOT)
-        // para neutralizar drift cambial e manter paridade com o capital aportado.
-        const snap = Number(e.valor_usd_referencia ?? 0);
-        if (snap > 0) {
-          return snapshotToConsolidacao(snap);
-        }
-        // Fallback (registros antigos sem snapshot): Cotação de Trabalho
-        return convertToConsolidation(valorBase, moeda);
-      };
+      // Resolve o valor consolidado de UM evento pela REGRA DE OURO multimoeda
+      // (mem://finance/lucro-realizado-fonte-unica-cotacao-trabalho):
+      //   1º moeda igual à de consolidação → valor NATIVO (proibido BRL → USD → BRL)
+      //   2º snapshot `valor_usd_referencia` congelado no registro
+      //   3º Cotação de Trabalho do projeto
+      // A dupla conversão do passo 1 distorcia Depósitos/Saques/"Lucro se sacar tudo"
+      // por usar duas cotações diferentes (congelada e de trabalho) no mesmo valor.
+      const resolveConsolidado = (e: any, valorBase: number, moeda: string): number =>
+        resolveValorConsolidado({
+          valor: valorBase,
+          moeda,
+          snapshotUsd: e.valor_usd_referencia != null ? Number(e.valor_usd_referencia) : null,
+          moedaConsolidacao,
+          convertToConsolidation,
+        });
 
       (ledger || []).forEach((e: any) => {
         const moeda = e.moeda || "BRL";
@@ -660,26 +656,23 @@ function useProjetoExtrato(
         );
       });
 
-      // Saques pendentes: usa snapshot congelado quando disponível (paridade
-      // com depósitos/saques confirmados); fallback = Cotação de Trabalho.
+      // Saques pendentes: mesma regra canônica (nativo → snapshot → trabalho).
       let saquesPendentesTotal = 0;
       (pendentes || []).forEach((p: any) => {
-        const snap = Number(p.valor_usd_referencia ?? 0);
-        if (snap > 0) {
-          saquesPendentesTotal += snapshotToConsolidacao(snap);
-        } else {
-          saquesPendentesTotal += convertToConsolidation(
-            Number(p.valor || 0),
-            p.moeda || "BRL"
-          );
-        }
+        saquesPendentesTotal += resolveValorConsolidado({
+          valor: Number(p.valor || 0),
+          moeda: p.moeda || "BRL",
+          snapshotUsd: p.valor_usd_referencia != null ? Number(p.valor_usd_referencia) : null,
+          moedaConsolidacao,
+          convertToConsolidation,
+        });
       });
 
       const byCurrency = Array.from(currencyMap.values());
 
-      // Totais GLOBAIS na moeda de consolidação usam SNAPSHOT (cotação congelada
-      // no momento de cada registro), não cotação live. Garante que KPIs históricos
-      // não flutuem com mudanças de Cotação de Trabalho ou PTAX.
+      // Totais GLOBAIS na moeda de consolidação: nativo quando já está na moeda do
+      // projeto, snapshot congelado para moeda estrangeira. KPIs históricos não
+      // flutuam com PTAX e valores em moeda própria não sofrem ida e volta cambial.
       const depositosTotal = depositosConsolidadoSnap;
       const saquesTotal = saquesConsolidadoSnap;
       const ajustesTotal = ajustesConsolidadoSnap;

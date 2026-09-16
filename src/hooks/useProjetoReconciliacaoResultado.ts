@@ -17,7 +17,11 @@ import {
  *
  * Somente leitura. Não altera ledger nem dados históricos.
  */
-export function useProjetoReconciliacaoResultado(projetoId: string | undefined) {
+export function useProjetoReconciliacaoResultado(
+  projetoId: string | undefined,
+  options?: { enabled?: boolean }
+) {
+  const ativo = options?.enabled !== false;
   const {
     cotacaoUSD,
     cotacaoEUR,
@@ -28,8 +32,9 @@ export function useProjetoReconciliacaoResultado(projetoId: string | undefined) 
     cotacaoCOP,
   } = useCotacoes();
   const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId || "");
-  const { data: recuperacao, isLoading: loadingRecuperacao } =
-    useProjetoRecuperacaoCapital(projetoId);
+  const { data: recuperacao, isLoading: loadingRecuperacao } = useProjetoRecuperacaoCapital(
+    ativo ? projetoId : undefined
+  );
 
   const { data: canonico, isLoading: loadingCanonico } = useQuery({
     queryKey: ["projeto-lucro-canonico-reconciliacao", projetoId, cotacaoUSD],
@@ -48,7 +53,7 @@ export function useProjetoReconciliacaoResultado(projetoId: string | undefined) 
       });
       return res[projetoId!] || null;
     },
-    enabled: !!projetoId && cotacaoUSD > 0,
+    enabled: ativo && !!projetoId && cotacaoUSD > 0,
     staleTime: 30_000,
   });
 
@@ -91,7 +96,7 @@ export function useProjetoReconciliacaoResultado(projetoId: string | undefined) 
 
       return { eventosDiferenca, saldos };
     },
-    enabled: !!projetoId,
+    enabled: ativo && !!projetoId,
     staleTime: 30_000,
   });
 

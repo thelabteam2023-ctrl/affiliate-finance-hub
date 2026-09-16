@@ -27,6 +27,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { getFinancialDisplay } from "@/lib/financial-display";
 import { FinancialMetricsPopover } from "@/components/projeto-detalhe/FinancialMetricsPopover";
+import { LucroRealizadoComposicaoTooltip } from "./LucroRealizadoComposicaoTooltip";
 
 type SaldoByMoeda = Record<string, number>;
 
@@ -113,6 +114,8 @@ export function ProjetoKanbanCard({
   const navigate = useNavigate();
   const cardRef = useRef<HTMLDivElement>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
+  // Composição do Lucro Realizado só é buscada quando o usuário passa o mouse.
+  const [hoverComposicao, setHoverComposicao] = useState(false);
 
   const lucroOperacional = projeto.lucro_operacional || 0;
   const lucroRealizado = projeto.lucro_realizado || 0;
@@ -244,9 +247,20 @@ export function ProjetoKanbanCard({
               <Info className="h-3 w-3 text-muted-foreground/40" />
             </div>
             <div className="text-center">
-              <span className={cn("text-xl font-bold tracking-tight", lucroRealizadoDisplay?.colorClass)}>
-                {lucroRealizadoDisplay?.isPositive ? '+' : lucroRealizado < 0 ? '-' : ''}{formatByMoeda(lucroRealizado, moedaConsolidacao)}
-              </span>
+              <Tooltip onOpenChange={(open) => open && setHoverComposicao(true)}>
+                <TooltipTrigger asChild>
+                  <span className={cn("text-xl font-bold tracking-tight cursor-help", lucroRealizadoDisplay?.colorClass)}>
+                    {lucroRealizadoDisplay?.isPositive ? '+' : lucroRealizado < 0 ? '-' : ''}{formatByMoeda(lucroRealizado, moedaConsolidacao)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="z-[110] p-3">
+                  <LucroRealizadoComposicaoTooltip
+                    projetoId={projeto.id}
+                    moedaConsolidacao={moedaConsolidacao}
+                    enabled={hoverComposicao}
+                  />
+                </TooltipContent>
+              </Tooltip>
             </div>
           </button>
         </PopoverTrigger>
