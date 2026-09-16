@@ -1106,6 +1106,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     
     // Primeiro, mapear as pernas existentes
     const pernasOdds: OddEntry[] = sortedPernas.map((perna, index) => ({
+      pernaId: (perna as any).id || undefined,
+      mainEntryId: (perna.entries?.[0] as any)?.id || undefined,
+      fonteSaldo: (perna.entries?.[0] as any)?.fonte_saldo || perna.fonte_saldo || "REAL",
       bookmaker_id: perna.bookmaker_id || "",
       moeda: (perna.moeda || "BRL") as SupportedCurrency,
       odd: perna.odd?.toString() || "",
@@ -1121,11 +1124,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       index,
       // Carregar entradas adicionais se existirem (com selecaoLivre por entrada)
       additionalEntries: perna.entries?.slice(1).map((e: any) => ({
+        id: e.id || undefined,
         bookmaker_id: e.bookmaker_id,
         moeda: e.moeda,
         odd: e.odd.toString(),
         stake: e.stake.toString(),
-        selecaoLivre: e.selecao_livre || ""
+        selecaoLivre: e.selecao_livre || "",
+        fonteSaldo: e.fonte_saldo || "REAL"
       })) || []
     }));
     
