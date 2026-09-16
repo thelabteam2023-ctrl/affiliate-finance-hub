@@ -102,7 +102,7 @@ export function ReconciliacaoBreakdown({ projetoId }: Props) {
 
       {temOutros && (
         <Linha
-          label="Outros Resultados Financeiros"
+          label="Conciliação Depósito × Saldo"
           valor={outrosFinanceiros}
           hint="diferenças de recebimento"
         />

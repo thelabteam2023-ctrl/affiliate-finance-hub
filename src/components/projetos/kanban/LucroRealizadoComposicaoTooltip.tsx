@@ -111,7 +111,7 @@ export function LucroRealizadoComposicaoTooltip({
 
       {Math.abs(outrosFinanceiros) >= 0.005 && (
         <Linha
-          label="Outros resultados financeiros"
+          label="Conciliação Depósito × Saldo"
           valor={outrosFinanceiros}
           hint="diferenças de recebimento"
         />
