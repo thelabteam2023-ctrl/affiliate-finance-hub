@@ -53,7 +53,7 @@ export function useProjetoReconciliacaoResultado(
       });
       return res[projetoId!] || null;
     },
-    enabled: !!projetoId && cotacaoUSD > 0,
+    enabled: ativo && !!projetoId && cotacaoUSD > 0,
     staleTime: 30_000,
   });
 
@@ -96,7 +96,7 @@ export function useProjetoReconciliacaoResultado(
 
       return { eventosDiferenca, saldos };
     },
-    enabled: !!projetoId,
+    enabled: ativo && !!projetoId,
     staleTime: 30_000,
   });
 
