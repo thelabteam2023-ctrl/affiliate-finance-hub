@@ -89,6 +89,11 @@ export interface RecuperacaoCapital {
   pendenteRestante: number;
   excedente: number; // 0 quando recuperado <= investido
   status: "vazio" | "em_recuperacao" | "recuperado" | "acima";
+  /**
+   * Fluxo líquido NATIVO por moeda (saques − depósitos, sem conversão).
+   * Usado para detectar conversões entre moedas no fluxo financeiro.
+   */
+  fluxoPorMoeda: Record<string, number>;
 }
 
 export function useProjetoRecuperacaoCapital(projetoId: string | undefined) {
