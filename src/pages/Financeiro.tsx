@@ -581,6 +581,8 @@ export default function Financeiro() {
             lucroOperacionalTeorico={lucroOperacionalApostas}
             formatCurrency={calc.formatCurrency}
             periodBadge={periodBadge}
+            projetos={lucroOperacionalData?.projetos ?? []}
+            componentes={lucroOperacionalData?.componentesBRL ?? {}}
           />
           <CustosDetalheDialog
             open={custosDetalheOpen}
