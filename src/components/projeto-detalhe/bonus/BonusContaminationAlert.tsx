@@ -16,6 +16,8 @@ interface ContaminatedBookmaker {
 interface BonusContaminationAlertProps {
   contaminatedBookmakers: ContaminatedBookmaker[];
   totalNonBonusBets: number;
+  /** Projeto atual: a dispensa do aviso é registrada por usuário + projeto */
+  projetoId?: string;
 }
 
 const STRATEGY_LABELS: Record<string, string> = {
@@ -31,12 +33,17 @@ const STRATEGY_LABELS: Record<string, string> = {
 
 export function BonusContaminationAlert({ 
   contaminatedBookmakers, 
-  totalNonBonusBets 
+  totalNonBonusBets,
+  projetoId
 }: BonusContaminationAlertProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(false);
+  const { isDismissed, isLoading: dismissalLoading, dismiss } = useAlertDismissal(
+    "bonus_contamination_alert",
+    projetoId
+  );
 
-  if (contaminatedBookmakers.length === 0 || isDismissed) return null;
+  // Evita "piscar" o aviso enquanto a preferência do usuário ainda carrega
+  if (contaminatedBookmakers.length === 0 || dismissalLoading || isDismissed) return null;
 
   const getStrategyLabel = (strategy: string) => STRATEGY_LABELS[strategy] || strategy;
 
