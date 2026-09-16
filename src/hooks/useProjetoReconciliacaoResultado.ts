@@ -17,7 +17,11 @@ import {
  *
  * Somente leitura. Não altera ledger nem dados históricos.
  */
-export function useProjetoReconciliacaoResultado(projetoId: string | undefined) {
+export function useProjetoReconciliacaoResultado(
+  projetoId: string | undefined,
+  options?: { enabled?: boolean }
+) {
+  const ativo = options?.enabled !== false;
   const {
     cotacaoUSD,
     cotacaoEUR,
@@ -28,8 +32,9 @@ export function useProjetoReconciliacaoResultado(projetoId: string | undefined) 
     cotacaoCOP,
   } = useCotacoes();
   const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId || "");
-  const { data: recuperacao, isLoading: loadingRecuperacao } =
-    useProjetoRecuperacaoCapital(projetoId);
+  const { data: recuperacao, isLoading: loadingRecuperacao } = useProjetoRecuperacaoCapital(
+    ativo ? projetoId : undefined
+  );
 
   const { data: canonico, isLoading: loadingCanonico } = useQuery({
     queryKey: ["projeto-lucro-canonico-reconciliacao", projetoId, cotacaoUSD],
