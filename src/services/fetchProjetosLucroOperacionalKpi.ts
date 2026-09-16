@@ -129,7 +129,19 @@ export async function fetchProjetosLucroOperacionalKpi({
       if (Math.abs(v) >= 0.001) porMoeda[moeda] = v;
     }
 
-    result[projetoId] = { consolidado, porMoeda };
+    const modulosRaw = (projData.__modulosConsolidado || {}) as Record<string, any>;
+    const modulos: Record<string, number> = {};
+    for (const [modulo, valor] of Object.entries(modulosRaw)) {
+      const v = Number(valor);
+      if (Math.abs(v) >= 0.001) modulos[modulo] = v;
+    }
+
+    result[projetoId] = {
+      consolidado,
+      porMoeda,
+      moedaConsolidacao: String(projData.__moedaConsolidacao || "BRL").toUpperCase(),
+      modulos,
+    };
   }
 
   return result;
