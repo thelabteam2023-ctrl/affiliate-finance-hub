@@ -89,6 +89,14 @@ export function ReconciliacaoBreakdown({ projetoId }: Props) {
               muted
             />
           )}
+          {Math.abs(cambialConversao) >= 0.005 && (
+            <Linha
+              label="conversão de capital"
+              valor={cambialConversao}
+              hint="aporte e recuperação em moedas diferentes"
+              muted
+            />
+          )}
         </>
       )}
 
