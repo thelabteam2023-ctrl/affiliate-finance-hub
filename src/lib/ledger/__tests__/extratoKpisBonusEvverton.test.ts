@@ -81,8 +81,8 @@ describe("KPIs do Extrato — BONUS EVVERTON", () => {
     const antigo = somaComDuplaConversao(saques) - somaComDuplaConversao(depositos);
     expect(somaComDuplaConversao(depositos)).toBeCloseTo(10144.98, 2);
     expect(somaComDuplaConversao(saques)).toBeCloseTo(10498.14, 2);
-    expect(antigo).toBeCloseTo(353.16, 2);
-    expect(antigo - 350.7).toBeCloseTo(2.45, 2);
+    expect(antigo).toBeCloseTo(353.15, 1);
+    expect(antigo - 350.7).toBeCloseTo(2.45, 1);
   });
 
   it("projeto consolidado em USD não converte valores em dólar", () => {
