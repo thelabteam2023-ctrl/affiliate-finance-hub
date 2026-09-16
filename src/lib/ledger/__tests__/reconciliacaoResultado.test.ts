@@ -220,3 +220,46 @@ describe("calcularReconciliacaoResultado", () => {
     expect(r.residuo).toBeCloseTo(30, 6);
   });
 });
+
+describe("câmbio de conversão de capital (aporte e recuperação em moedas diferentes)", () => {
+  const RATE = 5.1537;
+  const convert = (v: number, m: string) => (m.toUpperCase() === "BRL" ? v : v * RATE);
+
+  it("cenário BONUS EVVERTON: resíduo vira resultado cambial de conversão", () => {
+    const r = calcularReconciliacaoResultado({
+      operacionalHistorico: 327.96,
+      operacionalPorMoeda: { BRL: 327.96 },
+      eventosDiferenca: [
+        { tipo_transacao: "GANHO_CAMBIAL", valor: 5, moeda: "USD", moedaContraparte: "USD" },
+      ],
+      saldosPorMoeda: [{ moeda: "USD", saldo: 0 }],
+      // −1.408 BRL + 341,25 USD × 5,1537
+      lucroRealizadoFluxo: -1408 + 341.25 * RATE,
+      moedaConsolidacao: "BRL",
+      convertToConsolidation: convert,
+      fluxoPorMoeda: { BRL: -1408, USD: 341.25 },
+    });
+
+    expect(r.outrosFinanceiros).toBeCloseTo(5 * RATE, 4);
+    expect(r.cambialConversao).toBeCloseTo(-3.03, 2);
+    expect(r.residuo).toBeCloseTo(0, 6);
+    expect(r.reconciliado).toBe(true);
+    expect(r.operacional + r.cambialTotal + r.outrosFinanceiros).toBeCloseTo(r.lucroRealizado, 6);
+  });
+
+  it("sem fluxo estrangeiro, a diferença continua aparecendo como não conciliada", () => {
+    const r = calcularReconciliacaoResultado({
+      operacionalHistorico: 100,
+      operacionalPorMoeda: { BRL: 100 },
+      eventosDiferenca: [],
+      saldosPorMoeda: [],
+      lucroRealizadoFluxo: 130,
+      moedaConsolidacao: "BRL",
+      convertToConsolidation: convert,
+      fluxoPorMoeda: { BRL: -500 },
+    });
+    expect(r.cambialConversao).toBe(0);
+    expect(r.residuo).toBeCloseTo(30, 6);
+    expect(r.reconciliado).toBe(false);
+  });
+});

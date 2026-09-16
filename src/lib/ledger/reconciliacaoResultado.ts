@@ -49,12 +49,20 @@ export interface ReconciliacaoInput {
   moedaConsolidacao: string;
   /** Conversor pela Cotação de Trabalho atual do projeto */
   convertToConsolidation: (valor: number, moedaOrigem: string) => number;
+  /**
+   * Fluxo líquido NATIVO por moeda (saques − depósitos). Quando o projeto aporta
+   * em uma moeda e recupera em outra, houve conversão de capital: a diferença
+   * resultante é resultado cambial de conversão, não resíduo inexplicado.
+   */
+  fluxoPorMoeda?: Record<string, number>;
 }
 
 export interface ReconciliacaoResultado {
   operacional: number;
   cambialRealizado: number;
   cambialNaoRealizado: number;
+  /** Câmbio decorrente de conversão de capital entre moedas no fluxo financeiro */
+  cambialConversao: number;
   cambialTotal: number;
   outrosFinanceiros: number;
   /** Soma dos componentes explicados */
@@ -85,6 +93,7 @@ export function calcularReconciliacaoResultado(
     lucroRealizadoFluxo,
     moedaConsolidacao,
     convertToConsolidation,
+    fluxoPorMoeda,
   } = input;
 
   const dest = (moedaConsolidacao || "BRL").toUpperCase();
@@ -167,7 +176,22 @@ export function calcularReconciliacaoResultado(
   }
 
   const cambialRealizadoTotal = cambialRealizado + cambialDeConciliacao;
-  const cambialConsolidado = cambialRealizadoTotal + cambialNaoRealizado;
+
+  // 4) Câmbio de CONVERSÃO de capital: o projeto aportou em uma moeda e recuperou
+  //    em outra (ex.: depósito em BRL, saque em USD). A diferença entre o fluxo e a
+  //    soma dos componentes é justamente o resultado dessa troca de moeda — não é
+  //    resíduo inexplicado. Só é reconhecido quando existe fluxo estrangeiro real.
+  const parcialSemConversao =
+    operacionalHistorico + cambialRealizadoTotal + cambialNaoRealizado + outrosFinanceiros;
+  const diferencaRestante = lucroRealizadoFluxo - parcialSemConversao;
+
+  const houveFluxoEstrangeiro = Object.entries(fluxoPorMoeda || {}).some(
+    ([moeda, valor]) =>
+      !mesmaMoeda((moeda || "BRL").toUpperCase(), dest) && Math.abs(Number(valor) || 0) > 0.005
+  );
+
+  const cambialConversao = houveFluxoEstrangeiro ? diferencaRestante : 0;
+  const cambialConsolidado = cambialRealizadoTotal + cambialNaoRealizado + cambialConversao;
 
   const somaComponentes =
     operacionalHistorico + cambialConsolidado + outrosFinanceiros;
@@ -177,6 +201,7 @@ export function calcularReconciliacaoResultado(
     operacional: operacionalHistorico,
     cambialRealizado: cambialRealizadoTotal,
     cambialNaoRealizado,
+    cambialConversao,
     cambialTotal: cambialConsolidado,
     outrosFinanceiros,
     somaComponentes,

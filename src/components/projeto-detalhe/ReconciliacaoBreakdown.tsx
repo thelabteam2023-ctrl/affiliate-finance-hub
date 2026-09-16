@@ -24,6 +24,7 @@ export function ReconciliacaoBreakdown({ projetoId }: Props) {
     operacional,
     cambialRealizado,
     cambialNaoRealizado,
+    cambialConversao,
     cambialTotal,
     outrosFinanceiros,
     lucroRealizado,
@@ -85,6 +86,14 @@ export function ReconciliacaoBreakdown({ projetoId }: Props) {
               label="não realizado"
               valor={cambialNaoRealizado}
               hint="posição aberta em moeda estrangeira"
+              muted
+            />
+          )}
+          {Math.abs(cambialConversao) >= 0.005 && (
+            <Linha
+              label="conversão de capital"
+              valor={cambialConversao}
+              hint="aporte e recuperação em moedas diferentes"
               muted
             />
           )}

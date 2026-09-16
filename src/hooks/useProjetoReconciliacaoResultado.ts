@@ -105,6 +105,7 @@ export function useProjetoReconciliacaoResultado(projetoId: string | undefined) 
       lucroRealizadoFluxo: recuperacao.recuperado - recuperacao.investido,
       moedaConsolidacao,
       convertToConsolidation,
+      fluxoPorMoeda: recuperacao.fluxoPorMoeda,
     });
   }, [canonico, ledgerFx, recuperacao, moedaConsolidacao, convertToConsolidation]);
 

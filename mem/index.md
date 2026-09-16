@@ -10,3 +10,4 @@
 - [Troca de Casa em Aposta Simples](mem://finance/troca-casa-aposta-simples-reconciliacao) — Trigger reconcilia stake: estorna na casa antiga e debita na nova ao editar aposta pendente
 - [Leitura de Print na Arbitragem](mem://features/apostas/leitura-print-surebet-semantica) — Mercado canônico por sinônimos, posição da seleção 1X2 sem chute e separação entre início do evento e horário do registro
 - [Reconciliação do Lucro Realizado](mem://finance/reconciliacao-lucro-realizado-standard) — Proibida conversão BRL→USD→BRL na apresentação; Lucro Realizado decomposto em operacional + cambial (realizado/não realizado) + diferenças de recebimento
+- [Lucro Realizado fonte única](mem://finance/lucro-realizado-fonte-unica-cotacao-trabalho) — Card e Extrato usam Cotação de Trabalho; oficial só para agregação; cambialConversao explica resíduo multimoeda

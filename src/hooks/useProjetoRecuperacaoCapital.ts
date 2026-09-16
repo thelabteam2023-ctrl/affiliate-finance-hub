@@ -89,6 +89,11 @@ export interface RecuperacaoCapital {
   pendenteRestante: number;
   excedente: number; // 0 quando recuperado <= investido
   status: "vazio" | "em_recuperacao" | "recuperado" | "acima";
+  /**
+   * Fluxo líquido NATIVO por moeda (saques − depósitos, sem conversão).
+   * Usado para detectar conversões entre moedas no fluxo financeiro.
+   */
+  fluxoPorMoeda: Record<string, number>;
 }
 
 export function useProjetoRecuperacaoCapital(projetoId: string | undefined) {
@@ -146,6 +151,26 @@ export function useProjetoRecuperacaoCapital(projetoId: string | undefined) {
     const pendenteEmTransito = Math.min(pendente, emTransito);
     const pendenteRestante = Math.max(0, pendente - pendenteEmTransito);
 
+    // Fluxo líquido NATIVO por moeda (sem conversão) — revela conversões entre
+    // moedas: aportar em BRL e recuperar em USD produz resultado cambial que não
+    // aparece em nenhum evento GANHO_CAMBIAL/PERDA_CAMBIAL do ledger.
+    const fluxoPorMoeda: Record<string, number> = {};
+    const addFluxo = (moeda: string, valor: number) => {
+      const key = (moeda || "BRL").toUpperCase();
+      fluxoPorMoeda[key] = (fluxoPorMoeda[key] || 0) + valor;
+    };
+    data.depositos.forEach((d) => {
+      const isBaseline =
+        d.tipo_transacao === "DEPOSITO_VIRTUAL" &&
+        (d.origem_tipo === "BASELINE" || d.origem_tipo == null);
+      if (isBaseline) return;
+      addFluxo(d.moeda, -(Number(d.valor) || 0));
+    });
+    data.saques.forEach((s) => {
+      if (s.tipo_transacao === "SAQUE_VIRTUAL" && s.origem_tipo !== "MIGRACAO") return;
+      addFluxo(s.moeda, valorEfetivoSaque(s));
+    });
+
     let status: RecuperacaoCapital["status"];
     if (investido <= 0.005) status = "vazio";
     else if (recuperado >= investido && excedente > 0.005) status = "acima";
@@ -164,6 +189,7 @@ export function useProjetoRecuperacaoCapital(projetoId: string | undefined) {
       pendenteRestante,
       excedente,
       status,
+      fluxoPorMoeda,
     };
   }, [data, convertToConsolidation, moedaConsolidacao]);
 
