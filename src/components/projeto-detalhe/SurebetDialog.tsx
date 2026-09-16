@@ -1124,8 +1124,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     
     // Primeiro, mapear as pernas existentes
     const pernasOdds: OddEntry[] = sortedPernas.map((perna, index) => ({
-      pernaId: (perna as any).id || undefined,
-      mainEntryId: (perna.entries?.[0] as any)?.id || undefined,
+      pernaId: parseSurebetLegId((perna as any).id).pernaId,
+      mainEntryId: parseSurebetLegId((perna.entries?.[0] as any)?.id || (perna as any).id).entradaId,
       fonteSaldo: (perna.entries?.[0] as any)?.fonte_saldo || perna.fonte_saldo || "REAL",
       bookmaker_id: perna.bookmaker_id || "",
       moeda: (perna.moeda || "BRL") as SupportedCurrency,
@@ -2176,7 +2176,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         };
         
         const novasPernas: SurebetPerna[] = odds.map((entry, idx) => {
-          const pernaOriginal = pernasOriginais[idx];
+          // Casar pela identidade real da perna (a ordem do formulário pode diferir da do banco)
+          const pernaOriginal = entry.pernaId
+            ? (pernasOriginais.find(p => parseSurebetLegId((p as any).id).pernaId === entry.pernaId) || pernasOriginais[idx])
+            : pernasOriginais[idx];
           const mainStake = parseFloat(entry.stake) || 0;
           const mainMoeda = getBookmakerMoedaEdit(entry.bookmaker_id);
           const mainSnapshotFields = getSnapshotFields(mainStake, mainMoeda, getEffectiveRate(mainMoeda).rate);
