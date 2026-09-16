@@ -13204,6 +13204,33 @@ export type Database = {
           },
         ]
       }
+      user_alert_dismissals: {
+        Row: {
+          alert_key: string
+          dismissed_at: string
+          id: string
+          project_id: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          alert_key: string
+          dismissed_at?: string
+          id?: string
+          project_id?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          alert_key?: string
+          dismissed_at?: string
+          id?: string
+          project_id?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       user_favorites: {
         Row: {
           created_at: string
