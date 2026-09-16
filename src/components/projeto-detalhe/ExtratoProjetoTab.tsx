@@ -54,6 +54,7 @@ import {
 } from "lucide-react";
 import { CURRENCY_SYMBOLS, type SupportedCurrency } from "@/types/currency";
 import { RecuperacaoCapitalCard } from "./RecuperacaoCapitalCard";
+import { resolveValorConsolidado } from "@/lib/ledger/resolveValorConsolidado";
 
 interface ExtratoProjetoTabProps {
   projetoId: string;
