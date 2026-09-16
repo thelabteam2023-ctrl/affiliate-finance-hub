@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { useProjetoRecuperacaoCapital } from "@/hooks/useProjetoRecuperacaoCapital";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { ReconciliacaoBreakdown } from "./ReconciliacaoBreakdown";
 
 interface RecuperacaoCapitalCardProps {
   projetoId: string;
@@ -253,6 +254,9 @@ export function RecuperacaoCapitalCard({ projetoId }: RecuperacaoCapitalCardProp
             </span>
           </div>
         )}
+
+        {/* Composição reconciliável do resultado */}
+        <ReconciliacaoBreakdown projetoId={projetoId} />
 
         {/* Mensagem complementar */}
         <p className="text-xs text-muted-foreground leading-relaxed">{mensagem}</p>

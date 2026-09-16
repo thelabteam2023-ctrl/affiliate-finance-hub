@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { valorEfetivoSaque } from "@/lib/ledger/valorEfetivoSaque";
+import { resolveValorConsolidado } from "@/lib/ledger/resolveValorConsolidado";
 
 /**
  * Recuperação de Capital — paridade 1:1 com "Depósitos" e "Saques" do Extrato.
@@ -104,18 +105,15 @@ export function useProjetoRecuperacaoCapital(projetoId: string | undefined) {
   const result = useMemo<RecuperacaoCapital | null>(() => {
     if (!data) return null;
 
-    // Snapshot USD → moeda de consolidação via Cotação de Trabalho.
-    const snapToConsolidacao = (snapUsd: number): number => {
-      if (!snapUsd) return 0;
-      if (moedaConsolidacao === "USD") return snapUsd;
-      return convertToConsolidation(snapUsd, "USD");
-    };
-
-    const resolveSnap = (valor: number, snap: number | null, moeda: string): number => {
-      const s = Number(snap ?? 0);
-      if (s > 0) return snapToConsolidacao(s);
-      return convertToConsolidation(valor, moeda);
-    };
+    // Regra de ouro: valor já na moeda de consolidação NÃO passa por USD.
+    const resolveSnap = (valor: number, snap: number | null, moeda: string): number =>
+      resolveValorConsolidado({
+        valor,
+        moeda,
+        snapshotUsd: snap,
+        moedaConsolidacao,
+        convertToConsolidation,
+      });
 
     // Depósitos efetivos: exclui BASELINE e NULL (não são capital real).
     const investido = data.depositos.reduce((acc, d) => {
