@@ -163,12 +163,16 @@ export interface SurebetPerna {
 
 // Estrutura de entrada individual no formulário (um fill)
 interface OddFormEntry {
+  /** ID da entrada no banco (apostas_perna_entradas.id) — preserva identidade na edição */
+  id?: string;
   bookmaker_id: string;
   moeda: SupportedCurrency;
   odd: string;
   stake: string;
   // NOVO: Seleção/linha do mercado por entrada
   selecaoLivre: string;
+  /** Fonte do saldo da entrada: REAL ou FREEBET */
+  fonteSaldo?: string;
 }
 
 // Origem do stake para controle de precedência
