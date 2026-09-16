@@ -527,6 +527,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         <BonusContaminationAlert 
           contaminatedBookmakers={contaminatedBookmakers} 
           totalNonBonusBets={totalNonBonusBets} 
+          projetoId={projetoId}
         />
       )}
 
