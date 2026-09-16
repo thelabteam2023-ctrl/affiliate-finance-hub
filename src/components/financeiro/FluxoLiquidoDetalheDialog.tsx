@@ -9,6 +9,14 @@ import {
 import { TrendingUp, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface ProjetoLinha {
+  projetoId: string;
+  nome: string;
+  moeda: string;
+  valor: number;
+  valorBRL: number;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -16,7 +24,23 @@ interface Props {
   lucroOperacionalTeorico: number;
   formatCurrency: (value: number) => string;
   periodBadge?: ReactNode;
+  /** Composição do Lucro Operacional Teórico por projeto (já em BRL) */
+  projetos?: ProjetoLinha[];
+  /** Composição por componente (apostas, bonus, cashback, ...) já em BRL */
+  componentes?: Record<string, number>;
 }
+
+const COMPONENTE_LABELS: Record<string, string> = {
+  apostas: "Apostas liquidadas",
+  bonus: "Bônus",
+  cancelamento_bonus: "Cancelamento de bônus",
+  cashback: "Cashback",
+  giros: "Giros grátis",
+  promocionais: "Promocionais",
+  perdas: "Perdas operacionais",
+  ajustes: "Ajustes de saldo",
+  conciliacao: "Conciliação",
+};
 
 export function FluxoLiquidoDetalheDialog({
   open,
@@ -25,7 +49,12 @@ export function FluxoLiquidoDetalheDialog({
   lucroOperacionalTeorico,
   formatCurrency,
   periodBadge,
+  projetos = [],
+  componentes = {},
 }: Props) {
+  const componentesLista = Object.entries(componentes)
+    .filter(([, v]) => Math.abs(v) >= 0.01)
+    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
   const diferenca = lucroOperacionalTeorico - fluxoLiquido;
   const realizadoAcimaDoTeorico = diferenca < 0;
 
@@ -98,6 +127,65 @@ export function FluxoLiquidoDetalheDialog({
               : "Esse valor já foi produzido pela operação, mas ainda não virou caixa — está represado em saldos de bookmakers, parceiros e wallets."}
           </p>
         </div>
+
+        {(componentesLista.length > 0 || projetos.length > 0) && (
+          <div className="max-h-[40vh] overflow-y-auto space-y-4 pr-1">
+            {componentesLista.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Composição do Lucro Operacional Teórico
+                </div>
+                {componentesLista.map(([chave, valor]) => (
+                  <div key={chave} className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {COMPONENTE_LABELS[chave] ?? chave}
+                    </span>
+                    <span
+                      className={cn(
+                        "font-medium tabular-nums",
+                        valor >= 0
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-red-600 dark:text-red-400",
+                      )}
+                    >
+                      {formatCurrency(valor)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {projetos.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Por projeto
+                </div>
+                {projetos.map((p) => (
+                  <div key={p.projetoId} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="truncate text-muted-foreground">
+                      {p.nome}
+                      {p.moeda !== "BRL" && (
+                        <span className="ml-1 text-xs">
+                          ({p.moeda} {p.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={cn(
+                        "font-medium tabular-nums",
+                        p.valorBRL >= 0
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-red-600 dark:text-red-400",
+                      )}
+                    >
+                      {formatCurrency(p.valorBRL)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

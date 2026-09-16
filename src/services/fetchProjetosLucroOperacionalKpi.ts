@@ -3,9 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 /** Breakdown de lucro por moeda original (dinâmico — suporta todas as moedas) */
 type SaldoByMoeda = Record<string, number>;
 
-interface LucroProjetoResumo {
+export interface LucroProjetoResumo {
   consolidado: number;
   porMoeda: SaldoByMoeda;
+  /** Moeda em que `consolidado` está expresso (moeda de consolidação do projeto) */
+  moedaConsolidacao: string;
+  /** Composição do lucro operacional por módulo, JÁ consolidada na moeda do projeto (server-side) */
+  modulos: Record<string, number>;
 }
 
 interface Params {
@@ -52,6 +56,8 @@ export function derivarCotacoesFromConvertFn(
 const createEmpty = (): LucroProjetoResumo => ({
   consolidado: 0,
   porMoeda: {},
+  moedaConsolidacao: "BRL",
+  modulos: {},
 });
 
 /**
@@ -123,7 +129,19 @@ export async function fetchProjetosLucroOperacionalKpi({
       if (Math.abs(v) >= 0.001) porMoeda[moeda] = v;
     }
 
-    result[projetoId] = { consolidado, porMoeda };
+    const modulosRaw = (projData.__modulosConsolidado || {}) as Record<string, any>;
+    const modulos: Record<string, number> = {};
+    for (const [modulo, valor] of Object.entries(modulosRaw)) {
+      const v = Number(valor);
+      if (Math.abs(v) >= 0.001) modulos[modulo] = v;
+    }
+
+    result[projetoId] = {
+      consolidado,
+      porMoeda,
+      moedaConsolidacao: String(projData.__moedaConsolidacao || "BRL").toUpperCase(),
+      modulos,
+    };
   }
 
   return result;
