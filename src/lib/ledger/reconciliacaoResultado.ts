@@ -93,6 +93,7 @@ export function calcularReconciliacaoResultado(
     lucroRealizadoFluxo,
     moedaConsolidacao,
     convertToConsolidation,
+    fluxoPorMoeda,
   } = input;
 
   const dest = (moedaConsolidacao || "BRL").toUpperCase();
