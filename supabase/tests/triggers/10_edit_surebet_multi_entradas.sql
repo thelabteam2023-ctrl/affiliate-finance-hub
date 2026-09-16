@@ -28,8 +28,8 @@ BEGIN
 
   PERFORM set_config('app.skip_perna_auto_stake', 'on', true);
 
-  INSERT INTO apostas_unificada (user_id, projeto_id, workspace_id, modelo, status, evento, estrategia, stake_total)
-  VALUES (v_user, v_proj, v_ws, 'SUREBET', 'PENDENTE', 'Teste A x B', 'SUREBET', 1400)
+  INSERT INTO apostas_unificada (user_id, projeto_id, workspace_id, modelo, forma_registro, status, evento, estrategia, stake_total)
+  VALUES (v_user, v_proj, v_ws, 'SUREBET', 'ARBITRAGEM', 'PENDENTE', 'Teste A x B', 'SUREBET', 1400)
   RETURNING id INTO ap;
 
   INSERT INTO apostas_pernas (aposta_id, bookmaker_id, ordem, selecao, odd, stake, moeda, fonte_saldo, stake_real)
