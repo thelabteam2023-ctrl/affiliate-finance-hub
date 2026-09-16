@@ -254,6 +254,9 @@ export function RecuperacaoCapitalCard({ projetoId }: RecuperacaoCapitalCardProp
           </div>
         )}
 
+        {/* Composição reconciliável do resultado */}
+        <ReconciliacaoBreakdown projetoId={projetoId} />
+
         {/* Mensagem complementar */}
         <p className="text-xs text-muted-foreground leading-relaxed">{mensagem}</p>
       </CardContent>
