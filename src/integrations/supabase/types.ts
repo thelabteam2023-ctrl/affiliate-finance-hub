@@ -18333,6 +18333,19 @@ export type Database = {
         }
         Returns: Json
       }
+      editar_perna_surebet_v2: {
+        Args: {
+          p_bookmaker_id: string
+          p_entradas?: Json
+          p_fonte_saldo?: string
+          p_odd: number
+          p_perna_id: string
+          p_selecao: string
+          p_selecao_livre: string
+          p_stake: number
+        }
+        Returns: Json
+      }
       editar_surebet_completa_v1: {
         Args: {
           p_aposta_id: string

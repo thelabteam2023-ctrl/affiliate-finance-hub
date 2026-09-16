@@ -99,6 +99,20 @@
       "when": 1788925477608,
       "tag": "0013_reconciliar_stake_aposta_simples_troca_casa",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1789584837460,
+      "tag": "0014_editar_perna_surebet_v2_multi_entradas",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1789584905346,
+      "tag": "0015_editar_surebet_completa_v1_entradas",
+      "breakpoints": true
     }
   ]
 }
