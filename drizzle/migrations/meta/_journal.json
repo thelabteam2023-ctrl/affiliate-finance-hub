@@ -127,6 +127,13 @@
       "when": 1789587136483,
       "tag": "0017_fix_lucro_operacional_bonus_snapshot_consolidado",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1789587179431,
+      "tag": "0018_restore_v17_filters_lucro_operacional",
+      "breakpoints": true
     }
   ]
 }
