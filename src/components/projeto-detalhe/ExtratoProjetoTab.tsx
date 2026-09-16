@@ -553,17 +553,21 @@ function useProjetoExtrato(
         return convertToConsolidation(valorUsdSnap, "USD");
       };
 
-      // Resolve o valor consolidado de UM evento usando hierarquia snapshot → trabalho.
-      const resolveConsolidado = (e: any, valorBase: number, moeda: string): number => {
-        // Se houver valor_usd_referencia (snapshot congelado), usar ele (SSOT)
-        // para neutralizar drift cambial e manter paridade com o capital aportado.
-        const snap = Number(e.valor_usd_referencia ?? 0);
-        if (snap > 0) {
-          return snapshotToConsolidacao(snap);
-        }
-        // Fallback (registros antigos sem snapshot): Cotação de Trabalho
-        return convertToConsolidation(valorBase, moeda);
-      };
+      // Resolve o valor consolidado de UM evento pela REGRA DE OURO multimoeda
+      // (mem://finance/lucro-realizado-fonte-unica-cotacao-trabalho):
+      //   1º moeda igual à de consolidação → valor NATIVO (proibido BRL → USD → BRL)
+      //   2º snapshot `valor_usd_referencia` congelado no registro
+      //   3º Cotação de Trabalho do projeto
+      // A dupla conversão do passo 1 distorcia Depósitos/Saques/"Lucro se sacar tudo"
+      // por usar duas cotações diferentes (congelada e de trabalho) no mesmo valor.
+      const resolveConsolidado = (e: any, valorBase: number, moeda: string): number =>
+        resolveValorConsolidado({
+          valor: valorBase,
+          moeda,
+          snapshotUsd: e.valor_usd_referencia != null ? Number(e.valor_usd_referencia) : null,
+          moedaConsolidacao,
+          convertToConsolidation,
+        });
 
       (ledger || []).forEach((e: any) => {
         const moeda = e.moeda || "BRL";
