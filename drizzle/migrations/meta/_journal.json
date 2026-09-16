@@ -134,6 +134,13 @@
       "when": 1789587179431,
       "tag": "0018_restore_v17_filters_lucro_operacional",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1789587233392,
+      "tag": "0019_lucro_operacional_breakdown_por_modulo",
+      "breakpoints": true
     }
   ]
 }
