@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { valorEfetivoSaque } from "@/lib/ledger/valorEfetivoSaque";
+import { resolveValorConsolidado } from "@/lib/ledger/resolveValorConsolidado";
 
 /**
  * Recuperação de Capital — paridade 1:1 com "Depósitos" e "Saques" do Extrato.
