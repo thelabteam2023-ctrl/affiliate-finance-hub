@@ -252,12 +252,14 @@ export async function fetchProjetosLucroCanonico({
   }
 
   // === LUCRO REALIZADO (Fluxo Líquido Ajustado) ===
-  // Alinhado EXATAMENTE ao FinancialMetricsPopover:
-  // saques confirmados - depósitos efetivos, onde DEPOSITO_VIRTUAL de baseline
-  // é excluído e só MIGRACAO entra no fluxo.
+  // Alinhado EXATAMENTE ao Extrato (useProjetoRecuperacaoCapital):
+  // saques confirmados − depósitos efetivos, DEPOSITO_VIRTUAL de baseline excluído,
+  // e conversão pela regra canônica `resolveValorConsolidado`
+  // (moeda nativa → snapshot congelado → Cotação de Trabalho).
+  // A cotação OFICIAL só é usada para agregar projetos de moedas diferentes em BRL.
   let depositosQuery = supabase
     .from("cash_ledger")
-    .select("valor, moeda, projeto_id_snapshot, tipo_transacao, origem_tipo")
+    .select("valor, valor_usd_referencia, moeda, projeto_id_snapshot, tipo_transacao, origem_tipo")
     .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
     .eq("status", "CONFIRMADO")
     .in("projeto_id_snapshot", projetoIds)
@@ -265,7 +267,7 @@ export async function fetchProjetosLucroCanonico({
     .limit(50000);
   let saquesQuery = supabase
     .from("cash_ledger")
-    .select("valor, valor_confirmado, tipo_moeda, moeda, projeto_id_snapshot")
+    .select("valor, valor_confirmado, valor_usd_referencia, tipo_moeda, moeda, projeto_id_snapshot")
     .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
     .eq("status", "CONFIRMADO")
     .in("projeto_id_snapshot", projetoIds)
@@ -283,7 +285,13 @@ export async function fetchProjetosLucroCanonico({
 
   const [depositosRes, saquesRes] = await Promise.all([depositosQuery, saquesQuery]);
 
-  const depositosEfetivosByProjeto: Record<string, { valor: number; moeda: string }[]> = {};
+  interface FluxoRow {
+    valor: number;
+    moeda: string;
+    snapshotUsd: number | null;
+  }
+
+  const depositosEfetivosByProjeto: Record<string, FluxoRow[]> = {};
   (depositosRes.data || []).forEach((d: any) => {
     const pid = d.projeto_id_snapshot;
     if (!pid) return;
@@ -294,15 +302,20 @@ export async function fetchProjetosLucroCanonico({
     (depositosEfetivosByProjeto[pid] ||= []).push({
       valor: Number(d.valor) || 0,
       moeda: (d.moeda || "BRL").toUpperCase(),
+      snapshotUsd: d.valor_usd_referencia != null ? Number(d.valor_usd_referencia) : null,
     });
   });
 
-  const saquesByProjeto: Record<string, { valor: number; moeda: string }[]> = {};
+  const saquesByProjeto: Record<string, FluxoRow[]> = {};
   (saquesRes.data || []).forEach((s: any) => {
     const pid = s.projeto_id_snapshot;
     if (!pid) return;
     const v = valorEfetivoSaque(s as any);
-    (saquesByProjeto[pid] ||= []).push({ valor: v, moeda: (s.moeda || "BRL").toUpperCase() });
+    (saquesByProjeto[pid] ||= []).push({
+      valor: v,
+      moeda: (s.moeda || "BRL").toUpperCase(),
+      snapshotUsd: s.valor_usd_referencia != null ? Number(s.valor_usd_referencia) : null,
+    });
   });
 
   // Conversor para BRL usando cotações OFICIAIS — usado para agregar workspace multi-moeda.
@@ -310,23 +323,31 @@ export async function fetchProjetosLucroCanonico({
 
   for (const projetoId of projetoIds) {
     const r = result[projetoId] as any;
-    if (!r || !r._convertOficial) continue;
-    const convertOficial = r._convertOficial as (v: number, m: string) => number;
+    if (!r || !r._convertTrabalho) continue;
+    const convertTrabalho = r._convertTrabalho as (v: number, m: string) => number;
     const moedaProjeto = (r._moedaConsolidacao as string) || "BRL";
-    const totalSaques = (saquesByProjeto[projetoId] || []).reduce(
-      (acc, s) => acc + convertOficial(s.valor, s.moeda),
-      0
-    );
+
+    const resolve = (row: FluxoRow) =>
+      resolveValorConsolidado({
+        valor: row.valor,
+        moeda: row.moeda,
+        snapshotUsd: row.snapshotUsd,
+        moedaConsolidacao: moedaProjeto,
+        convertToConsolidation: convertTrabalho,
+      });
+
+    const totalSaques = (saquesByProjeto[projetoId] || []).reduce((acc, s) => acc + resolve(s), 0);
     const totalDepositosEfetivos = (depositosEfetivosByProjeto[projetoId] || []).reduce(
-      (acc, d) => acc + convertOficial(d.valor, d.moeda),
+      (acc, d) => acc + resolve(d),
       0
     );
     r.lucroRealizado = totalSaques - totalDepositosEfetivos;
     // Converte da moeda do projeto para BRL (no-op quando o projeto já é BRL).
     r.lucroRealizadoBRL = convertToBRL(r.lucroRealizado, moedaProjeto);
-    delete r._convertOficial;
+    delete r._convertTrabalho;
     delete r._moedaConsolidacao;
   }
+
 
   return result;
 }
