@@ -2241,17 +2241,120 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
           ? ((analysis?.guaranteedProfit || 0) / stakeEditTotal) * 100 
           : null;
         
-        const pernasParaRPC = novasPernas.map((perna) => ({
-          bookmaker_id: perna.bookmaker_id,
-          stake: perna.stake,
-          odd: perna.odd,
-          moeda: perna.moeda,
-          selecao: perna.selecao,
-          selecao_livre: perna.selecao_livre || null,
-          cotacao_snapshot: perna.cotacao_snapshot,
-          stake_brl_referencia: perna.stake_brl_referencia,
-          fonte_saldo: 'REAL',
-        }));
+        // CORREÇÃO CRÍTICA: preservar a identidade das pernas e entradas na edição.
+        // Sem o `id`, a rotina do banco apagava e recriava tudo, gerando novos débitos
+        // de stake (consumo duplicado) e perda de sub-entradas / origem do saldo.
+        const pernasParaRPC: any[] = [];
+
+        odds.forEach((entry) => {
+          const mainStake = parseFloat(entry.stake) || 0;
+          const mainOdd = parseFloat(entry.odd) || 0;
+          if (!entry.bookmaker_id || mainStake <= 0 || mainOdd <= 1) return;
+
+          const mainMoeda = getBookmakerMoedaEdit(entry.bookmaker_id);
+          const mainSnap = getSnapshotFields(mainStake, mainMoeda, getEffectiveRate(mainMoeda).rate);
+
+          const additionals = (entry.additionalEntries || []).filter((ae) => {
+            const aeStake = parseFloat(ae.stake) || 0;
+            const aeOdd = parseFloat(ae.odd) || 0;
+            return !!ae.bookmaker_id && aeStake > 0 && aeOdd > 1;
+          });
+
+          // Sub-entradas que vivem na MESMA perna (apostas_perna_entradas)
+          const entradasMesmaPerna = additionals.filter((ae) => {
+            const parsed = parseSurebetLegId(ae.id);
+            return !!parsed.entradaId && (!entry.pernaId || parsed.pernaId === entry.pernaId);
+          });
+          // Sub-entradas que são pernas irmãs (linhas próprias) ou novas
+          const pernasIrmas = additionals.filter((ae) => !entradasMesmaPerna.includes(ae));
+          // Quando a perna já usa o modelo de entradas, novas sub-entradas entram nele
+          const usaEntradas = !!entry.mainEntryId || entradasMesmaPerna.length > 0;
+
+          const buildEntrada = (
+            id: string | undefined,
+            bookmakerId: string,
+            odd: number,
+            stake: number,
+            selecaoLivre: string,
+            fonte?: string
+          ) => {
+            const moeda = getBookmakerMoedaEdit(bookmakerId);
+            const snap = getSnapshotFields(stake, moeda, getEffectiveRate(moeda).rate);
+            return {
+              id: id || null,
+              bookmaker_id: bookmakerId,
+              odd,
+              stake,
+              moeda,
+              fonte_saldo: fonte || 'REAL',
+              cotacao_snapshot: snap.cotacao_snapshot,
+              stake_brl_referencia: snap.valor_brl_referencia,
+              selecao_livre: selecaoLivre || null,
+            };
+          };
+
+          const entradas = [
+            buildEntrada(entry.mainEntryId, entry.bookmaker_id, mainOdd, mainStake, entry.selecaoLivre, entry.fonteSaldo),
+          ];
+
+          const novasSubEntradas = usaEntradas
+            ? pernasIrmas.filter((ae) => !parseSurebetLegId(ae.id).pernaId)
+            : [];
+
+          [...entradasMesmaPerna, ...novasSubEntradas].forEach((ae) => {
+            const parsed = parseSurebetLegId(ae.id);
+            entradas.push(
+              buildEntrada(
+                parsed.entradaId,
+                ae.bookmaker_id,
+                parseFloat(ae.odd) || 0,
+                parseFloat(ae.stake) || 0,
+                ae.selecaoLivre,
+                ae.fonteSaldo
+              )
+            );
+          });
+
+          const stakeDaPerna = entradas.reduce((acc, e) => acc + e.stake, 0);
+
+          pernasParaRPC.push({
+            id: entry.pernaId || null,
+            bookmaker_id: entry.bookmaker_id,
+            stake: stakeDaPerna,
+            odd: mainOdd,
+            moeda: mainMoeda,
+            selecao: entry.selecao,
+            selecao_livre: entry.selecaoLivre || null,
+            cotacao_snapshot: mainSnap.cotacao_snapshot,
+            stake_brl_referencia: mainSnap.valor_brl_referencia,
+            fonte_saldo: entry.fonteSaldo || 'REAL',
+            entradas: entradas.length > 1 ? entradas : null,
+          });
+
+          // Pernas irmãs (mesma seleção, linha própria no banco)
+          pernasIrmas
+            .filter((ae) => !novasSubEntradas.includes(ae))
+            .forEach((ae) => {
+              const parsed = parseSurebetLegId(ae.id);
+              const aeStake = parseFloat(ae.stake) || 0;
+              const aeOdd = parseFloat(ae.odd) || 0;
+              const aeMoeda = getBookmakerMoedaEdit(ae.bookmaker_id);
+              const aeSnap = getSnapshotFields(aeStake, aeMoeda, getEffectiveRate(aeMoeda).rate);
+              pernasParaRPC.push({
+                id: parsed.pernaId || null,
+                bookmaker_id: ae.bookmaker_id,
+                stake: aeStake,
+                odd: aeOdd,
+                moeda: aeMoeda,
+                selecao: entry.selecao,
+                selecao_livre: ae.selecaoLivre || entry.selecaoLivre || null,
+                cotacao_snapshot: aeSnap.cotacao_snapshot,
+                stake_brl_referencia: aeSnap.valor_brl_referencia,
+                fonte_saldo: ae.fonteSaldo || 'REAL',
+                entradas: null,
+              });
+            });
+        });
 
         const { data: rpcResult, error } = await supabase.rpc('editar_surebet_completa_v1', {
           p_aposta_id: surebet.id,
