@@ -14,11 +14,7 @@ DECLARE
   r jsonb;
   log text := '';
 
-  FUNCTION_PLACEHOLDER boolean;
-
   saldo1 numeric; saldo2 numeric; saldo3 numeric;
-
-  PROCEDURE_PLACEHOLDER boolean;
 BEGIN
   SELECT p.workspace_id, p.id, p.user_id INTO v_ws, v_proj, v_user
   FROM projetos p LIMIT 1;
