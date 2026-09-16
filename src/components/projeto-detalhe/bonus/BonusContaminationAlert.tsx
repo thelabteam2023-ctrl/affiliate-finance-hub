@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAlertDismissal } from "@/hooks/useAlertDismissal";
 import { AlertTriangle, ChevronDown, ChevronUp, Info, X } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
