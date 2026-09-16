@@ -178,6 +178,24 @@ interface OddFormEntry {
 // Origem do stake para controle de precedência
 type StakeOrigem = "print" | "referencia" | "manual";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolve o identificador exibido na tela para os IDs reais do banco.
+ * Pernas com sub-entradas chegam como `<perna_id>__entrada_<entrada_id>`.
+ */
+function parseSurebetLegId(raw?: string | null): { pernaId?: string; entradaId?: string } {
+  if (!raw) return {};
+  const composto = raw.split("__entrada_");
+  if (composto.length === 2 && UUID_RE.test(composto[0])) {
+    return {
+      pernaId: composto[0],
+      entradaId: UUID_RE.test(composto[1]) ? composto[1] : undefined,
+    };
+  }
+  return UUID_RE.test(raw) ? { pernaId: raw } : {};
+}
+
 // Estrutura interna do formulário - mantendo compatibilidade
 interface OddEntry {
   /** ID da perna no banco (apostas_pernas.id) — preserva identidade na edição */
