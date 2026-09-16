@@ -544,15 +544,6 @@ function useProjetoExtrato(
       let saquesConsolidadoSnap = 0;
       let ajustesConsolidadoSnap = 0;
 
-      // Converte snapshot USD → moeda de consolidação do projeto (USD ou BRL).
-      // Para USD: passthrough. Para BRL: usa Cotação de Trabalho USD→BRL do projeto
-      // (estável dentro do ciclo, não flutua com PTAX live).
-      const snapshotToConsolidacao = (valorUsdSnap: number): number => {
-        if (!valorUsdSnap) return 0;
-        if (moedaConsolidacao === "USD") return valorUsdSnap;
-        // Converter USD → moeda consolidação via Cotação de Trabalho
-        return convertToConsolidation(valorUsdSnap, "USD");
-      };
 
       // Resolve o valor consolidado de UM evento pela REGRA DE OURO multimoeda
       // (mem://finance/lucro-realizado-fonte-unica-cotacao-trabalho):
