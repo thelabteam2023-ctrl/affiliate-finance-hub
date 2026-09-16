@@ -16,6 +16,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { resolveValorConsolidado } from "@/lib/ledger/resolveValorConsolidado";
 import { calcularLucroCanonicoFromRpc } from "@/hooks/useKpiBreakdowns";
 import type { ProjetoDashboardRawData } from "@/hooks/useProjetoDashboardData";
 import { valorEfetivoSaque } from "@/lib/ledger/valorEfetivoSaque";
@@ -245,7 +246,7 @@ export async function fetchProjetosLucroCanonico({
       moedaConsolidacao,
       lucroRealizado: 0,
       lucroRealizadoBRL: 0,
-      _convertOficial: convertOficial,
+      _convertTrabalho: convertTrabalho,
       _moedaConsolidacao: moedaConsolidacao,
     } as any;
   }
