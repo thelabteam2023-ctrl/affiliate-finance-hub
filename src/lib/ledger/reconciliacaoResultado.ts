@@ -176,7 +176,22 @@ export function calcularReconciliacaoResultado(
   }
 
   const cambialRealizadoTotal = cambialRealizado + cambialDeConciliacao;
-  const cambialConsolidado = cambialRealizadoTotal + cambialNaoRealizado;
+
+  // 4) Câmbio de CONVERSÃO de capital: o projeto aportou em uma moeda e recuperou
+  //    em outra (ex.: depósito em BRL, saque em USD). A diferença entre o fluxo e a
+  //    soma dos componentes é justamente o resultado dessa troca de moeda — não é
+  //    resíduo inexplicado. Só é reconhecido quando existe fluxo estrangeiro real.
+  const parcialSemConversao =
+    operacionalHistorico + cambialRealizadoTotal + cambialNaoRealizado + outrosFinanceiros;
+  const diferencaRestante = lucroRealizadoFluxo - parcialSemConversao;
+
+  const houveFluxoEstrangeiro = Object.entries(fluxoPorMoeda || {}).some(
+    ([moeda, valor]) =>
+      !mesmaMoeda((moeda || "BRL").toUpperCase(), dest) && Math.abs(Number(valor) || 0) > 0.005
+  );
+
+  const cambialConversao = houveFluxoEstrangeiro ? diferencaRestante : 0;
+  const cambialConsolidado = cambialRealizadoTotal + cambialNaoRealizado + cambialConversao;
 
   const somaComponentes =
     operacionalHistorico + cambialConsolidado + outrosFinanceiros;
@@ -186,6 +201,7 @@ export function calcularReconciliacaoResultado(
     operacional: operacionalHistorico,
     cambialRealizado: cambialRealizadoTotal,
     cambialNaoRealizado,
+    cambialConversao,
     cambialTotal: cambialConsolidado,
     outrosFinanceiros,
     somaComponentes,
