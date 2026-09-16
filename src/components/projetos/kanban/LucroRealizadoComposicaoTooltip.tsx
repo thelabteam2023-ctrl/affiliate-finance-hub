@@ -1,6 +1,18 @@
 import { cn } from "@/lib/utils";
 import { useProjetoReconciliacaoResultado } from "@/hooks/useProjetoReconciliacaoResultado";
-import { formatByMoeda } from "@/lib/financial-display";
+
+const MOEDA_SYMBOLS: Record<string, string> = {
+  BRL: "R$", USD: "$", EUR: "€", GBP: "£", MYR: "RM", MXN: "MX$", ARS: "AR$", COP: "CO$",
+};
+
+const formatByMoeda = (value: number, moeda: string) => {
+  const m = (moeda || "BRL").toUpperCase();
+  const symbol = MOEDA_SYMBOLS[m] || m;
+  return `${symbol} ${Math.abs(value).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
 
 interface Props {
   projetoId: string;
