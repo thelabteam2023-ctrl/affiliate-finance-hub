@@ -24,6 +24,7 @@ export function ReconciliacaoBreakdown({ projetoId }: Props) {
     operacional,
     cambialRealizado,
     cambialNaoRealizado,
+    cambialConversao,
     cambialTotal,
     outrosFinanceiros,
     lucroRealizado,
