@@ -9,6 +9,14 @@ import {
 import { TrendingUp, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface ProjetoLinha {
+  projetoId: string;
+  nome: string;
+  moeda: string;
+  valor: number;
+  valorBRL: number;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -16,7 +24,23 @@ interface Props {
   lucroOperacionalTeorico: number;
   formatCurrency: (value: number) => string;
   periodBadge?: ReactNode;
+  /** Composição do Lucro Operacional Teórico por projeto (já em BRL) */
+  projetos?: ProjetoLinha[];
+  /** Composição por componente (apostas, bonus, cashback, ...) já em BRL */
+  componentes?: Record<string, number>;
 }
+
+const COMPONENTE_LABELS: Record<string, string> = {
+  apostas: "Apostas liquidadas",
+  bonus: "Bônus",
+  cancelamento_bonus: "Cancelamento de bônus",
+  cashback: "Cashback",
+  giros: "Giros grátis",
+  promocionais: "Promocionais",
+  perdas: "Perdas operacionais",
+  ajustes: "Ajustes de saldo",
+  conciliacao: "Conciliação",
+};
 
 export function FluxoLiquidoDetalheDialog({
   open,
@@ -25,7 +49,12 @@ export function FluxoLiquidoDetalheDialog({
   lucroOperacionalTeorico,
   formatCurrency,
   periodBadge,
+  projetos = [],
+  componentes = {},
 }: Props) {
+  const componentesLista = Object.entries(componentes)
+    .filter(([, v]) => Math.abs(v) >= 0.01)
+    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
   const diferenca = lucroOperacionalTeorico - fluxoLiquido;
   const realizadoAcimaDoTeorico = diferenca < 0;
 
