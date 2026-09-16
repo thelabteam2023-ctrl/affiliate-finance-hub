@@ -49,12 +49,20 @@ export interface ReconciliacaoInput {
   moedaConsolidacao: string;
   /** Conversor pela Cotação de Trabalho atual do projeto */
   convertToConsolidation: (valor: number, moedaOrigem: string) => number;
+  /**
+   * Fluxo líquido NATIVO por moeda (saques − depósitos). Quando o projeto aporta
+   * em uma moeda e recupera em outra, houve conversão de capital: a diferença
+   * resultante é resultado cambial de conversão, não resíduo inexplicado.
+   */
+  fluxoPorMoeda?: Record<string, number>;
 }
 
 export interface ReconciliacaoResultado {
   operacional: number;
   cambialRealizado: number;
   cambialNaoRealizado: number;
+  /** Câmbio decorrente de conversão de capital entre moedas no fluxo financeiro */
+  cambialConversao: number;
   cambialTotal: number;
   outrosFinanceiros: number;
   /** Soma dos componentes explicados */
