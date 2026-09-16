@@ -664,26 +664,23 @@ function useProjetoExtrato(
         );
       });
 
-      // Saques pendentes: usa snapshot congelado quando disponível (paridade
-      // com depósitos/saques confirmados); fallback = Cotação de Trabalho.
+      // Saques pendentes: mesma regra canônica (nativo → snapshot → trabalho).
       let saquesPendentesTotal = 0;
       (pendentes || []).forEach((p: any) => {
-        const snap = Number(p.valor_usd_referencia ?? 0);
-        if (snap > 0) {
-          saquesPendentesTotal += snapshotToConsolidacao(snap);
-        } else {
-          saquesPendentesTotal += convertToConsolidation(
-            Number(p.valor || 0),
-            p.moeda || "BRL"
-          );
-        }
+        saquesPendentesTotal += resolveValorConsolidado({
+          valor: Number(p.valor || 0),
+          moeda: p.moeda || "BRL",
+          snapshotUsd: p.valor_usd_referencia != null ? Number(p.valor_usd_referencia) : null,
+          moedaConsolidacao,
+          convertToConsolidation,
+        });
       });
 
       const byCurrency = Array.from(currencyMap.values());
 
-      // Totais GLOBAIS na moeda de consolidação usam SNAPSHOT (cotação congelada
-      // no momento de cada registro), não cotação live. Garante que KPIs históricos
-      // não flutuem com mudanças de Cotação de Trabalho ou PTAX.
+      // Totais GLOBAIS na moeda de consolidação: nativo quando já está na moeda do
+      // projeto, snapshot congelado para moeda estrangeira. KPIs históricos não
+      // flutuam com PTAX e valores em moeda própria não sofrem ida e volta cambial.
       const depositosTotal = depositosConsolidadoSnap;
       const saquesTotal = saquesConsolidadoSnap;
       const ajustesTotal = ajustesConsolidadoSnap;
