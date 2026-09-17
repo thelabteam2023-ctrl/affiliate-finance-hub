@@ -59,6 +59,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
  import { WalletCryptoSelect } from "@/components/wallets/WalletCryptoSelect";
+import { isFiatCurrency, violatesSnapshotUmParaUm } from "@/types/currency";
 import { DestinoConfirmadoCard } from "@/components/caixa/DestinoConfirmadoCard";
 import { PixKeysDisplay } from "@/components/caixa/PixKeysDisplay";
 
