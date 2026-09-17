@@ -268,6 +268,47 @@ export function isStablecoin(moeda: string): boolean {
 }
 
 /**
+ * FONTE ÚNICA de classificação FIAT x CRYPTO.
+ *
+ * Regra: moeda desconhecida é tratada como FIAT (exige cotação explícita),
+ * NUNCA como cripto 1:1 com dólar — isso evita gravar snapshot "1 para 1"
+ * para moedas como MYR e violar `chk_snapshot_1_para_1_nao_stable`.
+ */
+export function getCurrencyKind(moeda?: string | null): CurrencyType {
+  const m = (moeda || "").toUpperCase();
+  return CURRENCY_TYPES[m as SupportedCurrency] === "CRYPTO" ? "CRYPTO" : "FIAT";
+}
+
+/** Moeda fiduciária (inclui moeda desconhecida, por segurança) */
+export function isFiatCurrency(moeda?: string | null): boolean {
+  return getCurrencyKind(moeda) === "FIAT";
+}
+
+/** Moeda que vale 1:1 com o dólar (USD e stablecoins de dólar) */
+export function isUsdEquivalent(moeda?: string | null): boolean {
+  const m = (moeda || "").toUpperCase();
+  return m === "USD" || m === "USDT" || m === "USDC";
+}
+
+/**
+ * Espelha a trava do banco `chk_snapshot_1_para_1_nao_stable`.
+ * Retorna true quando o lançamento afirmaria, indevidamente, que uma moeda
+ * não-dólar vale 1:1 em dólar.
+ */
+export function violatesSnapshotUmParaUm(params: {
+  moeda?: string | null;
+  valor?: number | null;
+  valorUsdReferencia?: number | null;
+  cotacaoOrigemUsd?: number | null;
+}): boolean {
+  const { moeda, valor, valorUsdReferencia, cotacaoOrigemUsd } = params;
+  if (isUsdEquivalent(moeda)) return false;
+  if (valor == null || valor === 0) return false;
+  if (valorUsdReferencia == null || cotacaoOrigemUsd == null) return false;
+  return valorUsdReferencia === valor && cotacaoOrigemUsd === 1;
+}
+
+/**
  * Formata um valor com símbolo de moeda
  */
 export function formatCurrencyValue(

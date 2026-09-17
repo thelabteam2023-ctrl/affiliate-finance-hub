@@ -59,6 +59,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
  import { WalletCryptoSelect } from "@/components/wallets/WalletCryptoSelect";
+import { isFiatCurrency, violatesSnapshotUmParaUm } from "@/types/currency";
 import { DestinoConfirmadoCard } from "@/components/caixa/DestinoConfirmadoCard";
 import { PixKeysDisplay } from "@/components/caixa/PixKeysDisplay";
 
@@ -2821,8 +2822,10 @@ export function CaixaTransacaoDialog({
       // com o valor em EUR tratado como USD, o que quebra "Lucro se sacar tudo"
       // e Recuperação de Capital. Detectamos moedaOrigem FIAT e usamos o mesmo
       // caminho FIAT (getRate/cotacaoUSD) para o snapshot USD.
-      const FIAT_SET = new Set(["BRL","USD","EUR","GBP","MXN","ARS","CLP","COP","PEN","UYU","CAD","AUD","CHF","JPY"]);
-      const moedaOrigemEhFiat = FIAT_SET.has((moedaOrigem || "").toUpperCase());
+      // FONTE ÚNICA: classificação vem de CURRENCY_TYPES (src/types/currency.ts).
+      // Listas fixas locais já causaram bug: MYR ficava de fora e era tratado como
+      // cripto 1:1 com dólar, violando `chk_snapshot_1_para_1_nao_stable`.
+      const moedaOrigemEhFiat = isFiatCurrency(moedaOrigem);
       if (tipoMoeda === "CRYPTO" && !moedaOrigemEhFiat) {
         // Crypto puro: calcular valor em USD a partir da quantidade de coins × preço
         const cryptoPrice = cryptoPrices[coin] || 1;
@@ -2846,11 +2849,8 @@ export function CaixaTransacaoDialog({
       //  - FIAT   → FIAT  (ex: BRL→EUR):    usar getRate
       //  - FIAT   → Cripto (ex: BRL→USDT): usar cryptoPrices
       const moedaDestinoFinal = destinoBookmakerMoeda || moedaDestino;
-      // Destino é cripto se for uma das moedas crypto conhecidas
-      const CRYPTO_SET = new Set([
-        "USDT","USDC","BTC","ETH","BNB","TRX","SOL","MATIC","ADA","DOT","AVAX","LINK","UNI","LTC","XRP"
-      ]);
-      const destinoEhCripto = CRYPTO_SET.has((moedaDestinoFinal || "").toUpperCase());
+      // Destino é cripto conforme a FONTE ÚNICA de classificação
+      const destinoEhCripto = !isFiatCurrency(moedaDestinoFinal);
       if (destinoEhCripto) {
         // Destino é cripto: cotação vem do preço da coin (USDT=1, BTC=X USD)
         cotacaoDestinoUsd = cryptoPrices[moedaDestinoFinal] || (tipoMoeda === "CRYPTO" ? cryptoPrices[coin] : 0) || 1;
@@ -3202,6 +3202,27 @@ export function CaixaTransacaoDialog({
         ? contaComTaxa?.bancoTaxa?.taxa_deposito_valor
         : contaComTaxa?.bancoTaxa?.taxa_saque_valor;
 
+      // =========================================================================
+      // TRAVA DE SANIDADE (espelha `chk_snapshot_1_para_1_nao_stable` do banco)
+      // Nunca gravar moeda não-dólar afirmando cotação 1,00 e referência = valor.
+      // =========================================================================
+      if (
+        violatesSnapshotUmParaUm({
+          moeda: transactionData.moeda,
+          valor: transactionData.valor,
+          valorUsdReferencia: transactionData.valor_usd_referencia,
+          cotacaoOrigemUsd: transactionData.cotacao_origem_usd,
+        })
+      ) {
+        toast({
+          title: "Cotação indisponível",
+          description: `Não há cotação válida para ${transactionData.moeda}. O sistema não pode registrar essa transação tratando ${transactionData.moeda} como dólar. Atualize a cotação e tente novamente.`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       if (contaComTaxa && taxaTipo && taxaValor != null) {
         const valorTransacao = parseFloat(valor);
         const taxaMoedaConfig = contaComTaxa.bancoTaxa?.taxa_moeda ?? contaComTaxa.moeda ?? "BRL";
@@ -3313,11 +3334,18 @@ export function CaixaTransacaoDialog({
       console.error("Erro ao registrar transação:", error);
       const rawMsg = String(error?.message || "");
       const isSaldoInsuficiente = rawMsg.includes("SALDO_INSUFICIENTE");
+      const isSnapshotUmParaUm = rawMsg.includes("chk_snapshot_1_para_1_nao_stable");
       toast({
-        title: isSaldoInsuficiente ? "Saldo insuficiente" : "Erro ao registrar transação",
+        title: isSaldoInsuficiente
+          ? "Saldo insuficiente"
+          : isSnapshotUmParaUm
+            ? "Cotação inválida para a moeda"
+            : "Erro ao registrar transação",
         description: isSaldoInsuficiente
           ? `${rawMsg.replace(/^.*SALDO_INSUFICIENTE:\s*/, "")} Atualize a tela e confira se este lançamento já foi feito.`
-          : rawMsg,
+          : isSnapshotUmParaUm
+            ? "A transação foi recusada porque a moeda da operação estaria sendo tratada como se valesse 1,00 dólar. Atualize as cotações e registre novamente."
+            : rawMsg,
         variant: "destructive",
       });
     } finally {

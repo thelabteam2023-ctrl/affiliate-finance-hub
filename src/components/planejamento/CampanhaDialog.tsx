@@ -32,7 +32,8 @@ interface Props {
   suggestedParceiroId?: string | null;
 }
 
-const MOEDAS = ["BRL", "USD", "EUR", "GBP", "MXN", "USDT"];
+// Alinhado ao conjunto suportado (src/types/currency.ts) + stablecoin de uso corrente
+const MOEDAS = ["BRL", "USD", "EUR", "GBP", "MYR", "MXN", "ARS", "COP", "USDT"];
 
 export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookmaker, campanha, campanhasDoMes, suggestedParceiroId }: Props) {
   const { data: ips = [] } = usePlanningIps();
