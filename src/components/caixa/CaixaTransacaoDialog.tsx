@@ -3333,11 +3333,18 @@ export function CaixaTransacaoDialog({
       console.error("Erro ao registrar transação:", error);
       const rawMsg = String(error?.message || "");
       const isSaldoInsuficiente = rawMsg.includes("SALDO_INSUFICIENTE");
+      const isSnapshotUmParaUm = rawMsg.includes("chk_snapshot_1_para_1_nao_stable");
       toast({
-        title: isSaldoInsuficiente ? "Saldo insuficiente" : "Erro ao registrar transação",
+        title: isSaldoInsuficiente
+          ? "Saldo insuficiente"
+          : isSnapshotUmParaUm
+            ? "Cotação inválida para a moeda"
+            : "Erro ao registrar transação",
         description: isSaldoInsuficiente
           ? `${rawMsg.replace(/^.*SALDO_INSUFICIENTE:\s*/, "")} Atualize a tela e confira se este lançamento já foi feito.`
-          : rawMsg,
+          : isSnapshotUmParaUm
+            ? "A transação foi recusada porque a moeda da operação estaria sendo tratada como se valesse 1,00 dólar. Atualize as cotações e registre novamente."
+            : rawMsg,
         variant: "destructive",
       });
     } finally {
