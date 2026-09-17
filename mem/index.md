@@ -12,3 +12,4 @@
 - [Reconciliação do Lucro Realizado](mem://finance/reconciliacao-lucro-realizado-standard) — Proibida conversão BRL→USD→BRL na apresentação; Lucro Realizado decomposto em operacional + cambial (realizado/não realizado) + diferenças de recebimento
 - [Lucro Realizado fonte única](mem://finance/lucro-realizado-fonte-unica-cotacao-trabalho) — Card e Extrato usam Cotação de Trabalho; oficial só para agregação; cambialConversao explica resíduo multimoeda
 - [Surebet Edit Identity & Multi-Entradas](mem://architecture/surebet-edit-identity-and-entries) — Edição de surebet preserva ids reais de perna/entrada e fonte de saldo; ids da UI podem ser sintéticos
+- [Classificação de Moeda fonte única](mem://finance/classificacao-moeda-fonte-unica) — Proibidas listas fixas FIAT/CRYPTO; usar getCurrencyKind/isFiatCurrency e trava violatesSnapshotUmParaUm antes de gravar no cash_ledger
