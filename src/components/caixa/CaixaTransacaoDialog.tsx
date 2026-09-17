@@ -3201,6 +3201,27 @@ export function CaixaTransacaoDialog({
         ? contaComTaxa?.bancoTaxa?.taxa_deposito_valor
         : contaComTaxa?.bancoTaxa?.taxa_saque_valor;
 
+      // =========================================================================
+      // TRAVA DE SANIDADE (espelha `chk_snapshot_1_para_1_nao_stable` do banco)
+      // Nunca gravar moeda não-dólar afirmando cotação 1,00 e referência = valor.
+      // =========================================================================
+      if (
+        violatesSnapshotUmParaUm({
+          moeda: transactionData.moeda,
+          valor: transactionData.valor,
+          valorUsdReferencia: transactionData.valor_usd_referencia,
+          cotacaoOrigemUsd: transactionData.cotacao_origem_usd,
+        })
+      ) {
+        toast({
+          title: "Cotação indisponível",
+          description: `Não há cotação válida para ${transactionData.moeda}. O sistema não pode registrar essa transação tratando ${transactionData.moeda} como dólar. Atualize a cotação e tente novamente.`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       if (contaComTaxa && taxaTipo && taxaValor != null) {
         const valorTransacao = parseFloat(valor);
         const taxaMoedaConfig = contaComTaxa.bancoTaxa?.taxa_moeda ?? contaComTaxa.moeda ?? "BRL";
