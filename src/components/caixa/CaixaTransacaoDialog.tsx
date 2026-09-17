@@ -2821,8 +2821,10 @@ export function CaixaTransacaoDialog({
       // com o valor em EUR tratado como USD, o que quebra "Lucro se sacar tudo"
       // e Recuperação de Capital. Detectamos moedaOrigem FIAT e usamos o mesmo
       // caminho FIAT (getRate/cotacaoUSD) para o snapshot USD.
-      const FIAT_SET = new Set(["BRL","USD","EUR","GBP","MXN","ARS","CLP","COP","PEN","UYU","CAD","AUD","CHF","JPY"]);
-      const moedaOrigemEhFiat = FIAT_SET.has((moedaOrigem || "").toUpperCase());
+      // FONTE ÚNICA: classificação vem de CURRENCY_TYPES (src/types/currency.ts).
+      // Listas fixas locais já causaram bug: MYR ficava de fora e era tratado como
+      // cripto 1:1 com dólar, violando `chk_snapshot_1_para_1_nao_stable`.
+      const moedaOrigemEhFiat = isFiatCurrency(moedaOrigem);
       if (tipoMoeda === "CRYPTO" && !moedaOrigemEhFiat) {
         // Crypto puro: calcular valor em USD a partir da quantidade de coins × preço
         const cryptoPrice = cryptoPrices[coin] || 1;
