@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { AlertTriangle, Download, HardDriveDownload, Upload, FileArchive, CheckCircle2, Loader2 } from 'lucide-react';
 import { useSystemBackup, type PacoteLido } from '@/hooks/useSystemBackup';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -49,7 +50,7 @@ export function BackupRestoreTab() {
       const lido = await lerPacote(file);
       setPacote(lido);
     } catch (e: any) {
-      alert(e?.message ?? 'Não foi possível ler o pacote.');
+      toast.error(e?.message ?? 'Não foi possível ler o pacote.');
     } finally {
       setLendo(false);
     }
