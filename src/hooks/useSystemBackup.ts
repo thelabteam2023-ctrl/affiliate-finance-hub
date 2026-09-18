@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { unzip, type Unzipped } from 'fflate';
+import { unzip, zip, type Unzipped, type Zippable } from 'fflate';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -90,31 +90,110 @@ export function useSystemBackup() {
   // ---------------- BACKUP ----------------
   const gerarBackup = useCallback(async (incluirLogs: boolean) => {
     setEtapa('dados');
-    setProgresso(10);
-    setDetalhe('Exportando dados das tabelas...');
+    setProgresso(0);
+    setDetalhe('Preparando...');
     setBackupResumo(null);
 
     try {
-      const res = await fetch(`${FUNCTIONS_BASE}/system-backup`, {
-        method: 'POST',
-        headers: await authHeader(),
-        body: JSON.stringify({ includeLogs: incluirLogs }),
-      });
+      const encoder = new TextEncoder();
+      const files: Zippable = {};
 
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || `Falha ao gerar backup (${res.status})`);
+      const plano = await callBackup({ action: 'plan' });
+      const tabelas = (plano.tabelas ?? []).filter(
+        (t: any) => incluirLogs || !LOG_TABLES.has(t.table_name),
+      );
+
+      const manifest: BackupManifest = {
+        gerado_em: new Date().toISOString(),
+        gerado_por: plano.gerado_por,
+        versao_pacote: 1,
+        inclui_logs: incluirLogs,
+        tabelas: [],
+        buckets: [],
+        usuarios: 0,
+        totais: { tabelas: 0, linhas: 0, arquivos: 0 },
+      };
+
+      // ----- Dados -----
+      for (let i = 0; i < tabelas.length; i++) {
+        const t = tabelas[i];
+        setDetalhe(`Exportando dados: ${t.table_name} (${i + 1}/${tabelas.length})`);
+        setProgresso(Math.round(((i + 1) / tabelas.length) * 60));
+
+        const linhas: any[] = [];
+        for (let offset = 0; ; offset += 1000) {
+          const res = await callBackup({ action: 'table', tabela: t.table_name, offset, pk: t.pk_column });
+          if (res.erro) throw new Error(`${t.table_name}: ${res.erro}`);
+          linhas.push(...(res.linhas ?? []));
+          if (res.fim) break;
+        }
+
+        files[`dados/${t.table_name}.json`] = encoder.encode(JSON.stringify(linhas));
+        manifest.tabelas.push({
+          nome: t.table_name,
+          linhas: linhas.length,
+          ordem: t.sort_order,
+          pk: t.pk_column,
+        });
+        manifest.totais.linhas += linhas.length;
+      }
+      manifest.totais.tabelas = manifest.tabelas.length;
+
+      // ----- Usuários -----
+      setDetalhe('Exportando usuários...');
+      const usuarios: any[] = [];
+      for (let page = 1; page <= 100; page++) {
+        const res = await callBackup({ action: 'users', page });
+        usuarios.push(...(res.users ?? []));
+        if (res.fim) break;
+      }
+      manifest.usuarios = usuarios.length;
+      files['dados/_auth_users.json'] = encoder.encode(JSON.stringify(usuarios, null, 2));
+
+      // ----- Fotos e arquivos -----
+      setEtapa('fotos');
+      setDetalhe('Baixando fotos e arquivos...');
+      const buckets = plano.buckets ?? [];
+      for (let b = 0; b < buckets.length; b++) {
+        const bucket = buckets[b];
+        const lista = await callBackup({ action: 'storage_list', bucket: bucket.nome });
+        const arquivos = lista.arquivos ?? [];
+        let baixados = 0;
+        let bytes = 0;
+
+        for (let i = 0; i < arquivos.length; i += 50) {
+          const grupo = arquivos.slice(i, i + 50).map((a: any) => a.path);
+          const { urls } = await callBackup({ action: 'storage_urls', bucket: bucket.nome, paths: grupo });
+          for (const u of urls ?? []) {
+            if (!u.url) continue;
+            const resp = await fetch(u.url);
+            if (!resp.ok) continue;
+            const buf = new Uint8Array(await resp.arrayBuffer());
+            const cleanPath = String(u.path).replace(/^\/+/, '');
+            files[`storage/${bucket.nome}/${cleanPath}`] = [buf, { level: 0 }];
+            baixados++;
+            bytes += buf.length;
+          }
+          setDetalhe(`Baixando ${bucket.nome}: ${baixados}/${arquivos.length}`);
+        }
+
+        manifest.buckets.push({ nome: bucket.nome, publico: bucket.publico, arquivos: baixados, bytes });
+        manifest.totais.arquivos += baixados;
+        setProgresso(60 + Math.round(((b + 1) / Math.max(buckets.length, 1)) * 25));
       }
 
-      setEtapa('fotos');
-      setProgresso(55);
-      setDetalhe('Baixando fotos e arquivos...');
-
-      const blob = await res.blob();
-
+      // ----- Estrutura e manifesto -----
       setEtapa('finalizando');
       setProgresso(90);
-      setDetalhe('Finalizando pacote...');
+      setDetalhe('Gerando estrutura do banco e compactando...');
+      const schema = await callBackup({ action: 'schema' });
+      files['schema.sql'] = encoder.encode(String(schema.sql ?? ''));
+      files['MANIFEST.json'] = encoder.encode(JSON.stringify(manifest, null, 2));
+
+      const zipped: Uint8Array = await new Promise((resolve, reject) => {
+        zip(files, { level: 6 }, (err, data) => (err ? reject(err) : resolve(data)));
+      });
+      const blob = new Blob([zipped], { type: 'application/zip' });
 
       const nome = `labbet-backup-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.zip`;
       const url = URL.createObjectURL(blob);
