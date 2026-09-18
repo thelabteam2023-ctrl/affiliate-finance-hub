@@ -17535,6 +17535,14 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_backup_tables: {
+        Args: never
+        Returns: {
+          pk_column: string
+          sort_order: number
+          table_name: string
+        }[]
+      }
       admin_calculate_group_archive_impact: {
         Args: { p_group_id: string }
         Returns: Json
@@ -17567,6 +17575,7 @@ export type Database = {
         }
         Returns: string
       }
+      admin_dump_schema: { Args: never; Returns: string }
       admin_execute_cleanup:
         | { Args: { _user_ids: string[] }; Returns: Json }
         | {
@@ -17837,6 +17846,11 @@ export type Database = {
           workspace_plan: string
         }[]
       }
+      admin_restore_clear: { Args: { _table: string }; Returns: number }
+      admin_restore_insert: {
+        Args: { _rows: Json; _table: string }
+        Returns: number
+      }
       admin_set_test_user: {
         Args: { _is_test: boolean; _user_id: string }
         Returns: undefined
@@ -17849,6 +17863,7 @@ export type Database = {
         Args: { _active: boolean; _reason?: string; _workspace_id: string }
         Returns: undefined
       }
+      admin_table_row_count: { Args: { _table: string }; Returns: number }
       admin_update_sale_status: {
         Args: { _new_status: string; _sale_id: string }
         Returns: undefined
