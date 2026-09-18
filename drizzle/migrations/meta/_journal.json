@@ -141,6 +141,13 @@
       "when": 1789587233392,
       "tag": "0019_lucro_operacional_breakdown_por_modulo",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1789695334129,
+      "tag": "0020_backup_restore_system_functions",
+      "breakpoints": true
     }
   ]
 }

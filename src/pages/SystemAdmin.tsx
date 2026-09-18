@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSystemAdmin, isDeletedUser, AdminUserGrouped, AdminDeletedUser } from '@/hooks/useSystemAdmin';
 import { CleanupTab } from '@/components/system-admin/CleanupTab';
 import { CommunityResetTab } from '@/components/system-admin/CommunityResetTab';
+import { BackupRestoreTab } from '@/components/system-admin/BackupRestoreTab';
 import { PlansTab } from '@/components/system-admin/PlansTab';
 import { BillingDashboardTab } from '@/components/system-admin/BillingDashboardTab';
 import { SubscriptionsTab } from '@/components/system-admin/SubscriptionsTab';
@@ -38,7 +39,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Users, Building2, Shield, Ban, Check, Plus, UserPlus, Settings2, 
-  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History, BarChart3, ArrowUpDown, Activity
+  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History, BarChart3, ArrowUpDown, Activity, DatabaseBackup
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { format, differenceInDays } from 'date-fns';
@@ -767,6 +768,10 @@ export default function SystemAdmin() {
                 <MessagesSquare className="h-3.5 w-3.5" />
                 Reset Comunidade
               </TabsTrigger>
+              <TabsTrigger value="backup" className="gap-1.5 text-xs">
+                <DatabaseBackup className="h-3.5 w-3.5" />
+                Backup e Restauração
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="limpeza">
@@ -775,6 +780,10 @@ export default function SystemAdmin() {
 
             <TabsContent value="comunidade">
               <CommunityResetTab />
+            </TabsContent>
+
+            <TabsContent value="backup">
+              <BackupRestoreTab />
             </TabsContent>
           </Tabs>
         </TabsContent>
