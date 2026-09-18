@@ -768,6 +768,10 @@ export default function SystemAdmin() {
                 <MessagesSquare className="h-3.5 w-3.5" />
                 Reset Comunidade
               </TabsTrigger>
+              <TabsTrigger value="backup" className="gap-1.5 text-xs">
+                <DatabaseBackup className="h-3.5 w-3.5" />
+                Backup e Restauração
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="limpeza">
@@ -776,6 +780,10 @@ export default function SystemAdmin() {
 
             <TabsContent value="comunidade">
               <CommunityResetTab />
+            </TabsContent>
+
+            <TabsContent value="backup">
+              <BackupRestoreTab />
             </TabsContent>
           </Tabs>
         </TabsContent>
