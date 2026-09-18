@@ -93,6 +93,17 @@ async function callRestore(payload: Record<string, unknown>) {
   return body;
 }
 
+async function callBackup(payload: Record<string, unknown>) {
+  const res = await fetch(`${FUNCTIONS_BASE}/system-backup`, {
+    method: 'POST',
+    headers: await authHeader(),
+    body: JSON.stringify(payload),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.error || `Falha no backup (${res.status})`);
+  return body;
+}
+
 export function useSystemBackup() {
   const [etapa, setEtapa] = useState<Etapa>('idle');
   const [progresso, setProgresso] = useState(0);
