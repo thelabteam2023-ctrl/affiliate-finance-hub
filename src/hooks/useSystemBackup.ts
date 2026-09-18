@@ -7,6 +7,19 @@ const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const INSERT_CHUNK = 400;
 const UPLOAD_CHUNK_BYTES = 3 * 1024 * 1024;
 
+/** Tabelas de histórico/diagnóstico, opcionais no pacote. */
+const LOG_TABLES = new Set([
+  'api_request_logs',
+  'debug_logs',
+  'error_logs',
+  'login_attempts',
+  'login_history',
+  'daily_events',
+  'sports_events_raw',
+  'financial_debug_log',
+  'audit_logs',
+]);
+
 export interface BackupManifest {
   gerado_em: string;
   gerado_por?: string;
