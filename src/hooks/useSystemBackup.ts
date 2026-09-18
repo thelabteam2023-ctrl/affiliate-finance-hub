@@ -217,7 +217,7 @@ export function useSystemBackup() {
       const zipped: Uint8Array = await new Promise((resolve, reject) => {
         zip(files, { level: 6 }, (err, data) => (err ? reject(err) : resolve(data)));
       });
-      const blob = new Blob([zipped], { type: 'application/zip' });
+      const blob = new Blob([zipped.slice().buffer as ArrayBuffer], { type: 'application/zip' });
 
       const nome = `labbet-backup-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.zip`;
       const url = URL.createObjectURL(blob);
